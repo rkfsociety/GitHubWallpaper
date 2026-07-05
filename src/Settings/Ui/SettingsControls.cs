@@ -41,7 +41,7 @@ internal sealed class GlassSection : Panel
     public void SetContentHeight(int height)
     {
         ContentPanel.Height = height;
-        Height = ContentPanel.Top + height + SettingsTheme.SectionPadding;
+        Height = Padding.Top + ContentPanel.Top + height + Padding.Bottom;
     }
 
     protected override void OnPaint(PaintEventArgs e)

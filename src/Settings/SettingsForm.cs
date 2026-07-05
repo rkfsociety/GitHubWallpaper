@@ -77,15 +77,15 @@ internal sealed class SettingsForm : Form
         var content = new FlowLayoutPanel
         {
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = Color.Transparent,
+            Dock = DockStyle.Top,
             FlowDirection = FlowDirection.TopDown,
-            Location = new Point(0, 0),
             Padding = new Padding(20, 16, 20, 16),
             WrapContents = false,
         };
         scroll.Controls.Add(content);
-        scroll.Resize += (_, _) => content.Width = Math.Max(ContentWidth, scroll.ClientSize.Width - 4);
-        content.Width = ContentWidth;
+        scroll.Resize += (_, _) => SyncContentWidth(scroll, content);
 
         BuildAuthSection(content);
         BuildReposSection(content);
@@ -106,6 +106,31 @@ internal sealed class SettingsForm : Form
         LoadOAuthClientSecret();
         LoadGridLayout();
         UpdateTokenStatus();
+
+        Load += (_, _) =>
+        {
+            SyncContentWidth(scroll, content);
+            FitFormToContent(content);
+        };
+    }
+
+    private static void SyncContentWidth(Panel scroll, FlowLayoutPanel content)
+    {
+        var width = scroll.ClientSize.Width;
+        if (scroll.VerticalScroll.Visible)
+        {
+            width -= SystemInformation.VerticalScrollBarWidth;
+        }
+
+        content.Width = Math.Max(1, width);
+    }
+
+    private void FitFormToContent(FlowLayoutPanel content)
+    {
+        content.PerformLayout();
+        var maxHeight = Screen.FromControl(this).WorkingArea.Height - 48;
+        var desiredHeight = Math.Min(content.PreferredSize.Height, maxHeight);
+        ClientSize = new Size(ClientSize.Width, Math.Max(desiredHeight, 520));
     }
 
     protected override void OnPaintBackground(PaintEventArgs e) =>
