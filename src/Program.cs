@@ -18,6 +18,26 @@ internal static class Program
             return;
         }
 
+        if (!SingleInstanceGuard.TryAcquire(out var singleInstance))
+        {
+            MessageBox.Show(
+                "GitHub Wallpaper уже запущен.\n\nИконка приложения — в области уведомлений (трей).",
+                "GitHub Wallpaper",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            return;
+        }
+
+        using (singleInstance)
+        {
+            RunApplication(args);
+        }
+    }
+
+    private static void RunApplication(string[] args)
+    {
+        AppInstaller.EnsureWallpaperAssets();
+
         var justInstalled = args.Contains(AppInstaller.InstalledArgument, StringComparer.OrdinalIgnoreCase);
 
         if (WebView2RuntimeChecker.GetInstalledVersion() is null)

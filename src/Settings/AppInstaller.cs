@@ -28,6 +28,11 @@ internal static class AppInstaller
             RelaunchInstalled(InstalledArgument);
             return true;
         }
+        catch (IOException) when (IsInstalledCopyInUse())
+        {
+            // Установленная копия уже работает — второй запуск перехватит SingleInstanceGuard.
+            return false;
+        }
         catch (Exception ex)
         {
             MessageBox.Show(
@@ -37,6 +42,57 @@ internal static class AppInstaller
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
             return false;
+        }
+    }
+
+    private static bool IsInstalledCopyInUse()
+    {
+        if (!File.Exists(AppPaths.InstalledExecutablePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var stream = new FileStream(
+                AppPaths.InstalledExecutablePath,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None);
+
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Гарантирует наличие HTML/CSS/JS обоев рядом с exe.
+    /// Для portable single-file копирует из <c>wwwroot</c> в AppData при установке;
+    /// при обычном запуске — из <see cref="AppContext.BaseDirectory"/>.
+    /// </summary>
+    public static void EnsureWallpaperAssets()
+    {
+        var indexPath = Path.Combine(AppPaths.WallpaperRoot, "index.html");
+        if (File.Exists(indexPath))
+        {
+            return;
+        }
+
+        var sourceWallpaper = Path.Combine(AppContext.BaseDirectory, "wwwroot", "wallpaper");
+        if (!Directory.Exists(sourceWallpaper))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(AppPaths.WallpaperRoot);
+
+        foreach (var file in Directory.GetFiles(sourceWallpaper))
+        {
+            var targetFile = Path.Combine(AppPaths.WallpaperRoot, Path.GetFileName(file));
+            CopyFileWithRetry(file, targetFile);
         }
     }
 
