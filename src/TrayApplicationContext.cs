@@ -41,6 +41,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _repoPoller.ConfigurePollIntervals(settings.PollIntervalPreset);
         SyncAutostart(settings.AutoStart);
         _autoPauseMonitor.Configure(settings);
+        _wallpaperController.ConfigureDisplay(settings.DisplayDeviceName);
 
         // WebView2 требует STA и работающий message pump — инициализация после Application.Run.
         Application.Idle += OnStartupIdle;

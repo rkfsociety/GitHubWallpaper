@@ -12,6 +12,7 @@ internal sealed class SettingsForm : Form
     private readonly SettingsStore _settingsStore;
     private readonly RepoPoller _repoPoller;
     private readonly AutoPauseMonitor _autoPauseMonitor;
+    private readonly WallpaperController _wallpaperController;
     private readonly TextBox _tokenTextBox;
     private readonly Label _tokenStatusLabel;
     private readonly ListBox _repoListBox;
@@ -25,6 +26,7 @@ internal sealed class SettingsForm : Form
     private readonly CheckBox _autoStartCheckBox;
     private readonly CheckBox _pauseFullscreenCheckBox;
     private readonly CheckBox _pauseBatteryCheckBox;
+    private readonly ComboBox _monitorComboBox;
     private readonly List<RepoReference> _repositories;
     private bool _suppressBehaviorEvents;
 
@@ -32,16 +34,19 @@ internal sealed class SettingsForm : Form
         GitHubSession githubSession,
         SettingsStore settingsStore,
         RepoPoller repoPoller,
-        AutoPauseMonitor autoPauseMonitor)
+        AutoPauseMonitor autoPauseMonitor,
+        WallpaperController wallpaperController)
     {
         ArgumentNullException.ThrowIfNull(githubSession);
         ArgumentNullException.ThrowIfNull(settingsStore);
         ArgumentNullException.ThrowIfNull(repoPoller);
         ArgumentNullException.ThrowIfNull(autoPauseMonitor);
+        ArgumentNullException.ThrowIfNull(wallpaperController);
         _githubSession = githubSession;
         _settingsStore = settingsStore;
         _repoPoller = repoPoller;
         _autoPauseMonitor = autoPauseMonitor;
+        _wallpaperController = wallpaperController;
         _repositories = repoPoller.Repositories.ToList();
 
         Text = "GitHub Wallpaper — Настройки";
@@ -49,7 +54,7 @@ internal sealed class SettingsForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(520, 580);
+        ClientSize = new Size(520, 640);
         ShowInTaskbar = true;
 
         var tokenLabel = new Label
@@ -153,9 +158,33 @@ internal sealed class SettingsForm : Form
         };
         _moveDownButton.Click += OnMoveDownClick;
 
-        var behaviorGroup = new GroupBox
+        var displayGroup = new GroupBox
         {
             Location = new Point(16, 376),
+            Size = new Size(488, 58),
+            Text = "Экран",
+        };
+
+        var monitorLabel = new Label
+        {
+            AutoSize = true,
+            Location = new Point(12, 28),
+            Text = "Монитор:",
+        };
+
+        _monitorComboBox = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Location = new Point(84, 24),
+            Size = new Size(392, 23),
+        };
+        _monitorComboBox.SelectedIndexChanged += OnBehaviorChanged;
+
+        displayGroup.Controls.AddRange([monitorLabel, _monitorComboBox]);
+
+        var behaviorGroup = new GroupBox
+        {
+            Location = new Point(16, 442),
             Size = new Size(488, 150),
             Text = "Поведение",
         };
@@ -228,7 +257,7 @@ internal sealed class SettingsForm : Form
         var repoHintLabel = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 536),
+            Location = new Point(16, 600),
             Size = new Size(488, 32),
             ForeColor = SystemColors.GrayText,
             Text = "Токен хранится в Credential Manager. Остальные настройки — в settings.json.",
@@ -248,10 +277,12 @@ internal sealed class SettingsForm : Form
             _removeRepoButton,
             _moveUpButton,
             _moveDownButton,
+            displayGroup,
             behaviorGroup,
             repoHintLabel,
         ]);
 
+        PopulateMonitorComboBox();
         LoadBehaviorSettings();
         RefreshRepoListBox();
         UpdateTokenStatus();
@@ -279,8 +310,59 @@ internal sealed class SettingsForm : Form
         _autoStartCheckBox.Checked = settings.AutoStart;
         _pauseFullscreenCheckBox.Checked = settings.PauseOnFullscreen;
         _pauseBatteryCheckBox.Checked = settings.PauseOnBattery;
+        SelectMonitor(settings.DisplayDeviceName);
 
         _suppressBehaviorEvents = false;
+    }
+
+    private void PopulateMonitorComboBox()
+    {
+        _monitorComboBox.Items.Clear();
+
+        var screens = DisplayScreenHelper.GetAllScreens();
+        for (var index = 0; index < screens.Count; index++)
+        {
+            var screen = screens[index];
+            _monitorComboBox.Items.Add(new MonitorListItem(screen, index));
+        }
+    }
+
+    private void SelectMonitor(string? deviceName)
+    {
+        var resolved = DisplayScreenHelper.Resolve(deviceName);
+
+        for (var index = 0; index < _monitorComboBox.Items.Count; index++)
+        {
+            if (_monitorComboBox.Items[index] is MonitorListItem item
+                && item.Screen.DeviceName.Equals(resolved.DeviceName, StringComparison.OrdinalIgnoreCase))
+            {
+                _monitorComboBox.SelectedIndex = index;
+                return;
+            }
+        }
+
+        if (_monitorComboBox.Items.Count > 0)
+            _monitorComboBox.SelectedIndex = 0;
+    }
+
+    private string? GetSelectedDisplayDeviceName() =>
+        _monitorComboBox.SelectedItem is MonitorListItem item
+            ? item.Screen.DeviceName
+            : null;
+
+    private sealed class MonitorListItem
+    {
+        public MonitorListItem(Screen screen, int index)
+        {
+            Screen = screen;
+            Index = index;
+        }
+
+        public Screen Screen { get; }
+
+        public int Index { get; }
+
+        public override string ToString() => DisplayScreenHelper.FormatLabel(Screen, Index);
     }
 
     private void OnBehaviorChanged(object? sender, EventArgs e)
@@ -302,11 +384,13 @@ internal sealed class SettingsForm : Form
             settings.AutoStart = _autoStartCheckBox.Checked;
             settings.PauseOnFullscreen = _pauseFullscreenCheckBox.Checked;
             settings.PauseOnBattery = _pauseBatteryCheckBox.Checked;
+            settings.DisplayDeviceName = GetSelectedDisplayDeviceName() ?? string.Empty;
 
             _settingsStore.Save(settings);
             _repoPoller.ConfigurePollIntervals(settings.PollIntervalPreset);
             AutostartManager.SetEnabled(settings.AutoStart);
             _autoPauseMonitor.Configure(settings);
+            _wallpaperController.ConfigureDisplay(settings.DisplayDeviceName);
         }
         catch (Exception ex)
         {

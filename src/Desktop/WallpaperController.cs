@@ -1,4 +1,5 @@
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Win32;
 
 namespace GitHubWallpaper.Desktop;
 
@@ -15,6 +16,8 @@ public sealed class WallpaperController : IDisposable
     private bool _virtualHostMapped;
     private bool _disposed;
     private bool _paused;
+    private string? _displayDeviceName;
+    private bool _displaySettingsHooked;
 
     /// <summary>Обои прикреплены к рабочему столу.</summary>
     public bool IsApplied => _surface?.IsAttached ?? false;
@@ -36,6 +39,19 @@ public sealed class WallpaperController : IDisposable
 
     /// <summary>Обои откреплены от рабочего стола.</summary>
     public event EventHandler? Removed;
+
+    /// <summary>
+    /// Задаёт монитор для обоев по <see cref="Screen.DeviceName"/>.
+    /// Пустое значение — основной монитор. Применяется сразу, если обои уже на рабочем столе.
+    /// </summary>
+    public void ConfigureDisplay(string? displayDeviceName)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        _displayDeviceName = displayDeviceName;
+        EnsureDisplaySettingsHook();
+        ApplyDisplayBounds();
+    }
 
     /// <summary>
     /// Отправляет JSON-сообщение в страницу обоев через <c>PostWebMessageAsJson</c>.
@@ -85,6 +101,7 @@ public sealed class WallpaperController : IDisposable
 
         ResumeCoreIfPaused();
 
+        ApplyDisplayBounds();
         _surface.AttachToDesktop();
 
         var targetUri = wallpaperUri ?? DefaultWallpaperUri;
@@ -149,6 +166,7 @@ public sealed class WallpaperController : IDisposable
         ResumeCoreIfPaused();
         _surface?.Dispose();
         _surface = null;
+        RemoveDisplaySettingsHook();
         _virtualHostMapped = false;
         _paused = false;
         _disposed = true;
@@ -181,4 +199,39 @@ public sealed class WallpaperController : IDisposable
         _surface.WebView.CoreWebView2.Resume();
         _paused = false;
     }
+
+    private void ApplyDisplayBounds()
+    {
+        if (_surface is null)
+            return;
+
+        var bounds = DisplayScreenHelper.Resolve(_displayDeviceName).Bounds;
+
+        void Apply() => _surface.SetDisplayBounds(bounds);
+
+        if (_surface.InvokeRequired)
+            _surface.BeginInvoke(Apply);
+        else
+            Apply();
+    }
+
+    private void EnsureDisplaySettingsHook()
+    {
+        if (_displaySettingsHooked)
+            return;
+
+        SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+        _displaySettingsHooked = true;
+    }
+
+    private void RemoveDisplaySettingsHook()
+    {
+        if (!_displaySettingsHooked)
+            return;
+
+        SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        _displaySettingsHooked = false;
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e) => ApplyDisplayBounds();
 }

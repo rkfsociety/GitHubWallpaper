@@ -43,6 +43,7 @@ public sealed class DesktopHost : IDisposable
     private IntPtr _attachedHandle;
     private nint _savedStyle;
     private nint _savedExStyle;
+    private Rectangle? _targetBounds;
     private bool _disposed;
 
     /// <summary>HWND WorkerW, в который встроено окно обоев.</summary>
@@ -62,7 +63,16 @@ public sealed class DesktopHost : IDisposable
         _workerWindow = ResolveWorkerWindow();
     }
 
-    /// <summary>Прикрепляет WinForms-окно к WorkerW и растягивает на виртуальный экран.</summary>
+    /// <summary>Задаёт область монитора для обоев (координаты виртуального экрана).</summary>
+    public void SetTargetBounds(Rectangle bounds)
+    {
+        _targetBounds = bounds;
+
+        if (_attachedHandle != IntPtr.Zero)
+            FitToBounds(_attachedHandle, bounds);
+    }
+
+    /// <summary>Прикрепляет WinForms-окно к WorkerW и растягивает на целевой монитор.</summary>
     public void Attach(Form surface)
     {
         ArgumentNullException.ThrowIfNull(surface);
@@ -100,7 +110,7 @@ public sealed class DesktopHost : IDisposable
         SetWindowLongPtr(windowHandle, GwlExStyle, (nint)exStyle);
 
         SetParent(windowHandle, _workerWindow);
-        FitToVirtualScreen(windowHandle);
+        FitToTargetBounds(windowHandle);
 
         _attachedHandle = windowHandle;
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
@@ -121,13 +131,13 @@ public sealed class DesktopHost : IDisposable
         _attachedHandle = IntPtr.Zero;
     }
 
-    /// <summary>Обновляет размер прикреплённого окна под виртуальный экран.</summary>
+    /// <summary>Обновляет размер прикреплённого окна под целевой монитор.</summary>
     public void ResizeAttached()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (_attachedHandle != IntPtr.Zero)
-            FitToVirtualScreen(_attachedHandle);
+            FitToTargetBounds(_attachedHandle);
     }
 
     public void Dispose()
@@ -174,20 +184,27 @@ public sealed class DesktopHost : IDisposable
         return workerWindow != IntPtr.Zero ? workerWindow : progman;
     }
 
-    private static void FitToVirtualScreen(IntPtr windowHandle)
+    private void FitToTargetBounds(IntPtr windowHandle)
     {
-        var x = GetSystemMetrics(SmXVirtualScreen);
-        var y = GetSystemMetrics(SmYVirtualScreen);
-        var width = GetSystemMetrics(SmCxVirtualScreen);
-        var height = GetSystemMetrics(SmCyVirtualScreen);
+        var bounds = _targetBounds ?? GetVirtualScreenBounds();
+        FitToBounds(windowHandle, bounds);
+    }
 
+    private static Rectangle GetVirtualScreenBounds() => new(
+        GetSystemMetrics(SmXVirtualScreen),
+        GetSystemMetrics(SmYVirtualScreen),
+        GetSystemMetrics(SmCxVirtualScreen),
+        GetSystemMetrics(SmCyVirtualScreen));
+
+    private static void FitToBounds(IntPtr windowHandle, Rectangle bounds)
+    {
         SetWindowPos(
             windowHandle,
             IntPtr.Zero,
-            x,
-            y,
-            width,
-            height,
+            bounds.X,
+            bounds.Y,
+            bounds.Width,
+            bounds.Height,
             SwpNoZOrder | SwpNoActivate | SwpFrameChanged | SwpShowWindow);
     }
 

@@ -89,6 +89,10 @@ public sealed class WallpaperSurface : Form
         Hide();
     }
 
+    /// <summary>Задаёт монитор, на котором отображаются обои.</summary>
+    public void SetDisplayBounds(Rectangle bounds) =>
+        _desktopHost.SetTargetBounds(bounds);
+
     protected override void Dispose(bool disposing)
     {
         if (disposing && !_disposed)

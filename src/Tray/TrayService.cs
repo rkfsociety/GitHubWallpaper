@@ -105,7 +105,8 @@ internal sealed class TrayService : IDisposable
             _githubSession,
             _settingsStore,
             _repoPoller,
-            _autoPauseMonitor);
+            _autoPauseMonitor,
+            _wallpaperController);
         _settingsForm.FormClosed += (_, _) =>
         {
             _settingsForm?.Dispose();
