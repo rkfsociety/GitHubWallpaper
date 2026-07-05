@@ -49,7 +49,7 @@
 ### Задачи
 
 - [x] `RepoUrlParser` — разбор `owner/repo` и `https://github.com/owner/repo`
-- [ ] `GitHubApiClient` — HTTP-клиент с заголовком `Authorization`
+- [x] `GitHubApiClient` — HTTP-клиент с заголовком `Authorization`
 - [ ] Хранение PAT в Windows Credential Manager (не в JSON)
 - [ ] `RateLimitGuard` — отслеживание `X-RateLimit-*`, backoff при 403
 - [ ] `RepoPoller` — опрос мета-данных и коммитов
