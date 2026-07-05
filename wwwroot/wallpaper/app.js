@@ -6,6 +6,8 @@
   const wallpaperRoot = document.querySelector(".wallpaper");
 
   const MANY_REPOS_THRESHOLD = 2;
+  const MIN_GRID_COLUMNS = 3;
+  const MIN_COLUMN_WIDTH_PX = 160;
   const MIN_CONTENT_ZOOM = 0.4;
   const FIT_RETRY_DELAYS_MS = [0, 120, 400, 1200];
 
@@ -396,11 +398,22 @@
     }
 
     const preset = layoutPresets[density];
-    const minCardPx = preset.minCardRem * 16;
-    const columns = Math.max(
+    const maxColsByWidth = Math.max(
       1,
-      Math.min(repoCount, Math.floor((availWidth + gapPx) / (minCardPx + gapPx))),
+      Math.floor((availWidth + gapPx) / (MIN_COLUMN_WIDTH_PX + gapPx)),
     );
+
+    let columns;
+    if (repoCount >= MIN_GRID_COLUMNS) {
+      columns = Math.min(
+        repoCount,
+        maxColsByWidth >= MIN_GRID_COLUMNS ? MIN_GRID_COLUMNS : maxColsByWidth,
+      );
+    } else {
+      columns = Math.min(repoCount, maxColsByWidth);
+    }
+
+    columns = Math.max(1, columns);
 
     return { density, columns, commitLimit: preset.commitLimit };
   }
