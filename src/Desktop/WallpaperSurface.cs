@@ -76,6 +76,9 @@ public sealed class WallpaperSurface : Form
 
         if (!Visible)
             Show();
+
+        // WinForms Show() может сбросить HWND-позицию после SetParent — переприменяем bounds.
+        _desktopHost.ResizeAttached();
     }
 
     /// <summary>Открепляет окно от WorkerW и скрывает поверхность.</summary>

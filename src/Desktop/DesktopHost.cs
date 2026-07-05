@@ -196,15 +196,20 @@ public sealed class DesktopHost : IDisposable
         GetSystemMetrics(SmCxVirtualScreen),
         GetSystemMetrics(SmCyVirtualScreen));
 
-    private static void FitToBounds(IntPtr windowHandle, Rectangle bounds)
+    private void FitToBounds(IntPtr windowHandle, Rectangle screenBounds)
     {
+        var position = new Point(screenBounds.X, screenBounds.Y);
+
+        if (_workerWindow != IntPtr.Zero)
+            ScreenToClient(_workerWindow, ref position);
+
         SetWindowPos(
             windowHandle,
             IntPtr.Zero,
-            bounds.X,
-            bounds.Y,
-            bounds.Width,
-            bounds.Height,
+            position.X,
+            position.Y,
+            screenBounds.Width,
+            screenBounds.Height,
             SwpNoZOrder | SwpNoActivate | SwpFrameChanged | SwpShowWindow);
     }
 
@@ -256,6 +261,9 @@ public sealed class DesktopHost : IDisposable
 
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);
+
+    [DllImport("user32.dll")]
+    private static extern bool ScreenToClient(IntPtr hWnd, ref Point lpPoint);
 
     private static nint GetWindowLongPtr(IntPtr hWnd, int nIndex) =>
         IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLongPtr32(hWnd, nIndex);
