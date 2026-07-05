@@ -54,19 +54,42 @@ internal sealed class GitHubApiClient : IDisposable
     /// Выполняет GET-запрос к GitHub REST API.
     /// </summary>
     /// <param name="path">Относительный путь, например <c>/repos/{owner}/{repo}</c>.</param>
+    /// <param name="ifNoneMatch">Значение ETag для заголовка <c>If-None-Match</c>.</param>
+    public Task<GitHubApiResult> GetAsync(
+        string path,
+        CancellationToken cancellationToken = default) =>
+        GetAsync(path, ifNoneMatch: null, cancellationToken);
+
+    /// <summary>
+    /// Выполняет GET-запрос с опциональным <c>If-None-Match</c> (ответ 304 не считается ошибкой).
+    /// </summary>
     public async Task<GitHubApiResult> GetAsync(
         string path,
+        string? ifNoneMatch,
         CancellationToken cancellationToken = default)
     {
         await _rateLimitGuard.WaitIfNeededAsync(cancellationToken).ConfigureAwait(false);
 
-        using var request = CreateRequest(HttpMethod.Get, path);
+        using var request = CreateRequest(HttpMethod.Get, path, ifNoneMatch);
         using var response = await _httpClient
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         var rateLimit = GitHubRateLimit.TryParse(response);
+        var etag = response.Headers.ETag?.Tag ?? ifNoneMatch;
+
+        if (response.StatusCode == HttpStatusCode.NotModified)
+        {
+            _rateLimitGuard.Observe(rateLimit);
+
+            return new GitHubApiResult(
+                response.StatusCode,
+                string.Empty,
+                rateLimit,
+                etag,
+                IsNotModified: true);
+        }
 
         if (!response.IsSuccessStatusCode)
         {
@@ -85,7 +108,37 @@ internal sealed class GitHubApiClient : IDisposable
             response.StatusCode,
             body,
             rateLimit,
-            response.Headers.ETag?.Tag);
+            etag);
+    }
+
+    /// <summary>
+    /// GET к <c>stats/*</c> с повтором при HTTP 202 (данные ещё не готовы).
+    /// </summary>
+    public async Task<GitHubApiResult> GetStatsAsync(
+        string path,
+        string? ifNoneMatch = null,
+        CancellationToken cancellationToken = default)
+    {
+        const int maxAttempts = 5;
+
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var result = await GetAsync(path, ifNoneMatch, cancellationToken).ConfigureAwait(false);
+
+            if (result.IsNotModified || result.StatusCode != HttpStatusCode.Accepted)
+            {
+                return result;
+            }
+
+            var delay = TimeSpan.FromSeconds(2 + attempt);
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+        }
+
+        throw new GitHubApiException(
+            HttpStatusCode.Accepted,
+            path,
+            "GitHub stats не готовы после нескольких попыток.",
+            _rateLimitGuard.Current);
     }
 
     /// <summary>Проверяет PAT через <c>GET /user</c>.</summary>
@@ -100,13 +153,19 @@ internal sealed class GitHubApiClient : IDisposable
         }
     }
 
-    private HttpRequestMessage CreateRequest(HttpMethod method, string path)
+    private HttpRequestMessage CreateRequest(HttpMethod method, string path, string? ifNoneMatch = null)
     {
         var request = new HttpRequestMessage(method, BuildUri(path));
 
         if (_token is not null)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+        }
+
+        if (!string.IsNullOrWhiteSpace(ifNoneMatch))
+        {
+            request.Headers.IfNoneMatch.Clear();
+            request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(ifNoneMatch));
         }
 
         return request;

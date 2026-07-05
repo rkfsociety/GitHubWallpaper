@@ -56,6 +56,13 @@ internal enum RepoPollKind
 {
     Metadata,
     Commits,
+    PullRequests,
+    Issues,
+    Releases,
+    CiRun,
+    Heatmap,
+    Events,
+    ActivityFeed,
 }
 
 internal static class RepoApiParser

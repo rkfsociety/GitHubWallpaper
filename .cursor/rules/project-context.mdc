@@ -20,9 +20,10 @@ C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в
 | 1 Каркас движка | ✅ |
 | 2 GitHub + один репо | ✅ |
 | 3 Мульти-репо и настройки | ✅ |
-| 4–5 | 🔲 |
+| 4 Полная активность | ✅ |
+| 5 Полировка и релиз | 🔲 |
 
-**Сейчас:** обои работают; список репо, интервалы, автозапуск и автопауза — `SettingsForm` → `SettingsStore` (`settings.json`); PAT — Credential Manager.
+**Сейчас:** на обоях — PR, issues, релизы, CI badge, heatmap, лента событий; ETag-кэш API; клик по карточке открывает репо в браузере. Настройки — `SettingsForm` → `SettingsStore`; PAT — Credential Manager.
 
 ## Архитектура
 
@@ -48,7 +49,7 @@ PAT: GitHubPatCredentialStore (Credential Manager)
 
 ## Bridge: типы сообщений (C# → JS)
 
-`pause` · `resume` · `auth:status` · `repos:init` · `repo:metadata` · `repo:commits` · `repo:poll-failed`
+`pause` · `resume` · `auth:status` · `repos:init` · `repo:metadata` · `repo:commits` · `repo:pulls` · `repo:issues` · `repo:releases` · `repo:ci-run` · `repo:heatmap` · `repo:activity-feed` · `repo:poll-failed` · (JS→C#) `open-url`
 
 Virtual host: `app.local` (`WallpaperController.VirtualHostName`).
 

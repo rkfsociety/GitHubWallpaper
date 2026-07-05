@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Text.Json;
 using GitHubWallpaper.GitHub;
+using Microsoft.Web.WebView2.Core;
 
 namespace GitHubWallpaper.Desktop;
 
@@ -20,6 +22,7 @@ internal sealed class Bridge : IDisposable
     private readonly GitHubSession _githubSession;
     private readonly RepoPoller _repoPoller;
     private bool _started;
+    private bool _webMessageHooked;
     private bool _disposed;
 
     public Bridge(
@@ -45,12 +48,19 @@ internal sealed class Bridge : IDisposable
 
         _repoPoller.MetadataUpdated += OnMetadataUpdated;
         _repoPoller.CommitsUpdated += OnCommitsUpdated;
+        _repoPoller.PullsUpdated += OnPullsUpdated;
+        _repoPoller.IssuesUpdated += OnIssuesUpdated;
+        _repoPoller.ReleasesUpdated += OnReleasesUpdated;
+        _repoPoller.CiRunUpdated += OnCiRunUpdated;
+        _repoPoller.HeatmapUpdated += OnHeatmapUpdated;
+        _repoPoller.ActivityFeedUpdated += OnActivityFeedUpdated;
         _repoPoller.PollFailed += OnPollFailed;
         _repoPoller.RepositoriesChanged += OnRepositoriesChanged;
         _wallpaperController.Applied += OnWallpaperApplied;
         _githubSession.TokenChanged += OnTokenChanged;
 
         _started = true;
+        EnsureWebMessageHandler();
         PushInitialState();
     }
 
@@ -63,16 +73,27 @@ internal sealed class Bridge : IDisposable
         {
             _repoPoller.MetadataUpdated -= OnMetadataUpdated;
             _repoPoller.CommitsUpdated -= OnCommitsUpdated;
+            _repoPoller.PullsUpdated -= OnPullsUpdated;
+            _repoPoller.IssuesUpdated -= OnIssuesUpdated;
+            _repoPoller.ReleasesUpdated -= OnReleasesUpdated;
+            _repoPoller.CiRunUpdated -= OnCiRunUpdated;
+            _repoPoller.HeatmapUpdated -= OnHeatmapUpdated;
+            _repoPoller.ActivityFeedUpdated -= OnActivityFeedUpdated;
             _repoPoller.PollFailed -= OnPollFailed;
             _repoPoller.RepositoriesChanged -= OnRepositoriesChanged;
             _wallpaperController.Applied -= OnWallpaperApplied;
             _githubSession.TokenChanged -= OnTokenChanged;
         }
 
+        RemoveWebMessageHandler();
         _disposed = true;
     }
 
-    private void OnWallpaperApplied(object? sender, EventArgs e) => PushInitialState();
+    private void OnWallpaperApplied(object? sender, EventArgs e)
+    {
+        EnsureWebMessageHandler();
+        PushInitialState();
+    }
 
     private void OnRepositoriesChanged(object? sender, EventArgs e)
     {
@@ -87,6 +108,24 @@ internal sealed class Bridge : IDisposable
 
     private void OnCommitsUpdated(object? sender, RepoPollUpdatedEventArgs<IReadOnlyList<RepoCommitSnapshot>> e) =>
         Post(CreateCommitsMessage(e.Repository, e.Data));
+
+    private void OnPullsUpdated(object? sender, RepoPollUpdatedEventArgs<IReadOnlyList<RepoPullSnapshot>> e) =>
+        Post(CreatePullsMessage(e.Repository, e.Data));
+
+    private void OnIssuesUpdated(object? sender, RepoPollUpdatedEventArgs<IReadOnlyList<RepoIssueSnapshot>> e) =>
+        Post(CreateIssuesMessage(e.Repository, e.Data));
+
+    private void OnReleasesUpdated(object? sender, RepoPollUpdatedEventArgs<IReadOnlyList<RepoReleaseSnapshot>> e) =>
+        Post(CreateReleasesMessage(e.Repository, e.Data));
+
+    private void OnCiRunUpdated(object? sender, RepoPollUpdatedEventArgs<RepoCiRunSnapshot?> e) =>
+        Post(CreateCiRunMessage(e.Repository, e.Data));
+
+    private void OnHeatmapUpdated(object? sender, RepoPollUpdatedEventArgs<RepoHeatmapSnapshot> e) =>
+        Post(CreateHeatmapMessage(e.Repository, e.Data));
+
+    private void OnActivityFeedUpdated(object? sender, RepoPollUpdatedEventArgs<IReadOnlyList<ActivityFeedItem>> e) =>
+        Post(CreateActivityFeedMessage(e.Repository, e.Data));
 
     private void OnPollFailed(object? sender, RepoPollFailedEventArgs e) =>
         Post(CreatePollFailedMessage(e.Repository, e.Kind, e.Exception));
@@ -150,6 +189,112 @@ internal sealed class Bridge : IDisposable
             {
                 Post(CreateCommitsMessage(repository, commits));
             }
+
+            var pulls = _repoPoller.GetCachedPulls(repository);
+            if (pulls is not null)
+            {
+                Post(CreatePullsMessage(repository, pulls));
+            }
+
+            var issues = _repoPoller.GetCachedIssues(repository);
+            if (issues is not null)
+            {
+                Post(CreateIssuesMessage(repository, issues));
+            }
+
+            var releases = _repoPoller.GetCachedReleases(repository);
+            if (releases is not null)
+            {
+                Post(CreateReleasesMessage(repository, releases));
+            }
+
+            var ciRun = _repoPoller.GetCachedCiRun(repository);
+            if (ciRun is not null)
+            {
+                Post(CreateCiRunMessage(repository, ciRun));
+            }
+
+            var heatmap = _repoPoller.GetCachedHeatmap(repository);
+            if (heatmap is not null)
+            {
+                Post(CreateHeatmapMessage(repository, heatmap));
+            }
+
+            var feed = _repoPoller.GetCachedActivityFeed(repository);
+            if (feed is not null)
+            {
+                Post(CreateActivityFeedMessage(repository, feed));
+            }
+        }
+    }
+
+    private void EnsureWebMessageHandler()
+    {
+        if (_webMessageHooked)
+        {
+            return;
+        }
+
+        var core = _wallpaperController.Surface?.WebView.CoreWebView2;
+        if (core is null)
+        {
+            return;
+        }
+
+        core.WebMessageReceived += OnWebMessageReceived;
+        _webMessageHooked = true;
+    }
+
+    private void RemoveWebMessageHandler()
+    {
+        if (!_webMessageHooked)
+        {
+            return;
+        }
+
+        var core = _wallpaperController.Surface?.WebView.CoreWebView2;
+        if (core is not null)
+        {
+            core.WebMessageReceived -= OnWebMessageReceived;
+        }
+
+        _webMessageHooked = false;
+    }
+
+    private static void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(e.WebMessageAsJson);
+            var root = document.RootElement;
+
+            if (!root.TryGetProperty("type", out var typeElement)
+                || typeElement.GetString() != "open-url")
+            {
+                return;
+            }
+
+            if (!root.TryGetProperty("url", out var urlElement))
+            {
+                return;
+            }
+
+            var url = urlElement.GetString();
+            if (string.IsNullOrWhiteSpace(url)
+                || !Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = uri.ToString(),
+                UseShellExecute = true,
+            });
+        }
+        catch (JsonException)
+        {
         }
     }
 
@@ -188,6 +333,117 @@ internal sealed class Bridge : IDisposable
                 authorName = commit.AuthorName,
                 authorDate = commit.AuthorDate,
                 htmlUrl = commit.HtmlUrl,
+            }).ToArray(),
+        };
+
+    private static object CreatePullsMessage(
+        RepoReference repository,
+        IReadOnlyList<RepoPullSnapshot> pulls) =>
+        new
+        {
+            type = "repo:pulls",
+            owner = repository.Owner,
+            repo = repository.Repo,
+            payload = pulls.Select(pull => new
+            {
+                number = pull.Number,
+                title = pull.Title,
+                userLogin = pull.UserLogin,
+                createdAt = pull.CreatedAt,
+                htmlUrl = pull.HtmlUrl,
+            }).ToArray(),
+        };
+
+    private static object CreateIssuesMessage(
+        RepoReference repository,
+        IReadOnlyList<RepoIssueSnapshot> issues) =>
+        new
+        {
+            type = "repo:issues",
+            owner = repository.Owner,
+            repo = repository.Repo,
+            payload = issues.Select(issue => new
+            {
+                number = issue.Number,
+                title = issue.Title,
+                userLogin = issue.UserLogin,
+                createdAt = issue.CreatedAt,
+                htmlUrl = issue.HtmlUrl,
+            }).ToArray(),
+        };
+
+    private static object CreateReleasesMessage(
+        RepoReference repository,
+        IReadOnlyList<RepoReleaseSnapshot> releases) =>
+        new
+        {
+            type = "repo:releases",
+            owner = repository.Owner,
+            repo = repository.Repo,
+            payload = releases.Select(release => new
+            {
+                id = release.Id,
+                tagName = release.TagName,
+                name = release.Name,
+                isPrerelease = release.IsPrerelease,
+                publishedAt = release.PublishedAt,
+                htmlUrl = release.HtmlUrl,
+            }).ToArray(),
+        };
+
+    private static object CreateCiRunMessage(RepoReference repository, RepoCiRunSnapshot? run) =>
+        new
+        {
+            type = "repo:ci-run",
+            owner = repository.Owner,
+            repo = repository.Repo,
+            payload = run is null
+                ? null
+                : new
+                {
+                    id = run.Id,
+                    name = run.Name,
+                    status = run.Status,
+                    conclusion = run.Conclusion,
+                    updatedAt = run.UpdatedAt,
+                    htmlUrl = run.HtmlUrl,
+                },
+        };
+
+    private static object CreateHeatmapMessage(RepoReference repository, RepoHeatmapSnapshot heatmap) =>
+        new
+        {
+            type = "repo:heatmap",
+            owner = repository.Owner,
+            repo = repository.Repo,
+            payload = new
+            {
+                weeks = heatmap.Weeks.Select(week => new
+                {
+                    total = week.Total,
+                    days = week.Days,
+                }).ToArray(),
+                fetchedAt = heatmap.FetchedAt,
+            },
+        };
+
+    private static object CreateActivityFeedMessage(
+        RepoReference repository,
+        IReadOnlyList<ActivityFeedItem> feed) =>
+        new
+        {
+            type = "repo:activity-feed",
+            owner = repository.Owner,
+            repo = repository.Repo,
+            payload = feed.Select(item => new
+            {
+                id = item.Id,
+                kind = item.Kind,
+                title = item.Title,
+                subtitle = item.Subtitle,
+                timestamp = item.Timestamp,
+                htmlUrl = item.HtmlUrl,
+                isNew = item.IsNew,
             }).ToArray(),
         };
 

@@ -14,6 +14,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   color: #e6edf3;
   background: #0d1117;
+  --heatmap-0: #161b22;
+  --heatmap-1: #0e4429;
+  --heatmap-2: #006d32;
+  --heatmap-3: #26a641;
+  --heatmap-4: #39d353;
 }
 
 .wallpaper {
@@ -205,6 +210,18 @@ body.is-paused .hero__hint-dot {
   background: rgba(22, 27, 34, 0.82);
   backdrop-filter: blur(8px);
   box-shadow: 0 12px 32px rgba(1, 4, 9, 0.35);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.repo-card:hover {
+  border-color: rgba(88, 166, 255, 0.45);
+  box-shadow: 0 12px 32px rgba(1, 4, 9, 0.45);
+}
+
+.repo-card:focus-visible {
+  outline: 2px solid #58a6ff;
+  outline-offset: 2px;
 }
 
 .repo-card__header {
@@ -217,6 +234,13 @@ body.is-paused .hero__hint-dot {
   font-size: 1.05rem;
   font-weight: 600;
   line-height: 1.3;
+}
+
+.repo-card__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .repo-card__title a {
@@ -269,6 +293,219 @@ body.is-paused .hero__hint-dot {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #8b949e;
+}
+
+.repo-card__section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8b949e;
+}
+
+.repo-card__release {
+  font-size: 0.84rem;
+  color: #8b949e;
+}
+
+.repo-card__release a {
+  color: #58a6ff;
+  text-decoration: none;
+}
+
+.repo-card__release a:hover {
+  text-decoration: underline;
+}
+
+.repo-card__columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.repo-card__mini-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.repo-card__mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  list-style: none;
+}
+
+.repo-card__mini-list a {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.45rem;
+  align-items: baseline;
+  font-size: 0.8rem;
+  color: #c9d1d9;
+  text-decoration: none;
+}
+
+.repo-card__mini-list a:hover {
+  color: #58a6ff;
+}
+
+.repo-card__mini-number {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  color: #8b949e;
+}
+
+.ci-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(48, 54, 61, 0.9);
+  background: rgba(13, 17, 23, 0.65);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: #c9d1d9;
+  white-space: nowrap;
+}
+
+.ci-badge__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ci-badge--success {
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.35);
+}
+
+.ci-badge--failure {
+  color: #f85149;
+  border-color: rgba(248, 81, 73, 0.35);
+}
+
+.ci-badge--pending {
+  color: #d29922;
+  border-color: rgba(210, 153, 34, 0.35);
+}
+
+.ci-badge--pending .ci-badge__dot {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.ci-badge--cancelled,
+.ci-badge--unknown {
+  color: #8b949e;
+}
+
+.heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.heatmap__grid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+}
+
+.heatmap__week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.heatmap__cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.heatmap__legend {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  color: #8b949e;
+}
+
+.heatmap__legend-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.feed__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  list-style: none;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+.feed__item {
+  border-radius: 0.5rem;
+  background: rgba(13, 17, 23, 0.55);
+}
+
+.feed__item--new {
+  animation: feed-pop 1.2s ease;
+}
+
+@keyframes feed-pop {
+  0% {
+    background: rgba(56, 139, 253, 0.28);
+    transform: translateX(-4px);
+  }
+
+  100% {
+    background: rgba(13, 17, 23, 0.55);
+    transform: translateX(0);
+  }
+}
+
+.feed__link {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.45rem 0.65rem;
+  align-items: baseline;
+  padding: 0.5rem 0.65rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.feed__kind {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #58a6ff;
+}
+
+.feed__title {
+  font-size: 0.82rem;
+  color: #e6edf3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed__subtitle {
+  grid-column: 2;
+  font-size: 0.72rem;
+  color: #8b949e;
+}
+
+.feed__time {
+  font-size: 0.72rem;
+  color: #8b949e;
+  white-space: nowrap;
 }
 
 .repo-card__commit-list {
@@ -347,6 +584,18 @@ body.is-paused .hero__hint-dot {
   }
 
   .repo-card__commit-meta {
+    grid-column: 2;
+  }
+
+  .repo-card__columns {
+    grid-template-columns: 1fr;
+  }
+
+  .feed__link {
+    grid-template-columns: auto 1fr;
+  }
+
+  .feed__time {
     grid-column: 2;
   }
 }

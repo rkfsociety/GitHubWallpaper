@@ -56,7 +56,8 @@ internal sealed record GitHubApiResult(
     HttpStatusCode StatusCode,
     string Body,
     GitHubRateLimit RateLimit,
-    string? ETag);
+    string? ETag,
+    bool IsNotModified = false);
 
 /// <summary>
 /// Ошибка запроса к GitHub REST API.
