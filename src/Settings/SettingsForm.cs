@@ -30,6 +30,7 @@ internal sealed class SettingsForm : Form
     private readonly CheckBox _autoStartCheckBox;
     private readonly CheckBox _pauseFullscreenCheckBox;
     private readonly CheckBox _pauseBatteryCheckBox;
+    private readonly CheckBox _autoCheckUpdatesCheckBox;
     private readonly ComboBox _monitorComboBox;
     private readonly List<RepoReference> _repositories;
     private bool _suppressBehaviorEvents;
@@ -58,7 +59,7 @@ internal sealed class SettingsForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(520, 728);
+        ClientSize = new Size(520, 748);
         ShowInTaskbar = true;
 
         var tokenLabel = new Label
@@ -243,7 +244,7 @@ internal sealed class SettingsForm : Form
         var behaviorGroup = new GroupBox
         {
             Location = new Point(16, 538),
-            Size = new Size(488, 150),
+            Size = new Size(488, 172),
             Text = "Поведение",
         };
 
@@ -302,6 +303,14 @@ internal sealed class SettingsForm : Form
         };
         _pauseBatteryCheckBox.CheckedChanged += OnBehaviorChanged;
 
+        _autoCheckUpdatesCheckBox = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(12, 148),
+            Text = "Проверять обновления автоматически (раз в сутки)",
+        };
+        _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
+
         behaviorGroup.Controls.AddRange([
             pollLabel,
             _economyRadio,
@@ -310,12 +319,13 @@ internal sealed class SettingsForm : Form
             _autoStartCheckBox,
             _pauseFullscreenCheckBox,
             _pauseBatteryCheckBox,
+            _autoCheckUpdatesCheckBox,
         ]);
 
         var repoHintLabel = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 696),
+            Location = new Point(16, 716),
             Size = new Size(488, 24),
             ForeColor = SystemColors.GrayText,
             Text = "Токен хранится в Credential Manager. OAuth открывает github.com в браузере.",
@@ -412,6 +422,7 @@ internal sealed class SettingsForm : Form
         _autoStartCheckBox.Checked = settings.AutoStart;
         _pauseFullscreenCheckBox.Checked = settings.PauseOnFullscreen;
         _pauseBatteryCheckBox.Checked = settings.PauseOnBattery;
+        _autoCheckUpdatesCheckBox.Checked = settings.AutoCheckForUpdates;
         SelectMonitor(settings.DisplayDeviceName);
 
         _suppressBehaviorEvents = false;
@@ -486,6 +497,7 @@ internal sealed class SettingsForm : Form
             settings.AutoStart = _autoStartCheckBox.Checked;
             settings.PauseOnFullscreen = _pauseFullscreenCheckBox.Checked;
             settings.PauseOnBattery = _pauseBatteryCheckBox.Checked;
+            settings.AutoCheckForUpdates = _autoCheckUpdatesCheckBox.Checked;
             settings.DisplayDeviceName = GetSelectedDisplayDeviceName() ?? string.Empty;
 
             _settingsStore.Save(settings);

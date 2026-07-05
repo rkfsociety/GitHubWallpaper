@@ -79,6 +79,16 @@ jobs:
       - name: Publish single-file exe
         run: dotnet publish src -c Release -p:PublishProfile=win-x64 -p:Version=${{ steps.version.outputs.version }}
 
+      - name: Write version.json
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          @{
+            version = $version
+            publishedAt = (Get-Date).ToUniversalTime().ToString("o")
+            downloadUrl = "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper.exe"
+          } | ConvertTo-Json | Set-Content publish/version.json -Encoding utf8
+
       - name: Verify portable exe
         shell: pwsh
         run: |
@@ -103,7 +113,7 @@ jobs:
           $notes = @"
           ## GitHubWallpaper
 
-          Сборка **$version** (`$shortSha`).
+          Сборка **$version** ($shortSha).
 
           Portable single-file exe для Windows 10/11 (self-contained, .NET не требуется).
 
@@ -117,12 +127,12 @@ jobs:
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag publish/GitHubWallpaper.exe `
+            gh release create $tag publish/GitHubWallpaper.exe publish/version.json `
               --title "GitHubWallpaper" `
               --notes $notes `
               --latest
           } else {
-            gh release upload $tag publish/GitHubWallpaper.exe --clobber
+            gh release upload $tag publish/GitHubWallpaper.exe publish/version.json --clobber
             gh release edit $tag --title "GitHubWallpaper" --notes $notes --latest
           }
 

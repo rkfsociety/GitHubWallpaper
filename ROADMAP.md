@@ -166,6 +166,7 @@
 - Webhook / real-time обновления
 - Звуковые уведомления о важных событиях
 - [x] OAuth-вход через github.com (Authorization Code + PKCE и Device Flow)
+- [x] Автообновление portable exe из GitHub Release `latest`
 
 ---
 

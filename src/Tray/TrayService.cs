@@ -1,6 +1,7 @@
 using GitHubWallpaper.Desktop;
 using GitHubWallpaper.GitHub;
 using GitHubWallpaper.Settings;
+using GitHubWallpaper.Update;
 
 namespace GitHubWallpaper.Tray;
 
@@ -15,8 +16,10 @@ internal sealed class TrayService : IDisposable
     private readonly SettingsStore _settingsStore;
     private readonly RepoPoller _repoPoller;
     private readonly AutoPauseMonitor _autoPauseMonitor;
+    private readonly AppUpdateService _appUpdateService;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _pauseMenuItem;
+    private readonly ToolStripMenuItem _checkUpdatesMenuItem;
     private SettingsForm? _settingsForm;
     private bool _disposed;
 
@@ -26,7 +29,8 @@ internal sealed class TrayService : IDisposable
         GitHubSession githubSession,
         SettingsStore settingsStore,
         RepoPoller repoPoller,
-        AutoPauseMonitor autoPauseMonitor)
+        AutoPauseMonitor autoPauseMonitor,
+        AppUpdateService appUpdateService)
     {
         ArgumentNullException.ThrowIfNull(wallpaperController);
         ArgumentNullException.ThrowIfNull(pauseCoordinator);
@@ -34,18 +38,22 @@ internal sealed class TrayService : IDisposable
         ArgumentNullException.ThrowIfNull(settingsStore);
         ArgumentNullException.ThrowIfNull(repoPoller);
         ArgumentNullException.ThrowIfNull(autoPauseMonitor);
+        ArgumentNullException.ThrowIfNull(appUpdateService);
         _wallpaperController = wallpaperController;
         _pauseCoordinator = pauseCoordinator;
         _githubSession = githubSession;
         _settingsStore = settingsStore;
         _repoPoller = repoPoller;
         _autoPauseMonitor = autoPauseMonitor;
+        _appUpdateService = appUpdateService;
 
         _pauseMenuItem = new ToolStripMenuItem("Пауза", null, OnPauseClick);
+        _checkUpdatesMenuItem = new ToolStripMenuItem("Проверить обновления…", null, OnCheckForUpdatesClick);
 
         var menu = new ContextMenuStrip();
         menu.Items.Add(new ToolStripMenuItem("Настройки", null, OnSettingsClick));
         menu.Items.Add(_pauseMenuItem);
+        menu.Items.Add(_checkUpdatesMenuItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Выход", null, OnExitClick));
 
@@ -167,5 +175,146 @@ internal sealed class TrayService : IDisposable
             $"GitHub Wallpaper — {repositorySlug}",
             message,
             ToolTipIcon.Warning);
+    }
+
+    /// <summary>Фоновая проверка обновлений при старте.</summary>
+    public async Task CheckForUpdatesAutomaticallyAsync(CancellationToken cancellationToken = default)
+    {
+        if (_disposed || !_appUpdateService.ShouldCheckAutomatically())
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await _appUpdateService
+                .CheckForUpdatesAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (result is AppUpdateCheckResult.UpdateAvailable available)
+            {
+                NotifyUpdateAvailable(available.Update.Version);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+        }
+        finally
+        {
+            _appUpdateService.RecordAutomaticCheck();
+        }
+    }
+
+    public void NotifyUpdateAvailable(string version)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _notifyIcon.ShowBalloonTip(
+            8000,
+            "GitHub Wallpaper",
+            $"Доступна версия {version}. ПКМ по иконке → «Проверить обновления…».",
+            ToolTipIcon.Info);
+    }
+
+    private async void OnCheckForUpdatesClick(object? sender, EventArgs e)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _checkUpdatesMenuItem.Enabled = false;
+        var previousCursor = Cursor.Current;
+
+        try
+        {
+            Cursor.Current = Cursors.WaitCursor;
+            var result = await _appUpdateService.CheckForUpdatesAsync().ConfigureAwait(true);
+
+            switch (result)
+            {
+                case AppUpdateCheckResult.UpToDate upToDate:
+                    MessageBox.Show(
+                        $"Установлена последняя версия ({upToDate.CurrentVersion}).",
+                        "GitHub Wallpaper",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    break;
+
+                case AppUpdateCheckResult.UpdateAvailable available:
+                    await PromptAndApplyUpdateAsync(available.Update).ConfigureAwait(true);
+                    break;
+
+                case AppUpdateCheckResult.Skipped skipped:
+                    MessageBox.Show(
+                        skipped.Reason,
+                        "GitHub Wallpaper",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    break;
+
+                case AppUpdateCheckResult.Failed failed:
+                    MessageBox.Show(
+                        failed.Message,
+                        "GitHub Wallpaper",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    break;
+            }
+        }
+        finally
+        {
+            _checkUpdatesMenuItem.Enabled = true;
+            Cursor.Current = previousCursor;
+        }
+    }
+
+    private async Task PromptAndApplyUpdateAsync(AppUpdateInfo update)
+    {
+        var answer = MessageBox.Show(
+            $"Доступна новая версия {update.Version}.\n\n" +
+            "Скачать и перезапустить приложение сейчас?",
+            "GitHub Wallpaper",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
+
+        if (answer != DialogResult.Yes)
+        {
+            return;
+        }
+
+        using var progressForm = new UpdateProgressForm(update.Version);
+        progressForm.Show();
+        progressForm.Refresh();
+
+        try
+        {
+            var progress = new Progress<AppUpdateDownloadProgress>(value =>
+            {
+                progressForm.Report(value);
+            });
+
+            await _appUpdateService
+                .DownloadAndApplyAsync(update, progress)
+                .ConfigureAwait(true);
+
+            progressForm.Close();
+            ExitRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            progressForm.Close();
+            MessageBox.Show(
+                $"Не удалось установить обновление:\n{ex.Message}",
+                "GitHub Wallpaper",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 }

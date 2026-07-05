@@ -2,6 +2,7 @@ using GitHubWallpaper.Desktop;
 using GitHubWallpaper.GitHub;
 using GitHubWallpaper.Settings;
 using GitHubWallpaper.Tray;
+using GitHubWallpaper.Update;
 
 namespace GitHubWallpaper;
 
@@ -14,6 +15,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly Bridge _bridge;
     private readonly AutoPauseMonitor _autoPauseMonitor;
     private readonly SettingsStore _settingsStore;
+    private readonly AppUpdateService _appUpdateService;
     private readonly HashSet<string> _notifiedRepoErrors = new(StringComparer.OrdinalIgnoreCase);
 
     public TrayApplicationContext(
@@ -22,7 +24,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         RepoPoller repoPoller,
         TrayService trayService,
         SettingsStore settingsStore,
-        AutoPauseMonitor autoPauseMonitor)
+        AutoPauseMonitor autoPauseMonitor,
+        AppUpdateService appUpdateService)
     {
         _wallpaperController = wallpaperController;
         _githubSession = githubSession;
@@ -30,6 +33,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _trayService = trayService;
         _autoPauseMonitor = autoPauseMonitor;
         _settingsStore = settingsStore;
+        _appUpdateService = appUpdateService;
         _bridge = new Bridge(wallpaperController, githubSession, repoPoller);
         _trayService.ExitRequested += OnExitRequested;
         _wallpaperController.Paused += OnWallpaperPaused;
@@ -56,6 +60,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             await _wallpaperController.ApplyAsync().ConfigureAwait(true);
             _bridge.Start();
             _repoPoller.Start(_settingsStore.LoadRepositories());
+            _ = CheckForUpdatesInBackgroundAsync();
         }
         catch (Exception ex)
         {
@@ -77,6 +82,17 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
             ExitThread();
+        }
+    }
+
+    private async Task CheckForUpdatesInBackgroundAsync()
+    {
+        try
+        {
+            await _trayService.CheckForUpdatesAutomaticallyAsync().ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
         }
     }
 
@@ -126,6 +142,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _repoPoller.Dispose();
         _wallpaperController.Dispose();
         _githubSession.Dispose();
+        _appUpdateService.Dispose();
         ExitThread();
     }
 }

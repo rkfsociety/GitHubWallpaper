@@ -24,4 +24,8 @@ internal sealed class AppSettings
     /// Client ID OAuth App GitHub (публичный). Если пусто — используется встроенный или env.
     /// </summary>
     public string GitHubOAuthClientId { get; set; } = string.Empty;
+
+    public bool AutoCheckForUpdates { get; set; } = true;
+
+    public DateTimeOffset? LastUpdateCheckUtc { get; set; }
 }
