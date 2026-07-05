@@ -140,27 +140,25 @@ internal sealed class GhostButton : Button
     }
 }
 
-/// <summary>Текстовое поле с тёмным фоном и скруглённой рамкой.</summary>
+/// <summary>Текстовое поле без собственной рамки — обводку рисует <see cref="TextField"/>.</summary>
 internal sealed class ThemedTextBox : TextBox
 {
     public ThemedTextBox()
     {
-        BorderStyle = BorderStyle.None;
         SettingsTheme.ApplyToTextBox(this);
-        Margin = new Padding(0, 4, 0, 4);
-        Height = 28;
+        Margin = Padding.Empty;
     }
 }
 
 /// <summary>Обёртка для текстового поля со скруглённой рамкой.</summary>
 internal sealed class TextField : Panel
 {
-    public TextField(TextBox inner, int height = 30)
+    public TextField(TextBox inner, int height = 32)
     {
         SettingsTheme.EnableDoubleBuffer(this);
         BackColor = Color.Transparent;
         Height = height;
-        Padding = new Padding(10, 6, 10, 6);
+        Padding = new Padding(12, 0, 12, 0);
         inner.Dock = DockStyle.Fill;
         inner.Margin = Padding.Empty;
         Controls.Add(inner);

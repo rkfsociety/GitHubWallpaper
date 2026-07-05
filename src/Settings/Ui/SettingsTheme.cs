@@ -96,7 +96,7 @@ internal static class SettingsTheme
     {
         textBox.BackColor = InputFill;
         textBox.ForeColor = TextPrimary;
-        textBox.BorderStyle = BorderStyle.FixedSingle;
+        textBox.BorderStyle = BorderStyle.None;
         textBox.Font = BodyFont;
     }
 
