@@ -13,6 +13,7 @@ internal static class Program
 
         var wallpaperController = new WallpaperController();
         var githubSession = new GitHubSession();
+        var repoPoller = new RepoPoller(githubSession.Client);
         var trayService = new TrayService(wallpaperController, githubSession);
 
         try
@@ -22,6 +23,7 @@ internal static class Program
         catch (Exception ex)
         {
             trayService.Dispose();
+            repoPoller.Dispose();
             wallpaperController.Dispose();
             githubSession.Dispose();
             MessageBox.Show(
@@ -32,6 +34,6 @@ internal static class Program
             return;
         }
 
-        Application.Run(new TrayApplicationContext(wallpaperController, githubSession, trayService));
+        Application.Run(new TrayApplicationContext(wallpaperController, githubSession, repoPoller, trayService));
     }
 }
