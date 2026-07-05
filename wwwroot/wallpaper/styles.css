@@ -194,6 +194,12 @@ body {
   display: none;
 }
 
+.repo-grid__spacer {
+  min-height: 1px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .repo-card {
   display: flex;
   flex-direction: column;

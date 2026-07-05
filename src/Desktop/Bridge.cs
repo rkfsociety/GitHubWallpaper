@@ -2,6 +2,7 @@ using System.Diagnostics;
 using GitHubWallpaper.Desktop;
 using System.Text.Json;
 using GitHubWallpaper.GitHub;
+using GitHubWallpaper.Settings;
 using Microsoft.Web.WebView2.Core;
 
 namespace GitHubWallpaper.Desktop;
@@ -22,6 +23,7 @@ internal sealed class Bridge : IDisposable
     private readonly WallpaperController _wallpaperController;
     private readonly GitHubSession _githubSession;
     private readonly RepoPoller _repoPoller;
+    private readonly SettingsStore _settingsStore;
     private bool _started;
     private bool _webMessageHooked;
     private bool _disposed;
@@ -29,14 +31,17 @@ internal sealed class Bridge : IDisposable
     public Bridge(
         WallpaperController wallpaperController,
         GitHubSession githubSession,
-        RepoPoller repoPoller)
+        RepoPoller repoPoller,
+        SettingsStore settingsStore)
     {
         ArgumentNullException.ThrowIfNull(wallpaperController);
         ArgumentNullException.ThrowIfNull(githubSession);
         ArgumentNullException.ThrowIfNull(repoPoller);
+        ArgumentNullException.ThrowIfNull(settingsStore);
         _wallpaperController = wallpaperController;
         _githubSession = githubSession;
         _repoPoller = repoPoller;
+        _settingsStore = settingsStore;
     }
 
     /// <summary>Подписывается на poller и отправляет кэш при старте и после применения обоев.</summary>
@@ -141,8 +146,24 @@ internal sealed class Bridge : IDisposable
     private void PushInitialState()
     {
         PushAuthStatus();
+        PushLayout();
         PushRepoList();
         PushCachedState();
+    }
+
+    private void PushLayout()
+    {
+        var settings = _settingsStore.Load();
+
+        Post(new
+        {
+            type = "layout:update",
+            payload = new
+            {
+                columns = settings.GridColumns,
+                rows = settings.GridRows,
+            },
+        });
     }
 
     private void PushAuthStatus()
@@ -169,16 +190,41 @@ internal sealed class Bridge : IDisposable
 
     private void PushRepoList()
     {
+        var settings = _settingsStore.Load();
+        var capacity = settings.GridColumns * settings.GridRows;
+        var slotSlugs = settings.RepositorySlots.Take(capacity).ToList();
+
+        while (slotSlugs.Count < capacity)
+        {
+            slotSlugs.Add(string.Empty);
+        }
+
+        var slots = slotSlugs
+            .Select(slug =>
+            {
+                if (string.IsNullOrWhiteSpace(slug)
+                    || !RepoUrlParser.TryParse(slug.Trim(), out var reference))
+                {
+                    return null;
+                }
+
+                return (object?)new
+                {
+                    owner = reference.Owner,
+                    repo = reference.Repo,
+                };
+            })
+            .ToArray();
+
         Post(new
         {
             type = "repos:init",
-            payload = _repoPoller.Repositories
-                .Select(repository => new
-                {
-                    owner = repository.Owner,
-                    repo = repository.Repo,
-                })
-                .ToArray(),
+            payload = slots,
+            layout = new
+            {
+                columns = settings.GridColumns,
+                rows = settings.GridRows,
+            },
         });
     }
 

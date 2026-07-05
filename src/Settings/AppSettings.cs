@@ -7,6 +7,18 @@ internal sealed class AppSettings
 {
     public List<string> Repositories { get; set; } = [];
 
+    /// <summary>Число колонок сетки на обоях.</summary>
+    public int GridColumns { get; set; } = 3;
+
+    /// <summary>Число строк сетки на обоях (для масштабирования).</summary>
+    public int GridRows { get; set; } = 2;
+
+    /// <summary>
+    /// Репозитории по ячейкам сетки (слева направо, сверху вниз).
+    /// Пустая строка — пустая ячейка.
+    /// </summary>
+    public List<string> RepositorySlots { get; set; } = [];
+
     public PollIntervalPreset PollIntervalPreset { get; set; } = PollIntervalPreset.Normal;
 
     public bool AutoStart { get; set; }

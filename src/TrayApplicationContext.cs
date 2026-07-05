@@ -37,7 +37,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _settingsStore = settingsStore;
         _appUpdateService = appUpdateService;
         _justInstalled = justInstalled;
-        _bridge = new Bridge(wallpaperController, githubSession, repoPoller);
+        _bridge = new Bridge(wallpaperController, githubSession, repoPoller, settingsStore);
         _trayService.ExitRequested += OnExitRequested;
         _wallpaperController.Paused += OnWallpaperPaused;
         _wallpaperController.Resumed += OnWallpaperResumed;

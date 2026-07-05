@@ -6,8 +6,8 @@
   const wallpaperRoot = document.querySelector(".wallpaper");
 
   const MANY_REPOS_THRESHOLD = 2;
-  const MIN_GRID_COLUMNS = 3;
-  const MIN_COLUMN_WIDTH_PX = 160;
+  const DEFAULT_GRID_COLUMNS = 3;
+  const DEFAULT_GRID_ROWS = 2;
   const MIN_CONTENT_ZOOM = 0.4;
   const FIT_RETRY_DELAYS_MS = [0, 120, 400, 1200];
 
@@ -19,8 +19,14 @@
 
   const layoutState = {
     density: "default",
-    columns: 1,
+    columns: DEFAULT_GRID_COLUMNS,
+    rows: DEFAULT_GRID_ROWS,
     commitLimit: 5,
+  };
+
+  const gridSettings = {
+    columns: DEFAULT_GRID_COLUMNS,
+    rows: DEFAULT_GRID_ROWS,
   };
 
   const layoutPresets = {
@@ -148,23 +154,30 @@
       "GitHub token не задан — лимит 60 запросов/час. Настройки → «Войти через GitHub».";
   }
 
+  const EMPTY_SLOT_PREFIX = "__empty__";
+
+  function emptySlotKey(slotIndex) {
+    return `${EMPTY_SLOT_PREFIX}${slotIndex}`;
+  }
+
   function initRepos(repositories) {
     if (!Array.isArray(repositories)) {
       return;
     }
 
     const newKeys = new Set();
-    const orderedEntries = [];
+    const gridItems = [];
 
-    for (const item of repositories) {
+    repositories.forEach((item, slotIndex) => {
       if (!item?.owner || !item?.repo) {
-        continue;
+        gridItems.push({ type: "empty", key: emptySlotKey(slotIndex) });
+        return;
       }
 
       const key = repoKey(item.owner, item.repo);
       newKeys.add(key);
-      orderedEntries.push(ensureRepo(item.owner, item.repo));
-    }
+      gridItems.push({ type: "repo", key, entry: ensureRepo(item.owner, item.repo) });
+    });
 
     for (const key of Object.keys(state.repos)) {
       if (newKeys.has(key)) {
@@ -179,15 +192,44 @@
       }
     }
 
-    for (const entry of orderedEntries) {
-      const key = repoKey(entry.owner, entry.repo);
-      const card = cardElements.get(key);
-      if (card) {
-        repoGrid.appendChild(card);
+    for (const [key, card] of cardElements.entries()) {
+      if (!key.startsWith(EMPTY_SLOT_PREFIX)) {
+        continue;
+      }
+
+      const stillUsed = gridItems.some((item) => item.type === "empty" && item.key === key);
+      if (!stillUsed) {
+        card.remove();
+        cardElements.delete(key);
       }
     }
 
-    refreshAllRepoCards();
+    repoGrid.replaceChildren();
+
+    for (const item of gridItems) {
+      if (item.type === "empty") {
+        let card = cardElements.get(item.key);
+        if (!card) {
+          card = document.createElement("div");
+          card.className = "repo-grid__spacer";
+          card.setAttribute("aria-hidden", "true");
+          cardElements.set(item.key, card);
+        }
+
+        repoGrid.appendChild(card);
+        continue;
+      }
+
+      let card = cardElements.get(item.key);
+      if (!card) {
+        card = document.createElement("div");
+        cardElements.set(item.key, card);
+      }
+
+      repoGrid.appendChild(card);
+      mountRepoCard(item.entry);
+    }
+
     updateLayout(lastViewport);
   }
 
@@ -379,18 +421,43 @@
     }
   }
 
+  function applyGridSettings(payload) {
+    if (!payload) {
+      return;
+    }
+
+    const columns = Number(payload.columns);
+    const rows = Number(payload.rows);
+
+    if (Number.isFinite(columns) && columns >= 1) {
+      gridSettings.columns = columns;
+    }
+
+    if (Number.isFinite(rows) && rows >= 1) {
+      gridSettings.rows = rows;
+    }
+  }
+
   function computeLayout(viewport, repoCount) {
     if (!viewport || repoCount === 0) {
-      return { density: "default", columns: 1, commitLimit: 5 };
+      return {
+        density: "default",
+        columns: 1,
+        rows: gridSettings.rows,
+        commitLimit: 5,
+      };
     }
 
     const paddingPx = 48;
-    const gapPx = 16;
-    const availWidth = Math.max(320, viewport.width - viewport.safeLeft - viewport.safeRight - paddingPx);
+    const configuredColumns = Math.max(1, gridSettings.columns);
+    const configuredRows = Math.max(1, gridSettings.rows);
+    const gridCapacity = configuredColumns * configuredRows;
 
     let density = "default";
-    if (repoCount >= 6) {
+    if (repoCount > gridCapacity) {
       density = "tight";
+    } else if (repoCount >= 6 || gridCapacity >= 6) {
+      density = repoCount >= 6 ? "tight" : "dense";
     } else if (repoCount >= 4) {
       density = "dense";
     } else if (repoCount >= 2) {
@@ -398,24 +465,14 @@
     }
 
     const preset = layoutPresets[density];
-    const maxColsByWidth = Math.max(
-      1,
-      Math.floor((availWidth + gapPx) / (MIN_COLUMN_WIDTH_PX + gapPx)),
-    );
+    const columns = Math.min(configuredColumns, repoCount);
 
-    let columns;
-    if (repoCount >= MIN_GRID_COLUMNS) {
-      columns = Math.min(
-        repoCount,
-        maxColsByWidth >= MIN_GRID_COLUMNS ? MIN_GRID_COLUMNS : maxColsByWidth,
-      );
-    } else {
-      columns = Math.min(repoCount, maxColsByWidth);
-    }
-
-    columns = Math.max(1, columns);
-
-    return { density, columns, commitLimit: preset.commitLimit };
+    return {
+      density,
+      columns,
+      rows: configuredRows,
+      commitLimit: preset.commitLimit,
+    };
   }
 
   function getViewportSize() {
@@ -538,17 +595,22 @@
     const changed =
       layoutState.density !== layout.density ||
       layoutState.columns !== layout.columns ||
+      layoutState.rows !== layout.rows ||
       layoutState.commitLimit !== layout.commitLimit;
 
     layoutState.density = layout.density;
     layoutState.columns = layout.columns;
+    layoutState.rows = layout.rows;
     layoutState.commitLimit = layout.commitLimit;
 
     document.body.dataset.layout = layout.density;
     document.body.dataset.repoCount = String(Object.keys(state.repos).length);
     document.body.dataset.manyRepos =
       Object.keys(state.repos).length >= MANY_REPOS_THRESHOLD ? "true" : "false";
+    document.body.dataset.gridColumns = String(layout.columns);
+    document.body.dataset.gridRows = String(layout.rows);
     repoGrid.style.setProperty("--grid-columns", String(layout.columns));
+    repoGrid.style.setProperty("--grid-rows", String(layout.rows));
     repoGrid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
 
     if (changed) {
@@ -595,8 +657,16 @@
         dispatchBridgeEvent("wallpaper:auth-status", data);
         return;
       case "repos:init":
+        if (data.layout) {
+          applyGridSettings(data.layout);
+        }
         initRepos(data.payload);
         dispatchBridgeEvent("wallpaper:repos-init", data);
+        return;
+      case "layout:update":
+        applyGridSettings(data.payload);
+        updateLayout(lastViewport);
+        dispatchBridgeEvent("wallpaper:layout-update", data);
         return;
       case "repo:metadata": {
         const entry = ensureRepo(data.owner, data.repo);

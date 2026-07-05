@@ -20,11 +20,9 @@ internal sealed class SettingsForm : Form
     private readonly LinkLabel _createTokenLinkLabel;
     private readonly TextBox _oauthClientIdTextBox;
     private readonly TextBox _oauthClientSecretTextBox;
-    private readonly ListBox _repoListBox;
+    private readonly GridLayoutEditor _gridLayoutEditor;
     private readonly TextBox _repoInputTextBox;
     private readonly Button _removeRepoButton;
-    private readonly Button _moveUpButton;
-    private readonly Button _moveDownButton;
     private readonly RadioButton _economyRadio;
     private readonly RadioButton _normalRadio;
     private readonly RadioButton _frequentRadio;
@@ -33,8 +31,8 @@ internal sealed class SettingsForm : Form
     private readonly CheckBox _pauseBatteryCheckBox;
     private readonly CheckBox _autoCheckUpdatesCheckBox;
     private readonly ComboBox _monitorComboBox;
-    private readonly List<RepoReference> _repositories;
     private bool _suppressBehaviorEvents;
+    private bool _suppressGridEvents;
 
     public SettingsForm(
         GitHubSession githubSession,
@@ -53,14 +51,13 @@ internal sealed class SettingsForm : Form
         _repoPoller = repoPoller;
         _autoPauseMonitor = autoPauseMonitor;
         _wallpaperController = wallpaperController;
-        _repositories = repoPoller.Repositories.ToList();
 
         Text = "GitHub Wallpaper — Настройки";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(520, 776);
+        ClientSize = new Size(520, 820);
         ShowInTaskbar = true;
 
         var tokenLabel = new Label
@@ -183,20 +180,19 @@ internal sealed class SettingsForm : Form
         {
             AutoSize = true,
             Location = new Point(16, 280),
-            Text = "Репозитории (порядок = порядок на обоях):",
+            Text = "Сетка обоев (перетащите репозитории между ячейками):",
         };
 
-        _repoListBox = new ListBox
+        _gridLayoutEditor = new GridLayoutEditor
         {
             Location = new Point(16, 304),
-            Size = new Size(488, 110),
-            IntegralHeight = false,
+            Size = new Size(488, 148),
         };
-        _repoListBox.SelectedIndexChanged += (_, _) => UpdateRepoButtons();
+        _gridLayoutEditor.LayoutChanged += OnGridLayoutChanged;
 
         _repoInputTextBox = new TextBox
         {
-            Location = new Point(16, 422),
+            Location = new Point(16, 460),
             Size = new Size(360, 23),
             PlaceholderText = "owner/repo или https://github.com/owner/repo",
         };
@@ -204,7 +200,7 @@ internal sealed class SettingsForm : Form
 
         var addRepoButton = new Button
         {
-            Location = new Point(384, 420),
+            Location = new Point(384, 458),
             Size = new Size(120, 28),
             Text = "Добавить",
         };
@@ -212,31 +208,15 @@ internal sealed class SettingsForm : Form
 
         _removeRepoButton = new Button
         {
-            Location = new Point(16, 458),
-            Size = new Size(100, 28),
+            Location = new Point(16, 494),
+            Size = new Size(120, 28),
             Text = "Удалить",
         };
         _removeRepoButton.Click += OnRemoveRepoClick;
 
-        _moveUpButton = new Button
-        {
-            Location = new Point(124, 458),
-            Size = new Size(100, 28),
-            Text = "Вверх",
-        };
-        _moveUpButton.Click += OnMoveUpClick;
-
-        _moveDownButton = new Button
-        {
-            Location = new Point(232, 458),
-            Size = new Size(100, 28),
-            Text = "Вниз",
-        };
-        _moveDownButton.Click += OnMoveDownClick;
-
         var displayGroup = new GroupBox
         {
-            Location = new Point(16, 500),
+            Location = new Point(16, 536),
             Size = new Size(488, 58),
             Text = "Экран",
         };
@@ -260,7 +240,7 @@ internal sealed class SettingsForm : Form
 
         var behaviorGroup = new GroupBox
         {
-            Location = new Point(16, 566),
+            Location = new Point(16, 602),
             Size = new Size(488, 172),
             Text = "Поведение",
         };
@@ -342,7 +322,7 @@ internal sealed class SettingsForm : Form
         var repoHintLabel = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 744),
+            Location = new Point(16, 784),
             Size = new Size(488, 24),
             ForeColor = SystemColors.GrayText,
             Text = "Токен и Client Secret — в Credential Manager. Device Flow не требует Secret.",
@@ -365,12 +345,10 @@ internal sealed class SettingsForm : Form
             verifyButton,
             clearButton,
             reposLabel,
-            _repoListBox,
+            _gridLayoutEditor,
             _repoInputTextBox,
             addRepoButton,
             _removeRepoButton,
-            _moveUpButton,
-            _moveDownButton,
             displayGroup,
             behaviorGroup,
             repoHintLabel,
@@ -380,8 +358,26 @@ internal sealed class SettingsForm : Form
         LoadBehaviorSettings();
         LoadOAuthClientId();
         LoadOAuthClientSecret();
-        RefreshRepoListBox();
+        LoadGridLayout();
         UpdateTokenStatus();
+    }
+
+    private void LoadGridLayout()
+    {
+        var settings = _settingsStore.Load();
+        _suppressGridEvents = true;
+        _gridLayoutEditor.LoadLayout(settings.GridColumns, settings.GridRows, settings.RepositorySlots);
+        _suppressGridEvents = false;
+    }
+
+    private void OnGridLayoutChanged(object? sender, EventArgs e)
+    {
+        if (_suppressGridEvents)
+        {
+            return;
+        }
+
+        ApplyGridLayout();
     }
 
     private void LoadOAuthClientId()
@@ -588,44 +584,6 @@ internal sealed class SettingsForm : Form
         return PollIntervalPreset.Normal;
     }
 
-    private void RefreshRepoListBox()
-    {
-        var selectedSlug = _repoListBox.SelectedItem as string;
-
-        _repoListBox.BeginUpdate();
-        _repoListBox.Items.Clear();
-
-        foreach (var repository in _repositories)
-        {
-            _repoListBox.Items.Add(repository.Slug);
-        }
-
-        _repoListBox.EndUpdate();
-
-        if (selectedSlug is not null)
-        {
-            var index = _repositories.FindIndex(repository =>
-                repository.Slug.Equals(selectedSlug, StringComparison.OrdinalIgnoreCase));
-
-            if (index >= 0)
-            {
-                _repoListBox.SelectedIndex = index;
-            }
-        }
-
-        UpdateRepoButtons();
-    }
-
-    private void UpdateRepoButtons()
-    {
-        var index = _repoListBox.SelectedIndex;
-        var hasSelection = index >= 0;
-
-        _removeRepoButton.Enabled = hasSelection && _repositories.Count > 1;
-        _moveUpButton.Enabled = hasSelection && index > 0;
-        _moveDownButton.Enabled = hasSelection && index >= 0 && index < _repositories.Count - 1;
-    }
-
     private void OnRepoInputKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.KeyCode == Keys.Enter)
@@ -658,95 +616,80 @@ internal sealed class SettingsForm : Form
             return;
         }
 
-        if (_repositories.Any(existing =>
-                existing.Slug.Equals(reference.Slug, StringComparison.OrdinalIgnoreCase)))
+        if (_gridLayoutEditor.ContainsRepository(reference.Slug))
         {
             MessageBox.Show(
-                $"Репозиторий {reference.Slug} уже в списке.",
+                $"Репозиторий {reference.Slug} уже в сетке.",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
             return;
         }
 
-        _repositories.Add(reference);
-        _repoInputTextBox.Clear();
-        ApplyRepositories(reference.Slug);
-    }
-
-    private void OnRemoveRepoClick(object? sender, EventArgs e)
-    {
-        var index = _repoListBox.SelectedIndex;
-        if (index < 0)
-        {
-            return;
-        }
-
-        if (_repositories.Count <= 1)
+        if (!_gridLayoutEditor.TryAddRepository(reference.Slug))
         {
             MessageBox.Show(
-                "В списке должен остаться хотя бы один репозиторий.",
+                "Сетка заполнена. Увеличьте число строк или колонок, либо удалите репозиторий.",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
             return;
         }
 
-        _repositories.RemoveAt(index);
-        ApplyRepositories(selectSlug: _repositories[Math.Min(index, _repositories.Count - 1)].Slug);
+        _repoInputTextBox.Clear();
+        ApplyGridLayout();
     }
 
-    private void OnMoveUpClick(object? sender, EventArgs e)
+    private void OnRemoveRepoClick(object? sender, EventArgs e)
     {
-        var index = _repoListBox.SelectedIndex;
-        if (index <= 0)
+        if (_gridLayoutEditor.OccupiedSlotCount <= 1)
         {
+            MessageBox.Show(
+                "В сетке должен остаться хотя бы один репозиторий.",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
             return;
         }
 
-        var repository = _repositories[index];
-        _repositories.RemoveAt(index);
-        _repositories.Insert(index - 1, repository);
-        ApplyRepositories(repository.Slug);
-    }
-
-    private void OnMoveDownClick(object? sender, EventArgs e)
-    {
-        var index = _repoListBox.SelectedIndex;
-        if (index < 0 || index >= _repositories.Count - 1)
+        if (!_gridLayoutEditor.TryRemoveSelectedRepository())
         {
+            MessageBox.Show(
+                "Выберите ячейку с репозиторием, который нужно удалить.",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
             return;
         }
 
-        var repository = _repositories[index];
-        _repositories.RemoveAt(index);
-        _repositories.Insert(index + 1, repository);
-        ApplyRepositories(repository.Slug);
+        ApplyGridLayout();
     }
 
-    private void ApplyRepositories(string? selectSlug = null)
+    private void ApplyGridLayout()
     {
         try
         {
-            _settingsStore.SaveRepositories(_repositories);
-            _repoPoller.Start(_repositories);
-            RefreshRepoListBox();
+            _settingsStore.SaveGridLayout(
+                _gridLayoutEditor.GridColumns,
+                _gridLayoutEditor.GridRows,
+                _gridLayoutEditor.GetSlots());
 
-            if (selectSlug is not null)
+            _repoPoller.Start(_settingsStore.LoadRepositories());
+
+            _wallpaperController.PostMessageAsJson(new
             {
-                var index = _repositories.FindIndex(repository =>
-                    repository.Slug.Equals(selectSlug, StringComparison.OrdinalIgnoreCase));
-
-                if (index >= 0)
+                type = "layout:update",
+                payload = new
                 {
-                    _repoListBox.SelectedIndex = index;
-                }
-            }
+                    columns = _gridLayoutEditor.GridColumns,
+                    rows = _gridLayoutEditor.GridRows,
+                },
+            });
         }
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"Не удалось сохранить список репозиториев:\n{ex.Message}",
+                $"Не удалось сохранить сетку репозиториев:\n{ex.Message}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
