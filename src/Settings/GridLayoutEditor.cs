@@ -312,7 +312,7 @@ internal sealed class GridLayoutEditor : UserControl
             Padding = new Padding(8, 10, 8, 10);
             SettingsTheme.EnableDoubleBuffer(this);
 
-            _label = new Label
+            _label = new PassThroughLabel
             {
                 AutoEllipsis = true,
                 BackColor = Color.Transparent,
@@ -376,6 +376,24 @@ internal sealed class GridLayoutEditor : UserControl
             }
 
             base.OnPaint(e);
+        }
+    }
+
+    /// <summary>Метка, пропускающая мышь к родителю (для drag-and-drop по всей ячейке).</summary>
+    private sealed class PassThroughLabel : Label
+    {
+        private const int WmNcHitTest = 0x0084;
+        private const int HtTransparent = -1;
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WmNcHitTest)
+            {
+                m.Result = (IntPtr)HtTransparent;
+                return;
+            }
+
+            base.WndProc(ref m);
         }
     }
 }
