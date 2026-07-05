@@ -22,18 +22,17 @@ internal sealed class GridLayoutEditor : UserControl
 
     public GridLayoutEditor()
     {
-        SettingsTheme.ApplySurfaceBackground(this);
+        SettingsTheme.ApplyTransparentBackground(this);
 
         var sizePanel = new FlowLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
             Dock = DockStyle.Fill,
             WrapContents = false,
-            Padding = new Padding(0, 0, 0, 8),
+            Padding = new Padding(0, 0, 0, 10),
         };
-        SettingsTheme.EnableDoubleBuffer(sizePanel);
+        SettingsTheme.ApplyTransparentBackground(sizePanel);
 
         var columnsLabel = new Label
         {
@@ -65,18 +64,16 @@ internal sealed class GridLayoutEditor : UserControl
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
             ColumnCount = 3,
             RowCount = 2,
             Dock = DockStyle.Fill,
         };
-        SettingsTheme.EnableDoubleBuffer(_table);
+        SettingsTheme.ApplyTransparentBackground(_table);
 
         var root = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
             ColumnCount = 1,
             Dock = DockStyle.Top,
             RowCount = 2,
@@ -84,7 +81,7 @@ internal sealed class GridLayoutEditor : UserControl
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        SettingsTheme.EnableDoubleBuffer(root);
+        SettingsTheme.ApplyTransparentBackground(root);
 
         root.Controls.Add(sizePanel, 0, 0);
         root.Controls.Add(_table, 0, 1);
@@ -453,7 +450,7 @@ internal sealed class GridLayoutEditor : UserControl
             using var fill = new SolidBrush(SettingsTheme.SlotFill);
             e.Graphics.FillPath(fill, path);
 
-            var borderColor = _selected ? SettingsTheme.SlotSelected : SettingsTheme.GlassBorder;
+            var borderColor = _selected ? SettingsTheme.SlotSelected : SettingsTheme.CardBorder;
             var borderWidth = _selected ? 2f : 1f;
             using var border = new Pen(borderColor, borderWidth);
             e.Graphics.DrawPath(border, path);

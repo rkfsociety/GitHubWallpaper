@@ -88,7 +88,7 @@ internal sealed class SettingsForm : Form
             BackColor = SettingsTheme.BackgroundTop,
             Dock = DockStyle.Top,
             FlowDirection = FlowDirection.TopDown,
-            Padding = new Padding(20, 16, 20, 16),
+            Padding = new Padding(24, 20, 24, 20),
             WrapContents = false,
         };
         SettingsTheme.EnableDoubleBuffer(content);
@@ -185,21 +185,19 @@ internal sealed class SettingsForm : Form
 
         _authSignInPanel = new Panel
         {
-            BackColor = SettingsTheme.BackgroundTop,
             Location = Point.Empty,
             Width = innerWidth,
         };
-        SettingsTheme.EnableDoubleBuffer(_authSignInPanel);
+        SettingsTheme.ApplyTransparentBackground(_authSignInPanel);
 
         _authSignedInPanel = new Panel
         {
-            BackColor = SettingsTheme.BackgroundTop,
             Location = Point.Empty,
             Visible = false,
             Width = innerWidth,
             Height = AuthSignedInContentHeight,
         };
-        SettingsTheme.EnableDoubleBuffer(_authSignedInPanel);
+        SettingsTheme.ApplyTransparentBackground(_authSignedInPanel);
 
         _authUserLabel = new Label
         {
@@ -434,7 +432,6 @@ internal sealed class SettingsForm : Form
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
             ColumnCount = 1,
             RowCount = 4,
             Width = innerWidth,
@@ -444,7 +441,7 @@ internal sealed class SettingsForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        SettingsTheme.EnableDoubleBuffer(layout);
+        SettingsTheme.ApplyTransparentBackground(layout);
 
         var reposHint = CreateMutedLabel("Перетащите репозитории между ячейками");
         reposHint.AutoSize = true;
@@ -465,7 +462,6 @@ internal sealed class SettingsForm : Form
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
             ColumnCount = 2,
             Dock = DockStyle.Fill,
             Margin = new Padding(0, 0, 0, 8),
@@ -474,7 +470,7 @@ internal sealed class SettingsForm : Form
         };
         inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 124f));
-        SettingsTheme.EnableDoubleBuffer(inputRow);
+        SettingsTheme.ApplyTransparentBackground(inputRow);
 
         _repoInputTextBox = new ThemedTextBox
         {
