@@ -128,8 +128,15 @@ internal sealed class Bridge : IDisposable
     private void OnActivityFeedUpdated(object? sender, RepoPollUpdatedEventArgs<IReadOnlyList<ActivityFeedItem>> e) =>
         Post(CreateActivityFeedMessage(e.Repository, e.Data));
 
-    private void OnPollFailed(object? sender, RepoPollFailedEventArgs e) =>
+    private void OnPollFailed(object? sender, RepoPollFailedEventArgs e)
+    {
+        if (e.Kind is RepoPollKind.Heatmap or RepoPollKind.Events)
+        {
+            return;
+        }
+
         Post(CreatePollFailedMessage(e.Repository, e.Kind, e.Exception));
+    }
 
     private void PushInitialState()
     {

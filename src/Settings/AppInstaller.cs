@@ -69,18 +69,11 @@ internal static class AppInstaller
     }
 
     /// <summary>
-    /// Копирует HTML/CSS/JS обоев в AppData для portable single-file.
-    /// Источник — извлечённый bundle (<see cref="AppContext.BaseDirectory"/>) или папка рядом с exe.
+    /// Синхронизирует HTML/CSS/JS обоев из bundle в AppData для portable single-file.
     /// </summary>
     public static void EnsureWallpaperAssets()
     {
         if (IsDevelopmentBuild())
-        {
-            return;
-        }
-
-        var targetRoot = AppPaths.InstalledWallpaperRoot;
-        if (File.Exists(Path.Combine(targetRoot, "index.html")))
         {
             return;
         }
@@ -91,6 +84,7 @@ internal static class AppInstaller
             return;
         }
 
+        var targetRoot = AppPaths.InstalledWallpaperRoot;
         Directory.CreateDirectory(targetRoot);
 
         foreach (var file in Directory.GetFiles(sourceRoot))

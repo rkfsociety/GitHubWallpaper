@@ -464,7 +464,10 @@
       }
       case "repo:poll-failed": {
         const entry = ensureRepo(data.owner, data.repo);
-        entry.lastError = data.payload;
+        const silentKinds = new Set(["heatmap", "events"]);
+        if (!silentKinds.has(data.payload?.kind)) {
+          entry.lastError = data.payload;
+        }
         refreshRepoCard(data.owner, data.repo);
         dispatchBridgeEvent("wallpaper:repo-poll-failed", data);
         return;

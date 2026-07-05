@@ -9,6 +9,8 @@ internal sealed class RepoPoller : IDisposable
 {
     private static readonly TimeSpan LoopTick = TimeSpan.FromSeconds(30);
 
+    private static readonly TimeSpan PendingHeatmapPollInterval = TimeSpan.FromMinutes(2);
+
     /// <summary>Репозиторий по умолчанию до появления настроек (этап 3).</summary>
     public static readonly RepoReference DefaultRepository = new("microsoft", "vscode");
 
@@ -269,7 +271,11 @@ internal sealed class RepoPoller : IDisposable
                     await PollCiRunAsync(repository, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (IsDue(state.LastHeatmapPoll, intervals.Heatmap, includeNeverPolled))
+                var heatmapInterval = state.HeatmapPending
+                    ? PendingHeatmapPollInterval
+                    : intervals.Heatmap;
+
+                if (IsDue(state.LastHeatmapPoll, heatmapInterval, includeNeverPolled))
                 {
                     await PollHeatmapAsync(repository, cancellationToken).ConfigureAwait(false);
                 }
@@ -509,6 +515,17 @@ internal sealed class RepoPoller : IDisposable
             var etag = state.GetETag(EndpointKind.Heatmap);
             var result = await _client.GetStatsAsync(path, etag, cancellationToken).ConfigureAwait(false);
 
+            if (result is null)
+            {
+                lock (_sync)
+                {
+                    state.HeatmapPending = true;
+                    state.LastHeatmapPoll = DateTimeOffset.UtcNow;
+                }
+
+                return;
+            }
+
             if (result.IsNotModified)
             {
                 state.LastHeatmapPoll = DateTimeOffset.UtcNow;
@@ -521,6 +538,7 @@ internal sealed class RepoPoller : IDisposable
             lock (_sync)
             {
                 state.Heatmap = heatmap;
+                state.HeatmapPending = false;
                 state.LastHeatmapPoll = DateTimeOffset.UtcNow;
             }
 
@@ -636,6 +654,8 @@ internal sealed class RepoPoller : IDisposable
         public DateTimeOffset? LastCiPoll { get; set; }
 
         public DateTimeOffset? LastHeatmapPoll { get; set; }
+
+        public bool HeatmapPending { get; set; }
 
         public DateTimeOffset? LastEventsPoll { get; set; }
 

@@ -113,13 +113,14 @@ internal sealed class GitHubApiClient : IDisposable
 
     /// <summary>
     /// GET к <c>stats/*</c> с повтором при HTTP 202 (данные ещё не готовы).
+    /// Возвращает <c>null</c>, если GitHub всё ещё считает статистику — повторить позже.
     /// </summary>
-    public async Task<GitHubApiResult> GetStatsAsync(
+    public async Task<GitHubApiResult?> GetStatsAsync(
         string path,
         string? ifNoneMatch = null,
         CancellationToken cancellationToken = default)
     {
-        const int maxAttempts = 5;
+        const int maxAttempts = 12;
 
         for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
@@ -130,15 +131,16 @@ internal sealed class GitHubApiClient : IDisposable
                 return result;
             }
 
-            var delay = TimeSpan.FromSeconds(2 + attempt);
+            if (attempt == maxAttempts - 1)
+            {
+                break;
+            }
+
+            var delay = TimeSpan.FromSeconds(Math.Min(8, 2 + attempt));
             await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
         }
 
-        throw new GitHubApiException(
-            HttpStatusCode.Accepted,
-            path,
-            "GitHub stats не готовы после нескольких попыток.",
-            _rateLimitGuard.Current);
+        return null;
     }
 
     /// <summary>Проверяет PAT через <c>GET /user</c>.</summary>
