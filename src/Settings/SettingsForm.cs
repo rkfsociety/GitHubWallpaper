@@ -9,10 +9,11 @@ namespace GitHubWallpaper.Settings;
 /// </summary>
 internal sealed class SettingsForm : Form
 {
-    private const int FormContentWidth = 880;
-    private const int GridColumnWidth = 520;
+    private const int FormPadding = 24;
+    private const int ContentWidth = 880;
+    private const int LeftColumnWidth = 520;
     private const int ColumnGap = 14;
-    private static int SideColumnWidth => FormContentWidth - GridColumnWidth - ColumnGap;
+    private static int RightColumnWidth => ContentWidth - LeftColumnWidth - ColumnGap;
 
     private readonly GitHubSession _githubSession;
     private readonly SettingsStore _settingsStore;
@@ -26,22 +27,19 @@ internal sealed class SettingsForm : Form
     private LinkLabel _createTokenLinkLabel = null!;
     private TextBox _oauthClientIdTextBox = null!;
     private TextBox _oauthClientSecretTextBox = null!;
-    private FlowLayoutPanel _mainContent = null!;
-    private GlassSection _authSection = null!;
-    private GlassSection _reposSection = null!;
-    private GlassSection _displaySection = null!;
-    private GlassSection _behaviorSection = null!;
+    private TableLayoutPanel _pageLayout = null!;
+    private SettingsCard _authCard = null!;
     private Panel _authSignInPanel = null!;
     private Panel _authSignedInPanel = null!;
     private Label _authUserLabel = null!;
     private Button _authLogoutButton = null!;
     private Label _repoHintLabel = null!;
-    private int _authSignInContentHeight;
-    private const int AuthSignedInContentHeight = 44;
     private GridLayoutEditor _gridLayoutEditor = null!;
     private TextBox _repoInputTextBox = null!;
     private Button _removeRepoButton = null!;
-    private SegmentedChoice _pollPresetChoice = null!;
+    private RadioButton _economyRadio = null!;
+    private RadioButton _normalRadio = null!;
+    private RadioButton _frequentRadio = null!;
     private CheckBox _autoStartCheckBox = null!;
     private CheckBox _pauseFullscreenCheckBox = null!;
     private CheckBox _pauseBatteryCheckBox = null!;
@@ -73,7 +71,7 @@ internal sealed class SettingsForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(FormContentWidth + 40, 620);
+        ClientSize = new Size(ContentWidth + FormPadding * 2, 720);
         ShowInTaskbar = true;
         BackColor = SettingsTheme.BackgroundTop;
         ForeColor = SettingsTheme.TextPrimary;
@@ -81,63 +79,31 @@ internal sealed class SettingsForm : Form
         SettingsTheme.EnableDoubleBuffer(this);
 
         var scroll = new ThemedScrollPanel();
-
-        var content = new FlowLayoutPanel
+        _pageLayout = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = SettingsTheme.BackgroundTop,
+            ColumnCount = 1,
             Dock = DockStyle.Top,
-            FlowDirection = FlowDirection.TopDown,
-            Padding = new Padding(24, 20, 24, 20),
-            WrapContents = false,
+            Location = new Point(FormPadding, FormPadding),
+            Padding = Padding.Empty,
+            Width = ContentWidth,
         };
-        SettingsTheme.EnableDoubleBuffer(content);
-        _mainContent = content;
-        scroll.Controls.Add(content);
-        scroll.Resize += (_, _) => SyncContentWidth(scroll, content);
+        _pageLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        SettingsTheme.EnableDoubleBuffer(_pageLayout);
 
-        BuildAuthSection(content, FormContentWidth);
+        BuildAuthCard(_pageLayout);
+        BuildMainColumns(_pageLayout);
 
-        var bottomRow = new TableLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
-            ColumnCount = 2,
-            Margin = Padding.Empty,
-            RowCount = 1,
-            Width = FormContentWidth,
-        };
-        bottomRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, GridColumnWidth));
-        bottomRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, SideColumnWidth));
-        SettingsTheme.EnableDoubleBuffer(bottomRow);
-
-        var rightColumn = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
-            FlowDirection = FlowDirection.TopDown,
-            Margin = new Padding(ColumnGap, 0, 0, 0),
-            WrapContents = false,
-            Width = SideColumnWidth,
-        };
-        SettingsTheme.EnableDoubleBuffer(rightColumn);
-
-        BuildReposSection(bottomRow, GridColumnWidth);
-        BuildDisplaySection(rightColumn, SideColumnWidth);
-        BuildBehaviorSection(rightColumn, SideColumnWidth);
-        bottomRow.Controls.Add(rightColumn, 1, 0);
-        content.Controls.Add(bottomRow);
-
-        var repoHintLabel = CreateMutedLabel(
+        _repoHintLabel = CreateMutedLabel(
             "Токен и Client Secret — в Credential Manager. Device Flow не требует Secret.");
-        repoHintLabel.Width = FormContentWidth;
-        repoHintLabel.Height = 36;
-        _repoHintLabel = repoHintLabel;
-        content.Controls.Add(repoHintLabel);
+        _repoHintLabel.AutoSize = true;
+        _repoHintLabel.Margin = new Padding(0, 4, 0, 0);
+        _repoHintLabel.MaximumSize = new Size(ContentWidth, 0);
+        AddPageRow(_repoHintLabel);
 
+        scroll.Controls.Add(_pageLayout);
         Controls.Add(scroll);
 
         PopulateMonitorComboBox();
@@ -148,88 +114,91 @@ internal sealed class SettingsForm : Form
         UpdateTokenStatus();
         UpdateAuthView();
         RefreshAuthUserAsync();
+    }
 
-        Load += (_, _) =>
+    private void AddPageRow(Control control)
+    {
+        var row = _pageLayout.RowCount;
+        _pageLayout.RowCount++;
+        _pageLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _pageLayout.Controls.Add(control, 0, row);
+    }
+
+    private void BuildMainColumns(TableLayoutPanel page)
+    {
+        var columns = new TableLayoutPanel
         {
-            SyncContentWidth(scroll, content);
-            RefreshSectionHeights();
-            FitFormToContent(content);
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.BackgroundTop,
+            ColumnCount = 2,
+            Dock = DockStyle.Top,
+            Width = ContentWidth,
         };
-    }
+        columns.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LeftColumnWidth));
+        columns.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, RightColumnWidth));
 
-    private void RefreshSectionHeights()
-    {
-        if (_githubSession.HasStoredToken)
+        var rightStack = new TableLayoutPanel
         {
-            _authSection.SetTitleVisible(false);
-            _authSection.SetContentHeight(AuthSignedInContentHeight);
-        }
-        else
-        {
-            _authSection.SetTitleVisible(true);
-            _authSection.SetContentHeight(_authSignInContentHeight);
-        }
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.BackgroundTop,
+            ColumnCount = 1,
+            Dock = DockStyle.Top,
+            Margin = new Padding(ColumnGap, 0, 0, 0),
+            Width = RightColumnWidth,
+        };
+        rightStack.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
-        _reposSection.FitToContent();
-        _displaySection.FitToContent();
-        _behaviorSection.FitToContent();
-    }
+        BuildReposCard(columns);
+        BuildDisplayCard(rightStack);
+        BuildBehaviorCard(rightStack);
 
-    private static void SyncContentWidth(Panel scroll, FlowLayoutPanel content)
-    {
-        var width = scroll.ClientSize.Width;
-        if (scroll.VerticalScroll.Visible)
-        {
-            width -= SystemInformation.VerticalScrollBarWidth;
-        }
-
-        content.Width = Math.Max(1, width);
-    }
-
-    private void FitFormToContent(FlowLayoutPanel content)
-    {
-        content.PerformLayout();
-        var maxHeight = Screen.FromControl(this).WorkingArea.Height - 48;
-        var desiredHeight = Math.Min(content.PreferredSize.Height, maxHeight);
-        ClientSize = new Size(ClientSize.Width, Math.Max(desiredHeight, 480));
+        columns.Controls.Add(rightStack, 1, 0);
+        AddPageRow(columns);
     }
 
     protected override void OnPaintBackground(PaintEventArgs e) =>
         SettingsTheme.PaintFormBackground(e.Graphics, ClientRectangle);
 
-    private void BuildAuthSection(FlowLayoutPanel parent, int sectionWidth)
+    private void BuildAuthCard(TableLayoutPanel page)
     {
-        _authSection = new GlassSection("Авторизация GitHub", sectionWidth);
-        var panel = _authSection.ContentPanel;
-        var innerWidth = GlassSection.ContentWidth(sectionWidth);
+        _authCard = new SettingsCard("Авторизация GitHub", ContentWidth);
+        var body = _authCard.Body;
+        var innerWidth = SettingsCard.BodyWidth(ContentWidth);
 
-        _authSignInPanel = new Panel
-        {
-            Location = Point.Empty,
-            Width = innerWidth,
-        };
-        SettingsTheme.ApplyCardContentBackground(_authSignInPanel);
+        _authSignInPanel = CreateAuthSignInPanel(innerWidth);
+        _authSignedInPanel = CreateAuthSignedInPanel(innerWidth);
 
-        _authSignedInPanel = new Panel
+        body.Controls.Add(_authSignInPanel);
+        body.Controls.Add(_authSignedInPanel);
+        AddPageRow(_authCard);
+    }
+
+    private Panel CreateAuthSignedInPanel(int innerWidth)
+    {
+        var panel = new Panel
         {
-            Location = Point.Empty,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            Dock = DockStyle.Top,
             Visible = false,
             Width = innerWidth,
-            Height = AuthSignedInContentHeight,
         };
-        SettingsTheme.ApplyCardContentBackground(_authSignedInPanel);
 
-        var signedInRow = new TableLayoutPanel
+        var row = new TableLayoutPanel
         {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
             ColumnCount = 2,
-            Dock = DockStyle.Fill,
-            Height = AuthSignedInContentHeight,
-            RowCount = 1,
+            Dock = DockStyle.Top,
+            Width = innerWidth,
         };
-        signedInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        signedInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108f));
-        signedInRow.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        SettingsTheme.ApplyCardContentBackground(signedInRow);
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108f));
+        row.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
 
         _authUserLabel = new Label
         {
@@ -249,24 +218,68 @@ internal sealed class SettingsForm : Form
         };
         _authLogoutButton.Click += OnLogoutClick;
 
-        signedInRow.Controls.Add(_authUserLabel, 0, 0);
-        signedInRow.Controls.Add(_authLogoutButton, 1, 0);
-        _authSignedInPanel.Controls.Add(signedInRow);
+        row.Controls.Add(_authUserLabel, 0, 0);
+        row.Controls.Add(_authLogoutButton, 1, 0);
+        panel.Controls.Add(row);
+        return panel;
+    }
 
-        var y = 0;
-
-        _signInWithGitHubButton = new GlowButton
+    private Panel CreateAuthSignInPanel(int innerWidth)
+    {
+        var panel = new Panel
         {
-            Location = new Point(0, y),
-            Size = new Size(196, 34),
-            Text = "Войти через GitHub",
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            Dock = DockStyle.Top,
+            Width = innerWidth,
         };
+
+        var layout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            ColumnCount = 1,
+            Dock = DockStyle.Top,
+            Width = innerWidth,
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+
+        void AddRow(Control control, SizeType height = SizeType.AutoSize, int absoluteHeight = 0)
+        {
+            var row = layout.RowCount;
+            layout.RowCount++;
+            layout.RowStyles.Add(absoluteHeight > 0
+                ? new RowStyle(SizeType.Absolute, absoluteHeight)
+                : new RowStyle(height));
+            control.Dock = absoluteHeight > 0 ? DockStyle.Fill : DockStyle.Top;
+            control.Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
+            layout.Controls.Add(control, 0, row);
+        }
+
+        var signInRow = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            ColumnCount = 3,
+            Dock = DockStyle.Top,
+            Width = innerWidth,
+        };
+        signInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 196f));
+        signInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        signInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108f));
+        signInRow.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
+
+        _signInWithGitHubButton = new GlowButton { Text = "Войти через GitHub" };
         _signInWithGitHubButton.Click += OnSignInWithGitHubClick;
 
         _deviceSignInLinkLabel = new LinkLabel
         {
             AutoSize = true,
-            Location = new Point(208, y + 8),
+            LinkBehavior = LinkBehavior.HoverUnderline,
+            Padding = new Padding(8, 10, 0, 0),
             Text = "Вход по коду устройства",
         };
         SettingsTheme.ApplyToLink(_deviceSignInLinkLabel);
@@ -275,128 +288,107 @@ internal sealed class SettingsForm : Form
         _createTokenLinkLabel = new LinkLabel
         {
             AutoSize = true,
-            Location = new Point(innerWidth - 108, y + 8),
+            LinkBehavior = LinkBehavior.HoverUnderline,
+            Padding = new Padding(0, 10, 0, 0),
             Text = "Токен вручную",
+            TextAlign = ContentAlignment.TopRight,
         };
         SettingsTheme.ApplyToLink(_createTokenLinkLabel);
         _createTokenLinkLabel.LinkClicked += OnCreateTokenLinkClicked;
 
-        y += 44;
+        signInRow.Controls.Add(_signInWithGitHubButton, 0, 0);
+        signInRow.Controls.Add(_deviceSignInLinkLabel, 1, 0);
+        signInRow.Controls.Add(_createTokenLinkLabel, 2, 0);
+        AddRow(signInRow);
 
-        var oauthClientIdLabel = CreateFieldLabel("OAuth Client ID");
-        oauthClientIdLabel.Location = new Point(0, y + 6);
-        _oauthClientIdTextBox = new ThemedTextBox
-        {
-            PlaceholderText = "из GitHub → Developer settings",
-            Width = 280,
-        };
+        var oauthIdRow = CreateLabeledFieldRow(innerWidth, "OAuth Client ID", out _oauthClientIdTextBox);
+        _oauthClientIdTextBox.PlaceholderText = "из GitHub → Developer settings";
         _oauthClientIdTextBox.Leave += OnOAuthClientIdLeave;
-        var oauthClientIdField = new TextField(_oauthClientIdTextBox)
-        {
-            Location = new Point(112, y),
-            Width = innerWidth - 112 - 136,
-        };
+        AddRow(oauthIdRow);
 
         var oauthRegisterLinkLabel = new LinkLabel
         {
             AutoSize = true,
-            Location = new Point(innerWidth - 128, y + 8),
+            LinkBehavior = LinkBehavior.HoverUnderline,
             Text = "Создать OAuth App",
         };
         SettingsTheme.ApplyToLink(oauthRegisterLinkLabel);
         oauthRegisterLinkLabel.LinkClicked += OnOAuthRegisterLinkClicked;
+        AddRow(oauthRegisterLinkLabel);
 
-        y += 38;
-
-        var oauthClientSecretLabel = CreateFieldLabel("Client Secret");
-        oauthClientSecretLabel.Location = new Point(0, y + 6);
-        _oauthClientSecretTextBox = new ThemedTextBox
-        {
-            PlaceholderText = "для входа через браузер (необязательно)",
-            UseSystemPasswordChar = true,
-            Width = 280,
-        };
+        var oauthSecretRow = CreateLabeledFieldRow(innerWidth, "Client Secret", out _oauthClientSecretTextBox);
+        _oauthClientSecretTextBox.PlaceholderText = "для входа через браузер (необязательно)";
+        _oauthClientSecretTextBox.UseSystemPasswordChar = true;
         _oauthClientSecretTextBox.Leave += OnOAuthClientSecretLeave;
-        var oauthClientSecretField = new TextField(_oauthClientSecretTextBox)
-        {
-            Location = new Point(112, y),
-            Width = innerWidth - 112,
-        };
+        AddRow(oauthSecretRow);
 
-        y += 44;
+        AddRow(CreateMutedLabel("Или вставьте Personal Access Token:"));
 
-        var manualTokenLabel = CreateMutedLabel("Или вставьте Personal Access Token:");
-        manualTokenLabel.Location = new Point(0, y);
-        manualTokenLabel.AutoSize = true;
-        y += 22;
-
-        _tokenTextBox = new ThemedTextBox
-        {
-            UseSystemPasswordChar = true,
-            Width = innerWidth,
-        };
-        var tokenField = new TextField(_tokenTextBox)
-        {
-            Location = new Point(0, y),
-            Width = innerWidth,
-        };
-        y += 38;
+        _tokenTextBox = new ThemedTextBox { UseSystemPasswordChar = true };
+        AddRow(new TextField(_tokenTextBox), SizeType.Absolute, SettingsTheme.ControlHeight);
 
         _tokenStatusLabel = CreateMutedLabel(string.Empty);
-        _tokenStatusLabel.Location = new Point(0, y);
-        _tokenStatusLabel.Size = new Size(innerWidth, 42);
-        y += 48;
+        _tokenStatusLabel.Height = 36;
+        AddRow(_tokenStatusLabel);
 
-        var saveButton = new GlowButton
+        var buttonsRow = new TableLayoutPanel
         {
-            Location = new Point(0, y),
-            Size = new Size(112, 34),
-            Text = "Сохранить",
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            ColumnCount = 3,
+            Dock = DockStyle.Top,
+            Width = innerWidth,
         };
+        buttonsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112f));
+        buttonsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112f));
+        buttonsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112f));
+        buttonsRow.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
+
+        var saveButton = new GlowButton { Text = "Сохранить" };
         saveButton.Click += OnSaveClick;
-
-        var verifyButton = new GhostButton
-        {
-            Location = new Point(120, y),
-            Size = new Size(112, 34),
-            Text = "Проверить",
-        };
+        var verifyButton = new GhostButton { Text = "Проверить" };
         verifyButton.Click += OnVerifyClick;
-
-        var clearButton = new GhostButton
-        {
-            Location = new Point(240, y),
-            Size = new Size(112, 34),
-            Text = "Очистить",
-        };
+        var clearButton = new GhostButton { Text = "Очистить" };
         clearButton.Click += OnClearClick;
 
-        y += 46;
-        _authSignInContentHeight = y;
-        _authSignInPanel.Height = y;
+        buttonsRow.Controls.Add(saveButton, 0, 0);
+        buttonsRow.Controls.Add(verifyButton, 1, 0);
+        buttonsRow.Controls.Add(clearButton, 2, 0);
+        AddRow(buttonsRow);
 
-        _authSignInPanel.Controls.AddRange([
-            _signInWithGitHubButton,
-            _deviceSignInLinkLabel,
-            _createTokenLinkLabel,
-            oauthClientIdLabel,
-            oauthClientIdField,
-            oauthRegisterLinkLabel,
-            oauthClientSecretLabel,
-            oauthClientSecretField,
-            manualTokenLabel,
-            tokenField,
-            _tokenStatusLabel,
-            saveButton,
-            verifyButton,
-            clearButton,
-        ]);
+        panel.Controls.Add(layout);
+        return panel;
+    }
 
-        panel.Controls.Add(_authSignInPanel);
-        panel.Controls.Add(_authSignedInPanel);
-        _authSection.SetContentHeight(_authSignInContentHeight);
+    private static TableLayoutPanel CreateLabeledFieldRow(int width, string labelText, out TextBox textBox)
+    {
+        var row = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            ColumnCount = 2,
+            Dock = DockStyle.Top,
+            Width = width,
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112f));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        row.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
 
-        parent.Controls.Add(_authSection);
+        var label = new Label
+        {
+            AutoSize = true,
+            ForeColor = SettingsTheme.TextPrimary,
+            Padding = new Padding(0, 10, 0, 0),
+            Text = labelText,
+        };
+
+        textBox = new ThemedTextBox();
+        var field = new TextField(textBox) { Dock = DockStyle.Fill };
+        row.Controls.Add(label, 0, 0);
+        row.Controls.Add(field, 1, 0);
+        return row;
     }
 
     private void UpdateAuthView()
@@ -405,9 +397,8 @@ internal sealed class SettingsForm : Form
         _authSignInPanel.Visible = !signedIn;
         _authSignedInPanel.Visible = signedIn;
         _repoHintLabel.Visible = !signedIn;
-        _authSection.SetTitleVisible(!signedIn);
-        _authSection.SetContentHeight(signedIn ? AuthSignedInContentHeight : _authSignInContentHeight);
-        FitFormToContent(_mainContent);
+        _authCard.SetTitleVisible(!signedIn);
+        _authCard.PerformLayout();
     }
 
     private void SetAuthUserLogin(string? login)
@@ -457,37 +448,42 @@ internal sealed class SettingsForm : Form
         }
     }
 
-    private void BuildReposSection(TableLayoutPanel parent, int sectionWidth)
+    private void BuildReposCard(TableLayoutPanel columns)
     {
-        var section = new GlassSection("Сетка обоев", sectionWidth);
-        _reposSection = section;
-        var panel = section.ContentPanel;
-        var innerWidth = GlassSection.ContentWidth(sectionWidth);
+        var card = new SettingsCard("Сетка обоев", LeftColumnWidth);
+        var body = card.Body;
+        var innerWidth = SettingsCard.BodyWidth(LeftColumnWidth);
 
         var layout = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
             ColumnCount = 1,
             Dock = DockStyle.Top,
-            RowCount = 3,
             Width = innerWidth,
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        SettingsTheme.ApplyCardContentBackground(layout);
 
-        var gridHost = new InnerPanel
+        void AddBodyRow(Control control, SizeType rowSize = SizeType.AutoSize, int absoluteHeight = 0)
+        {
+            var row = layout.RowCount;
+            layout.RowCount++;
+            layout.RowStyles.Add(absoluteHeight > 0
+                ? new RowStyle(SizeType.Absolute, absoluteHeight)
+                : new RowStyle(rowSize));
+            control.Dock = DockStyle.Top;
+            control.Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
+            layout.Controls.Add(control, 0, row);
+        }
+
+        var gridHost = new GridHostPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Top,
-            Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap),
             Width = innerWidth,
         };
-        SettingsTheme.EnableDoubleBuffer(gridHost);
 
         var gridHint = CreateMutedLabel("Перетащите репозитории между ячейками");
         gridHint.AutoSize = true;
@@ -504,170 +500,158 @@ internal sealed class SettingsForm : Form
         };
         _gridLayoutEditor.LayoutChanged += OnGridLayoutChanged;
         gridHost.Controls.Add(_gridLayoutEditor);
-        layout.Controls.Add(gridHost, 0, 0);
+        AddBodyRow(gridHost);
 
         var inputRow = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
             ColumnCount = 2,
-            Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap),
-            RowCount = 1,
+            Dock = DockStyle.Top,
             Width = innerWidth,
         };
         inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128f));
         inputRow.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
-        SettingsTheme.ApplyCardContentBackground(inputRow);
 
         _repoInputTextBox = new ThemedTextBox
         {
             PlaceholderText = "owner/repo или https://github.com/owner/repo",
         };
         _repoInputTextBox.KeyDown += OnRepoInputKeyDown;
-        var repoInputField = new TextField(_repoInputTextBox)
-        {
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, 8, 0),
-        };
 
-        var addRepoButton = new GlowButton
-        {
-            Dock = DockStyle.Fill,
-            Margin = Padding.Empty,
-            Text = "Добавить",
-        };
+        var addRepoButton = new GlowButton { Text = "Добавить" };
         addRepoButton.Click += OnAddRepoClick;
 
-        inputRow.Controls.Add(repoInputField, 0, 0);
+        inputRow.Controls.Add(new TextField(_repoInputTextBox) { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 8, 0) }, 0, 0);
         inputRow.Controls.Add(addRepoButton, 1, 0);
-        layout.Controls.Add(inputRow, 0, 1);
+        AddBodyRow(inputRow);
 
         _removeRepoButton = new GhostButton
         {
-            AutoSize = false,
-            Margin = Padding.Empty,
             Size = new Size(128, SettingsTheme.ControlHeight),
             Text = "Удалить",
         };
         _removeRepoButton.Click += OnRemoveRepoClick;
-        layout.Controls.Add(_removeRepoButton, 0, 2);
+        AddBodyRow(_removeRepoButton);
 
-        panel.Controls.Add(layout);
-        section.FitToContent();
-        parent.Controls.Add(section, 0, 0);
+        body.Controls.Add(layout);
+        columns.Controls.Add(card, 0, 0);
     }
 
-    private void BuildDisplaySection(FlowLayoutPanel parent, int sectionWidth)
+    private static void AddStackRow(TableLayoutPanel stack, Control control)
     {
-        var section = new GlassSection("Экран", sectionWidth);
-        _displaySection = section;
-        var panel = section.ContentPanel;
-        var innerWidth = GlassSection.ContentWidth(sectionWidth);
+        var row = stack.RowCount;
+        stack.RowCount++;
+        stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        control.Dock = DockStyle.Top;
+        control.Margin = new Padding(0, 0, 0, SettingsTheme.SectionGap);
+        stack.Controls.Add(control, 0, row);
+    }
+
+    private void BuildDisplayCard(TableLayoutPanel stack)
+    {
+        var card = new SettingsCard("Экран", RightColumnWidth);
+        var body = card.Body;
+        var innerWidth = SettingsCard.BodyWidth(RightColumnWidth);
 
         var layout = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
             ColumnCount = 1,
             Dock = DockStyle.Top,
-            RowCount = 2,
             Width = innerWidth,
         };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        layout.RowCount = 2;
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
-        SettingsTheme.ApplyCardContentBackground(layout);
 
         var monitorLabel = CreateMutedLabel("Монитор");
         monitorLabel.AutoSize = true;
         monitorLabel.Margin = new Padding(0, 0, 0, 6);
         layout.Controls.Add(monitorLabel, 0, 0);
 
-        _monitorComboBox = new ComboBox
-        {
-            DropDownStyle = ComboBoxStyle.DropDownList,
-        };
+        _monitorComboBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         SettingsTheme.ApplyToComboBox(_monitorComboBox);
         _monitorComboBox.SelectedIndexChanged += OnBehaviorChanged;
+        layout.Controls.Add(new ComboField(_monitorComboBox) { Dock = DockStyle.Fill }, 0, 1);
 
-        var monitorField = new ComboField(_monitorComboBox)
-        {
-            Dock = DockStyle.Fill,
-            Margin = Padding.Empty,
-        };
-        layout.Controls.Add(monitorField, 0, 1);
-
-        panel.Controls.Add(layout);
-        section.FitToContent();
-        parent.Controls.Add(section);
+        body.Controls.Add(layout);
+        AddStackRow(stack, card);
     }
 
-    private void BuildBehaviorSection(FlowLayoutPanel parent, int sectionWidth)
+    private void BuildBehaviorCard(TableLayoutPanel stack)
     {
-        var section = new GlassSection("Поведение", sectionWidth);
-        _behaviorSection = section;
-        var panel = section.ContentPanel;
-        var innerWidth = GlassSection.ContentWidth(sectionWidth);
+        var card = new SettingsCard("Поведение", RightColumnWidth);
+        var body = card.Body;
+        var innerWidth = SettingsCard.BodyWidth(RightColumnWidth);
 
         var layout = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
             ColumnCount = 1,
             Dock = DockStyle.Top,
-            RowCount = 6,
             Width = innerWidth,
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        SettingsTheme.ApplyCardContentBackground(layout);
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+
+        void AddBodyRow(Control control)
+        {
+            var row = layout.RowCount;
+            layout.RowCount++;
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            control.Dock = DockStyle.Top;
+            control.Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
+            layout.Controls.Add(control, 0, row);
+        }
 
         var pollLabel = CreateMutedLabel("Интервал опроса GitHub API");
         pollLabel.AutoSize = true;
-        pollLabel.Margin = new Padding(0, 0, 0, 8);
-        layout.Controls.Add(pollLabel, 0, 0);
+        AddBodyRow(pollLabel);
 
-        _pollPresetChoice = new SegmentedChoice
-        {
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap),
-            Width = innerWidth,
-        };
-        _pollPresetChoice.SetSegments([
-            "Экономный 15/10",
-            "Нормальный 5/2",
-            "Частый 2/1",
-        ]);
-        _pollPresetChoice.SelectionChanged += OnBehaviorChanged;
-        layout.Controls.Add(_pollPresetChoice, 0, 1);
+        _economyRadio = new RadioButton { Text = "Экономный (15 / 10 мин)" };
+        SettingsTheme.ApplyToRadio(_economyRadio);
+        _economyRadio.CheckedChanged += OnBehaviorChanged;
+        AddBodyRow(_economyRadio);
 
-        _autoStartCheckBox = new CheckBox { AutoSize = true, Text = "Запускать при старте Windows" };
+        _normalRadio = new RadioButton { Text = "Нормальный (5 / 2 мин)" };
+        SettingsTheme.ApplyToRadio(_normalRadio);
+        _normalRadio.CheckedChanged += OnBehaviorChanged;
+        AddBodyRow(_normalRadio);
+
+        _frequentRadio = new RadioButton { Text = "Частый (2 / 1 мин)" };
+        SettingsTheme.ApplyToRadio(_frequentRadio);
+        _frequentRadio.CheckedChanged += OnBehaviorChanged;
+        AddBodyRow(_frequentRadio);
+
+        _autoStartCheckBox = new CheckBox { Text = "Запускать при старте Windows" };
         SettingsTheme.ApplyToCheckBox(_autoStartCheckBox);
         _autoStartCheckBox.CheckedChanged += OnBehaviorChanged;
-        layout.Controls.Add(_autoStartCheckBox, 0, 2);
+        AddBodyRow(_autoStartCheckBox);
 
-        _pauseFullscreenCheckBox = new CheckBox { AutoSize = true, Text = "Пауза при полноэкранных приложениях" };
+        _pauseFullscreenCheckBox = new CheckBox { Text = "Пауза при полноэкранных приложениях" };
         SettingsTheme.ApplyToCheckBox(_pauseFullscreenCheckBox);
         _pauseFullscreenCheckBox.CheckedChanged += OnBehaviorChanged;
-        layout.Controls.Add(_pauseFullscreenCheckBox, 0, 3);
+        AddBodyRow(_pauseFullscreenCheckBox);
 
-        _pauseBatteryCheckBox = new CheckBox { AutoSize = true, Text = "Пауза при работе от батареи" };
+        _pauseBatteryCheckBox = new CheckBox { Text = "Пауза при работе от батареи" };
         SettingsTheme.ApplyToCheckBox(_pauseBatteryCheckBox);
         _pauseBatteryCheckBox.CheckedChanged += OnBehaviorChanged;
-        layout.Controls.Add(_pauseBatteryCheckBox, 0, 4);
+        AddBodyRow(_pauseBatteryCheckBox);
 
-        _autoCheckUpdatesCheckBox = new CheckBox { AutoSize = true, Text = "Автопроверка обновлений (раз в сутки)" };
+        _autoCheckUpdatesCheckBox = new CheckBox { Text = "Автопроверка обновлений (раз в сутки)" };
         SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
-        layout.Controls.Add(_autoCheckUpdatesCheckBox, 0, 5);
+        AddBodyRow(_autoCheckUpdatesCheckBox);
 
-        panel.Controls.Add(layout);
-        section.FitToContent();
-        parent.Controls.Add(section);
+        body.Controls.Add(layout);
+        AddStackRow(stack, card);
     }
 
     private static Label CreateFieldLabel(string text)
@@ -685,7 +669,8 @@ internal sealed class SettingsForm : Form
     {
         var label = new Label
         {
-            AutoSize = false,
+            AutoSize = true,
+            BackColor = SettingsTheme.CardFill,
             Text = text,
         };
         SettingsTheme.ApplyToLabel(label, muted: true);
@@ -792,13 +777,13 @@ internal sealed class SettingsForm : Form
         switch (settings.PollIntervalPreset)
         {
             case PollIntervalPreset.Economy:
-                _pollPresetChoice.SetSelectedIndexSilent(0);
+                _economyRadio.Checked = true;
                 break;
             case PollIntervalPreset.Frequent:
-                _pollPresetChoice.SetSelectedIndexSilent(2);
+                _frequentRadio.Checked = true;
                 break;
             default:
-                _pollPresetChoice.SetSelectedIndexSilent(1);
+                _normalRadio.Checked = true;
                 break;
         }
 
@@ -899,13 +884,20 @@ internal sealed class SettingsForm : Form
         }
     }
 
-    private PollIntervalPreset GetSelectedPollPreset() =>
-        _pollPresetChoice.SelectedIndex switch
+    private PollIntervalPreset GetSelectedPollPreset()
+    {
+        if (_economyRadio.Checked)
         {
-            0 => PollIntervalPreset.Economy,
-            2 => PollIntervalPreset.Frequent,
-            _ => PollIntervalPreset.Normal,
-        };
+            return PollIntervalPreset.Economy;
+        }
+
+        if (_frequentRadio.Checked)
+        {
+            return PollIntervalPreset.Frequent;
+        }
+
+        return PollIntervalPreset.Normal;
+    }
 
     private void OnRepoInputKeyDown(object? sender, KeyEventArgs e)
     {

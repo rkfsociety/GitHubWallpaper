@@ -98,6 +98,16 @@ internal static class SettingsTheme
         graphics.FillEllipse(purpleGlow, bounds.Width - 300, bounds.Height - 260, 320, 280);
     }
 
+    public static void PaintCardBorder(Graphics graphics, Rectangle bounds, int radius)
+    {
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        bounds.Width -= 1;
+        bounds.Height -= 1;
+        using var path = CreateRoundedRectangle(bounds, radius);
+        using var border = new Pen(CardBorder, 1f);
+        graphics.DrawPath(border, path);
+    }
+
     public static void PaintCard(Graphics graphics, Rectangle bounds, int radius)
     {
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
@@ -130,7 +140,7 @@ internal static class SettingsTheme
     public static void ApplyToLabel(Label label, bool muted = false)
     {
         label.ForeColor = muted ? TextMuted : TextPrimary;
-        label.BackColor = Color.Transparent;
+        label.BackColor = CardFill;
         label.Font = muted ? SmallFont : BodyFont;
     }
 
@@ -147,18 +157,26 @@ internal static class SettingsTheme
         link.LinkColor = AccentBlue;
         link.ActiveLinkColor = Color.FromArgb(121, 192, 255);
         link.VisitedLinkColor = AccentBlue;
-        link.BackColor = Color.Transparent;
+        link.BackColor = CardFill;
         link.Font = BodyFont;
     }
 
     public static void ApplyToCheckBox(CheckBox checkBox)
     {
         checkBox.ForeColor = TextPrimary;
-        checkBox.BackColor = Color.Transparent;
+        checkBox.BackColor = CardFill;
         checkBox.Font = BodyFont;
-        checkBox.FlatStyle = FlatStyle.Flat;
-        checkBox.FlatAppearance.BorderSize = 0;
-        checkBox.Margin = new Padding(0, 0, 0, 8);
+        checkBox.AutoSize = true;
+        checkBox.Margin = new Padding(0, 0, 0, 6);
+    }
+
+    public static void ApplyToRadio(RadioButton radio)
+    {
+        radio.ForeColor = TextPrimary;
+        radio.BackColor = CardFill;
+        radio.Font = BodyFont;
+        radio.AutoSize = true;
+        radio.Margin = new Padding(0, 0, 0, 4);
     }
 
     public static void ApplyToComboBox(ComboBox comboBox)
