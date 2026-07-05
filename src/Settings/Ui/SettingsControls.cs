@@ -14,17 +14,12 @@ internal sealed class ThemedScrollPanel : Panel
         SettingsTheme.PaintFormBackground(e.Graphics, ClientRectangle);
 }
 
-/// <summary>Контент внутри карточки без собственного фона.</summary>
+/// <summary>Контент внутри карточки.</summary>
 internal sealed class CardContentPanel : Panel
 {
     public CardContentPanel()
     {
-        BackColor = Color.Transparent;
-        SettingsTheme.EnableDoubleBuffer(this);
-    }
-
-    protected override void OnPaintBackground(PaintEventArgs e)
-    {
+        SettingsTheme.ApplyCardContentBackground(this);
     }
 }
 
@@ -69,8 +64,30 @@ internal sealed class GlassSection : Panel
 
     public void SetContentHeight(int height)
     {
-        ContentPanel.Height = height;
+        ContentPanel.Height = Math.Max(1, height);
         Height = ContentPanel.Bottom + SettingsTheme.SectionPadding;
+    }
+
+    public void FitToContent()
+    {
+        ContentPanel.PerformLayout();
+        var height = 0;
+        foreach (Control child in ContentPanel.Controls)
+        {
+            if (child.AutoSize)
+            {
+                child.PerformLayout();
+            }
+
+            height = Math.Max(height, child.Bottom);
+        }
+
+        if (height <= 0 && ContentPanel.Controls.Count == 1)
+        {
+            height = ContentPanel.Controls[0].PreferredSize.Height;
+        }
+
+        SetContentHeight(Math.Max(1, height));
     }
 
     public void SetTitleVisible(bool visible)
@@ -102,7 +119,8 @@ internal sealed class InnerPanel : Panel
 {
     public InnerPanel()
     {
-        SettingsTheme.ApplySurfaceBackground(this);
+        BackColor = SettingsTheme.InnerPanelFill;
+        SettingsTheme.EnableDoubleBuffer(this);
         Padding = new Padding(12);
     }
 
@@ -152,7 +170,6 @@ internal sealed class GlowButton : ThemedButtonBase
 
     protected override void OnPaint(PaintEventArgs pevent)
     {
-        pevent.Graphics.SetClip(ClientRectangle);
         pevent.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var bounds = ClientRectangle;
         bounds.Width -= 1;
@@ -165,10 +182,6 @@ internal sealed class GlowButton : ThemedButtonBase
         }
 
         using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
-        using var glow = new SolidBrush(Color.FromArgb(_hover ? 56 : 36, SettingsTheme.Accent));
-        var glowBounds = Rectangle.Inflate(bounds, 2, 2);
-        using var glowPath = SettingsTheme.CreateRoundedRectangle(glowBounds, SettingsTheme.ControlCornerRadius + 1);
-        pevent.Graphics.FillPath(glow, glowPath);
         using var brush = new SolidBrush(fill);
         pevent.Graphics.FillPath(brush, path);
 
@@ -184,7 +197,7 @@ internal sealed class GhostButton : ThemedButtonBase
 
     public GhostButton()
     {
-        BackColor = Color.Transparent;
+        BackColor = SettingsTheme.CardFill;
         ForeColor = SettingsTheme.TextPrimary;
         Font = SettingsTheme.BodyFont;
         MouseEnter += (_, _) => { _hover = true; Invalidate(); };
@@ -193,7 +206,6 @@ internal sealed class GhostButton : ThemedButtonBase
 
     protected override void OnPaint(PaintEventArgs pevent)
     {
-        pevent.Graphics.SetClip(ClientRectangle);
         pevent.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var bounds = ClientRectangle;
         bounds.Width -= 1;
@@ -220,7 +232,7 @@ internal sealed class OutlineButton : ThemedButtonBase
     public OutlineButton(Color accent)
     {
         _accent = accent;
-        BackColor = Color.Transparent;
+        BackColor = SettingsTheme.CardFill;
         ForeColor = SettingsTheme.TextPrimary;
         Font = SettingsTheme.BodyFont;
         MouseEnter += (_, _) => { _hover = true; Invalidate(); };
@@ -229,19 +241,10 @@ internal sealed class OutlineButton : ThemedButtonBase
 
     protected override void OnPaint(PaintEventArgs pevent)
     {
-        pevent.Graphics.SetClip(ClientRectangle);
         pevent.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var bounds = ClientRectangle;
         bounds.Width -= 1;
         bounds.Height -= 1;
-
-        if (_hover)
-        {
-            using var glow = new SolidBrush(Color.FromArgb(40, _accent));
-            var glowBounds = Rectangle.Inflate(bounds, 2, 2);
-            using var glowPath = SettingsTheme.CreateRoundedRectangle(glowBounds, SettingsTheme.ControlCornerRadius + 1);
-            pevent.Graphics.FillPath(glow, glowPath);
-        }
 
         using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
         using var fill = new SolidBrush(Color.FromArgb(_hover ? 32 : 16, _accent));
@@ -257,14 +260,29 @@ internal sealed class OutlineButton : ThemedButtonBase
 /// <summary>Горизонтальный переключатель из pill-кнопок.</summary>
 internal sealed class SegmentedChoice : Panel
 {
+    private readonly TableLayoutPanel _layout;
     private readonly List<SegmentButton> _segments = [];
     private bool _suppressEvents;
     private int _selectedIndex;
 
     public SegmentedChoice()
     {
-        SettingsTheme.ApplyTransparentBackground(this);
-        Height = SettingsTheme.ControlHeight + 4;
+        SettingsTheme.ApplyCardContentBackground(this);
+        Height = SettingsTheme.ControlHeight;
+
+        _layout = new TableLayoutPanel
+        {
+            ColumnCount = 3,
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
+            RowCount = 1,
+        };
+        _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+        _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
+        _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+        _layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        SettingsTheme.ApplyCardContentBackground(_layout);
+        Controls.Add(_layout);
     }
 
     public event EventHandler? SelectionChanged;
@@ -274,7 +292,12 @@ internal sealed class SegmentedChoice : Panel
         get => _selectedIndex;
         set
         {
-            if (value < 0 || value >= _segments.Count || value == _selectedIndex)
+            if (value < 0 || value >= _segments.Count)
+            {
+                return;
+            }
+
+            if (value == _selectedIndex)
             {
                 return;
             }
@@ -290,7 +313,7 @@ internal sealed class SegmentedChoice : Panel
 
     public void SetSegments(IReadOnlyList<string> labels)
     {
-        Controls.Clear();
+        _layout.Controls.Clear();
         _segments.Clear();
 
         for (var index = 0; index < labels.Count; index++)
@@ -298,14 +321,14 @@ internal sealed class SegmentedChoice : Panel
             var segmentIndex = index;
             var button = new SegmentButton(labels[index])
             {
-                Dock = DockStyle.Left,
+                Dock = DockStyle.Fill,
+                Margin = index < labels.Count - 1 ? new Padding(0, 0, 6, 0) : Padding.Empty,
             };
             button.Click += (_, _) => SelectedIndex = segmentIndex;
             _segments.Add(button);
-            Controls.Add(button);
+            _layout.Controls.Add(button, index, 0);
         }
 
-        ResizeSegments();
         if (_segments.Count > 0)
         {
             _selectedIndex = Math.Clamp(_selectedIndex, 0, _segments.Count - 1);
@@ -315,30 +338,15 @@ internal sealed class SegmentedChoice : Panel
 
     public void SetSelectedIndexSilent(int index)
     {
-        _suppressEvents = true;
-        SelectedIndex = index;
-        _suppressEvents = false;
-    }
-
-    protected override void OnSizeChanged(EventArgs e)
-    {
-        base.OnSizeChanged(e);
-        ResizeSegments();
-    }
-
-    private void ResizeSegments()
-    {
-        if (_segments.Count == 0 || Width <= 0)
+        if (index < 0 || index >= _segments.Count)
         {
             return;
         }
 
-        var segmentWidth = Math.Max(1, (Width - (_segments.Count - 1) * 6) / _segments.Count);
-        foreach (var segment in _segments)
-        {
-            segment.Width = segmentWidth;
-            segment.Margin = new Padding(0, 0, 6, 0);
-        }
+        _suppressEvents = true;
+        _selectedIndex = index;
+        UpdateSegmentVisuals();
+        _suppressEvents = false;
     }
 
     private void UpdateSegmentVisuals()
@@ -358,7 +366,7 @@ internal sealed class SegmentedChoice : Panel
         {
             Text = text;
             Font = SettingsTheme.SmallFont;
-            Height = SettingsTheme.ControlHeight;
+            BackColor = SettingsTheme.SegmentFill;
             MouseEnter += (_, _) => { _hover = true; Invalidate(); };
             MouseLeave += (_, _) => { _hover = false; Invalidate(); };
         }
@@ -375,7 +383,6 @@ internal sealed class SegmentedChoice : Panel
 
         protected override void OnPaint(PaintEventArgs pevent)
         {
-            pevent.Graphics.SetClip(ClientRectangle);
             pevent.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             var bounds = ClientRectangle;
             bounds.Width -= 1;
@@ -430,7 +437,8 @@ internal sealed class TextField : Panel
 {
     public TextField(TextBox inner, int height = SettingsTheme.ControlHeight)
     {
-        SettingsTheme.ApplySurfaceBackground(this);
+        BackColor = SettingsTheme.CardFill;
+        SettingsTheme.EnableDoubleBuffer(this);
         Height = height;
         Padding = new Padding(12, 0, 12, 0);
         inner.Dock = DockStyle.Fill;
@@ -457,7 +465,8 @@ internal sealed class ComboField : Panel
 {
     public ComboField(ComboBox inner, int height = SettingsTheme.ControlHeight)
     {
-        SettingsTheme.ApplySurfaceBackground(this);
+        BackColor = SettingsTheme.CardFill;
+        SettingsTheme.EnableDoubleBuffer(this);
         Height = height;
         Padding = new Padding(10, 0, 8, 0);
         inner.Dock = DockStyle.Fill;

@@ -58,6 +58,12 @@ internal static class SettingsTheme
         EnableDoubleBuffer(control);
     }
 
+    public static void ApplyCardContentBackground(Control control)
+    {
+        control.BackColor = CardFill;
+        EnableDoubleBuffer(control);
+    }
+
     public static GraphicsPath CreateRoundedRectangle(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();

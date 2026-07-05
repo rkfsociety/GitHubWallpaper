@@ -28,6 +28,9 @@ internal sealed class SettingsForm : Form
     private TextBox _oauthClientSecretTextBox = null!;
     private FlowLayoutPanel _mainContent = null!;
     private GlassSection _authSection = null!;
+    private GlassSection _reposSection = null!;
+    private GlassSection _displaySection = null!;
+    private GlassSection _behaviorSection = null!;
     private Panel _authSignInPanel = null!;
     private Panel _authSignedInPanel = null!;
     private Label _authUserLabel = null!;
@@ -149,8 +152,27 @@ internal sealed class SettingsForm : Form
         Load += (_, _) =>
         {
             SyncContentWidth(scroll, content);
+            RefreshSectionHeights();
             FitFormToContent(content);
         };
+    }
+
+    private void RefreshSectionHeights()
+    {
+        if (_githubSession.HasStoredToken)
+        {
+            _authSection.SetTitleVisible(false);
+            _authSection.SetContentHeight(AuthSignedInContentHeight);
+        }
+        else
+        {
+            _authSection.SetTitleVisible(true);
+            _authSection.SetContentHeight(_authSignInContentHeight);
+        }
+
+        _reposSection.FitToContent();
+        _displaySection.FitToContent();
+        _behaviorSection.FitToContent();
     }
 
     private static void SyncContentWidth(Panel scroll, FlowLayoutPanel content)
@@ -186,7 +208,7 @@ internal sealed class SettingsForm : Form
             Location = Point.Empty,
             Width = innerWidth,
         };
-        SettingsTheme.ApplyTransparentBackground(_authSignInPanel);
+        SettingsTheme.ApplyCardContentBackground(_authSignInPanel);
 
         _authSignedInPanel = new Panel
         {
@@ -195,26 +217,28 @@ internal sealed class SettingsForm : Form
             Width = innerWidth,
             Height = AuthSignedInContentHeight,
         };
-        SettingsTheme.ApplyTransparentBackground(_authSignedInPanel);
+        SettingsTheme.ApplyCardContentBackground(_authSignedInPanel);
 
         var signedInRow = new TableLayoutPanel
         {
             ColumnCount = 2,
             Dock = DockStyle.Fill,
+            Height = AuthSignedInContentHeight,
             RowCount = 1,
         };
         signedInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         signedInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108f));
-        SettingsTheme.ApplyTransparentBackground(signedInRow);
+        signedInRow.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        SettingsTheme.ApplyCardContentBackground(signedInRow);
 
         _authUserLabel = new Label
         {
-            AutoSize = true,
-            Anchor = AnchorStyles.Left,
+            AutoEllipsis = true,
+            Dock = DockStyle.Fill,
             Font = SettingsTheme.SectionFont,
             ForeColor = SettingsTheme.TextPrimary,
-            Margin = new Padding(0, 8, 0, 0),
             Text = "Авторизован",
+            TextAlign = ContentAlignment.MiddleLeft,
         };
 
         _authLogoutButton = new OutlineButton(SettingsTheme.AccentPurple)
@@ -381,12 +405,7 @@ internal sealed class SettingsForm : Form
         _authSignInPanel.Visible = !signedIn;
         _authSignedInPanel.Visible = signedIn;
         _repoHintLabel.Visible = !signedIn;
-        if (_authSection.TitleLabel is not null)
-        {
-            _authSection.SetTitleVisible(!signedIn);
-            _authSection.TitleLabel.Text = "Авторизация GitHub";
-        }
-
+        _authSection.SetTitleVisible(!signedIn);
         _authSection.SetContentHeight(signedIn ? AuthSignedInContentHeight : _authSignInContentHeight);
         FitFormToContent(_mainContent);
     }
@@ -441,6 +460,7 @@ internal sealed class SettingsForm : Form
     private void BuildReposSection(TableLayoutPanel parent, int sectionWidth)
     {
         var section = new GlassSection("Сетка обоев", sectionWidth);
+        _reposSection = section;
         var panel = section.ContentPanel;
         var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
@@ -457,7 +477,7 @@ internal sealed class SettingsForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        SettingsTheme.ApplyTransparentBackground(layout);
+        SettingsTheme.ApplyCardContentBackground(layout);
 
         var gridHost = new InnerPanel
         {
@@ -497,7 +517,8 @@ internal sealed class SettingsForm : Form
         };
         inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128f));
-        SettingsTheme.ApplyTransparentBackground(inputRow);
+        inputRow.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
+        SettingsTheme.ApplyCardContentBackground(inputRow);
 
         _repoInputTextBox = new ThemedTextBox
         {
@@ -533,27 +554,29 @@ internal sealed class SettingsForm : Form
         layout.Controls.Add(_removeRepoButton, 0, 2);
 
         panel.Controls.Add(layout);
-        layout.PerformLayout();
-        section.SetContentHeight(layout.PreferredSize.Height);
+        section.FitToContent();
         parent.Controls.Add(section, 0, 0);
     }
 
     private void BuildDisplaySection(FlowLayoutPanel parent, int sectionWidth)
     {
         var section = new GlassSection("Экран", sectionWidth);
+        _displaySection = section;
         var panel = section.ContentPanel;
         var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
         var layout = new TableLayoutPanel
         {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 1,
             Dock = DockStyle.Top,
             RowCount = 2,
             Width = innerWidth,
         };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        SettingsTheme.ApplyTransparentBackground(layout);
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
+        SettingsTheme.ApplyCardContentBackground(layout);
 
         var monitorLabel = CreateMutedLabel("Монитор");
         monitorLabel.AutoSize = true;
@@ -574,14 +597,15 @@ internal sealed class SettingsForm : Form
         };
         layout.Controls.Add(monitorField, 0, 1);
 
-        section.SetContentHeight(72);
         panel.Controls.Add(layout);
+        section.FitToContent();
         parent.Controls.Add(section);
     }
 
     private void BuildBehaviorSection(FlowLayoutPanel parent, int sectionWidth)
     {
         var section = new GlassSection("Поведение", sectionWidth);
+        _behaviorSection = section;
         var panel = section.ContentPanel;
         var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
@@ -591,13 +615,16 @@ internal sealed class SettingsForm : Form
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 1,
             Dock = DockStyle.Top,
-            RowCount = 3,
+            RowCount = 6,
             Width = innerWidth,
         };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        SettingsTheme.ApplyTransparentBackground(layout);
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        SettingsTheme.ApplyCardContentBackground(layout);
 
         var pollLabel = CreateMutedLabel("Интервал опроса GitHub API");
         pollLabel.AutoSize = true;
@@ -606,8 +633,8 @@ internal sealed class SettingsForm : Form
 
         _pollPresetChoice = new SegmentedChoice
         {
-            Dock = DockStyle.Top,
-            Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap + 4),
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap),
             Width = innerWidth,
         };
         _pollPresetChoice.SetSegments([
@@ -618,44 +645,28 @@ internal sealed class SettingsForm : Form
         _pollPresetChoice.SelectionChanged += OnBehaviorChanged;
         layout.Controls.Add(_pollPresetChoice, 0, 1);
 
-        var optionsPanel = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Dock = DockStyle.Top,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Width = innerWidth,
-        };
-        SettingsTheme.ApplyTransparentBackground(optionsPanel);
-
         _autoStartCheckBox = new CheckBox { AutoSize = true, Text = "Запускать при старте Windows" };
         SettingsTheme.ApplyToCheckBox(_autoStartCheckBox);
         _autoStartCheckBox.CheckedChanged += OnBehaviorChanged;
+        layout.Controls.Add(_autoStartCheckBox, 0, 2);
 
         _pauseFullscreenCheckBox = new CheckBox { AutoSize = true, Text = "Пауза при полноэкранных приложениях" };
         SettingsTheme.ApplyToCheckBox(_pauseFullscreenCheckBox);
         _pauseFullscreenCheckBox.CheckedChanged += OnBehaviorChanged;
+        layout.Controls.Add(_pauseFullscreenCheckBox, 0, 3);
 
         _pauseBatteryCheckBox = new CheckBox { AutoSize = true, Text = "Пауза при работе от батареи" };
         SettingsTheme.ApplyToCheckBox(_pauseBatteryCheckBox);
         _pauseBatteryCheckBox.CheckedChanged += OnBehaviorChanged;
+        layout.Controls.Add(_pauseBatteryCheckBox, 0, 4);
 
         _autoCheckUpdatesCheckBox = new CheckBox { AutoSize = true, Text = "Автопроверка обновлений (раз в сутки)" };
         SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
-
-        optionsPanel.Controls.AddRange([
-            _autoStartCheckBox,
-            _pauseFullscreenCheckBox,
-            _pauseBatteryCheckBox,
-            _autoCheckUpdatesCheckBox,
-        ]);
-        layout.Controls.Add(optionsPanel, 0, 2);
+        layout.Controls.Add(_autoCheckUpdatesCheckBox, 0, 5);
 
         panel.Controls.Add(layout);
-        layout.PerformLayout();
-        section.SetContentHeight(layout.PreferredSize.Height);
+        section.FitToContent();
         parent.Controls.Add(section);
     }
 

@@ -22,7 +22,7 @@ internal sealed class GridLayoutEditor : UserControl
 
     public GridLayoutEditor()
     {
-        SettingsTheme.ApplyTransparentBackground(this);
+        SettingsTheme.ApplyCardContentBackground(this);
 
         var sizePanel = new FlowLayoutPanel
         {
@@ -32,7 +32,7 @@ internal sealed class GridLayoutEditor : UserControl
             WrapContents = false,
             Padding = new Padding(0, 0, 0, 10),
         };
-        SettingsTheme.ApplyTransparentBackground(sizePanel);
+        SettingsTheme.ApplyCardContentBackground(sizePanel);
 
         var columnsLabel = new Label
         {
@@ -68,7 +68,7 @@ internal sealed class GridLayoutEditor : UserControl
             RowCount = 2,
             Dock = DockStyle.Fill,
         };
-        SettingsTheme.ApplyTransparentBackground(_table);
+        SettingsTheme.ApplyCardContentBackground(_table);
 
         var root = new TableLayoutPanel
         {
@@ -81,7 +81,7 @@ internal sealed class GridLayoutEditor : UserControl
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        SettingsTheme.ApplyTransparentBackground(root);
+        SettingsTheme.ApplyCardContentBackground(root);
 
         root.Controls.Add(sizePanel, 0, 0);
         root.Controls.Add(_table, 0, 1);
