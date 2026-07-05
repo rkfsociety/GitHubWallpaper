@@ -1,0 +1,181 @@
+using System.Diagnostics;
+
+namespace GitHubWallpaper.Settings;
+
+/// <summary>
+/// Копирует portable exe в AppData, создаёт ярлыки и перезапускает из постоянной папки.
+/// </summary>
+internal static class AppInstaller
+{
+    public const string InstalledArgument = "--installed";
+
+    private const string ShortcutName = "GitHub Wallpaper.lnk";
+
+    /// <summary>
+    /// При запуске не из AppData копирует приложение и перезапускает установленную копию.
+    /// Возвращает <c>true</c>, если текущий процесс должен завершиться.
+    /// </summary>
+    public static bool TryMigrateToInstallLocation()
+    {
+        if (!ShouldMigrate())
+        {
+            return false;
+        }
+
+        try
+        {
+            InstallFromCurrentLocation();
+            RelaunchInstalled(InstalledArgument);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось скопировать приложение в:\n{AppPaths.AppData}\n\n{ex.Message}\n\n" +
+                "Приложение продолжит работу из текущей папки.",
+                "GitHub Wallpaper",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            return false;
+        }
+    }
+
+    /// <summary>Создаёт ярлыки в меню «Пуск» и на рабочем столе.</summary>
+    public static void EnsureShortcuts()
+    {
+        if (!File.Exists(AppPaths.InstalledExecutablePath))
+        {
+            throw new FileNotFoundException(
+                "Установленная копия не найдена. Запустите exe из загрузок ещё раз.",
+                AppPaths.InstalledExecutablePath);
+        }
+
+        CreateShortcuts(AppPaths.InstalledExecutablePath);
+    }
+
+    public static bool IsRunningFromInstallLocation()
+    {
+        var current = NormalizePath(GetExecutablePath());
+        var installed = NormalizePath(AppPaths.InstalledExecutablePath);
+        return string.Equals(current, installed, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ShouldMigrate()
+    {
+        if (IsDevelopmentBuild())
+        {
+            return false;
+        }
+
+        return !IsRunningFromInstallLocation();
+    }
+
+    private static void InstallFromCurrentLocation()
+    {
+        var sourceExe = GetExecutablePath();
+        Directory.CreateDirectory(AppPaths.AppData);
+
+        CopyFileWithRetry(sourceExe, AppPaths.InstalledExecutablePath);
+
+        var sourceWwwroot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
+        if (Directory.Exists(sourceWwwroot))
+        {
+            CopyDirectory(sourceWwwroot, Path.Combine(AppPaths.AppData, "wwwroot"));
+        }
+
+        CreateShortcuts(AppPaths.InstalledExecutablePath);
+    }
+
+    private static void CreateShortcuts(string targetExe)
+    {
+        var startMenuPrograms = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
+        ShellShortcut.Create(
+            Path.Combine(startMenuPrograms, ShortcutName),
+            targetExe,
+            "Динамические обои с активностью GitHub");
+
+        var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        ShellShortcut.Create(
+            Path.Combine(desktop, ShortcutName),
+            targetExe,
+            "Динамические обои с активностью GitHub");
+    }
+
+    private static void RelaunchInstalled(string? arguments)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = AppPaths.InstalledExecutablePath,
+            Arguments = arguments ?? string.Empty,
+            UseShellExecute = true,
+            WorkingDirectory = AppPaths.AppData,
+        });
+    }
+
+    private static void CopyFileWithRetry(string source, string destination)
+    {
+        const int attempts = 5;
+        IOException? lastError = null;
+
+        for (var attempt = 1; attempt <= attempts; attempt++)
+        {
+            try
+            {
+                File.Copy(source, destination, overwrite: true);
+                return;
+            }
+            catch (IOException ex) when (attempt < attempts)
+            {
+                lastError = ex;
+                Thread.Sleep(200);
+            }
+        }
+
+        throw new IOException(
+            $"Не удалось скопировать файл в {destination}.",
+            lastError);
+    }
+
+    private static void CopyDirectory(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+
+        foreach (var file in Directory.GetFiles(source))
+        {
+            var targetFile = Path.Combine(destination, Path.GetFileName(file));
+            CopyFileWithRetry(file, targetFile);
+        }
+
+        foreach (var directory in Directory.GetDirectories(source))
+        {
+            CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)));
+        }
+    }
+
+    private static bool IsDevelopmentBuild()
+    {
+        var path = GetExecutablePath();
+        return path.Contains(@"\bin\Debug\", StringComparison.OrdinalIgnoreCase)
+            || path.Contains(@"\bin\Release\", StringComparison.OrdinalIgnoreCase)
+            || path.Contains(@"\obj\", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetExecutablePath()
+    {
+        var path = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            path = Application.ExecutablePath;
+        }
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new InvalidOperationException("Не удалось определить путь к исполняемому файлу.");
+        }
+
+        return path;
+    }
+
+    private static string NormalizePath(string path) =>
+        Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+}

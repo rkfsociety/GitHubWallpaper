@@ -31,12 +31,31 @@ internal static class AutostartManager
 
         if (enabled)
         {
-            key.SetValue(ValueName, QuoteExecutablePath(GetExecutablePath()));
+            key.SetValue(ValueName, QuoteExecutablePath(GetAutostartExecutablePath()));
         }
         else
         {
             key.DeleteValue(ValueName, throwOnMissingValue: false);
         }
+    }
+
+    /// <summary>Обновляет путь автозапуска, если запись уже включена.</summary>
+    public static void RefreshPathIfEnabled()
+    {
+        if (IsEnabled())
+        {
+            SetEnabled(true);
+        }
+    }
+
+    private static string GetAutostartExecutablePath()
+    {
+        if (File.Exists(AppPaths.InstalledExecutablePath))
+        {
+            return AppPaths.InstalledExecutablePath;
+        }
+
+        return GetExecutablePath();
     }
 
     private static string GetExecutablePath()

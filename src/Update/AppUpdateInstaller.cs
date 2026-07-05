@@ -82,8 +82,10 @@ internal static class AppUpdateInstaller
 
     public static void ScheduleRestart(string downloadedExePath)
     {
-        var currentExePath = Environment.ProcessPath
-            ?? throw new InvalidOperationException("Не удалось определить путь к текущему exe.");
+        var currentExePath = File.Exists(AppPaths.InstalledExecutablePath)
+            ? AppPaths.InstalledExecutablePath
+            : Environment.ProcessPath
+                ?? throw new InvalidOperationException("Не удалось определить путь к текущему exe.");
 
         if (!File.Exists(downloadedExePath))
         {

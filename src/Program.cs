@@ -9,9 +9,16 @@ namespace GitHubWallpaper;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
+
+        if (AppInstaller.TryMigrateToInstallLocation())
+        {
+            return;
+        }
+
+        var justInstalled = args.Contains(AppInstaller.InstalledArgument, StringComparer.OrdinalIgnoreCase);
 
         if (WebView2RuntimeChecker.GetInstalledVersion() is null)
         {
@@ -42,6 +49,7 @@ internal static class Program
             trayService,
             settingsStore,
             autoPauseMonitor,
-            appUpdateService));
+            appUpdateService,
+            justInstalled));
     }
 }

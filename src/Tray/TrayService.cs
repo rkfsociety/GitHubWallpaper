@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using GitHubWallpaper.Desktop;
 using GitHubWallpaper.GitHub;
 using GitHubWallpaper.Settings;
@@ -54,6 +55,9 @@ internal sealed class TrayService : IDisposable
         menu.Items.Add(new ToolStripMenuItem("Настройки", null, OnSettingsClick));
         menu.Items.Add(_pauseMenuItem);
         menu.Items.Add(_checkUpdatesMenuItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new ToolStripMenuItem("Создать ярлык", null, OnCreateShortcutClick));
+        menu.Items.Add(new ToolStripMenuItem("Открыть папку приложения", null, OnOpenAppFolderClick));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Выход", null, OnExitClick));
 
@@ -139,6 +143,57 @@ internal sealed class TrayService : IDisposable
 
     private void OnExitClick(object? sender, EventArgs e) =>
         ExitRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnCreateShortcutClick(object? sender, EventArgs e)
+    {
+        try
+        {
+            AppInstaller.EnsureShortcuts();
+            _notifyIcon.ShowBalloonTip(
+                4000,
+                "GitHub Wallpaper",
+                "Ярлыки созданы в меню «Пуск» и на рабочем столе.",
+                ToolTipIcon.Info);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось создать ярлык:\n{ex.Message}",
+                "GitHub Wallpaper",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
+    }
+
+    private void OnOpenAppFolderClick(object? sender, EventArgs e)
+    {
+        var folder = AppInstaller.IsRunningFromInstallLocation()
+            ? AppPaths.InstallDirectory
+            : Path.GetDirectoryName(Environment.ProcessPath ?? Application.ExecutablePath)
+                ?? AppPaths.AppData;
+
+        Directory.CreateDirectory(folder);
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = folder,
+            UseShellExecute = true,
+        });
+    }
+
+    /// <summary>Уведомление после первой установки в AppData.</summary>
+    public void ShowInstallNotification()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _notifyIcon.ShowBalloonTip(
+            8000,
+            "GitHub Wallpaper",
+            $"Приложение установлено в:\n{AppPaths.AppData}\n\nЯрлык — на рабочем столе и в меню «Пуск».",
+            ToolTipIcon.Info);
+    }
 
     private void OnWallpaperPauseStateChanged(object? sender, EventArgs e) =>
         UpdatePauseMenuItem();

@@ -16,6 +16,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly AutoPauseMonitor _autoPauseMonitor;
     private readonly SettingsStore _settingsStore;
     private readonly AppUpdateService _appUpdateService;
+    private readonly bool _justInstalled;
     private readonly HashSet<string> _notifiedRepoErrors = new(StringComparer.OrdinalIgnoreCase);
 
     public TrayApplicationContext(
@@ -25,7 +26,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         TrayService trayService,
         SettingsStore settingsStore,
         AutoPauseMonitor autoPauseMonitor,
-        AppUpdateService appUpdateService)
+        AppUpdateService appUpdateService,
+        bool justInstalled = false)
     {
         _wallpaperController = wallpaperController;
         _githubSession = githubSession;
@@ -34,6 +36,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _autoPauseMonitor = autoPauseMonitor;
         _settingsStore = settingsStore;
         _appUpdateService = appUpdateService;
+        _justInstalled = justInstalled;
         _bridge = new Bridge(wallpaperController, githubSession, repoPoller);
         _trayService.ExitRequested += OnExitRequested;
         _wallpaperController.Paused += OnWallpaperPaused;
@@ -44,6 +47,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         var settings = settingsStore.Load();
         _repoPoller.ConfigurePollIntervals(settings.PollIntervalPreset);
         SyncAutostart(settings.AutoStart);
+        AutostartManager.RefreshPathIfEnabled();
         _autoPauseMonitor.Configure(settings);
         _wallpaperController.ConfigureDisplay(settings.DisplayDeviceName);
 
@@ -61,6 +65,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _bridge.Start();
             _repoPoller.Start(_settingsStore.LoadRepositories());
             _ = CheckForUpdatesInBackgroundAsync();
+
+            if (_justInstalled)
+            {
+                _trayService.ShowInstallNotification();
+            }
         }
         catch (Exception ex)
         {
