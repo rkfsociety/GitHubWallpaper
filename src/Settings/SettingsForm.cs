@@ -19,6 +19,7 @@ internal sealed class SettingsForm : Form
     private readonly LinkLabel _deviceSignInLinkLabel;
     private readonly LinkLabel _createTokenLinkLabel;
     private readonly TextBox _oauthClientIdTextBox;
+    private readonly TextBox _oauthClientSecretTextBox;
     private readonly ListBox _repoListBox;
     private readonly TextBox _repoInputTextBox;
     private readonly Button _removeRepoButton;
@@ -59,7 +60,7 @@ internal sealed class SettingsForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(520, 748);
+        ClientSize = new Size(520, 776);
         ShowInTaskbar = true;
 
         var tokenLabel = new Label
@@ -116,16 +117,32 @@ internal sealed class SettingsForm : Form
         };
         oauthRegisterLinkLabel.LinkClicked += OnOAuthRegisterLinkClicked;
 
-        var manualTokenLabel = new Label
+        var oauthClientSecretLabel = new Label
         {
             AutoSize = true,
             Location = new Point(16, 106),
+            Text = "OAuth Client Secret:",
+        };
+
+        _oauthClientSecretTextBox = new TextBox
+        {
+            Location = new Point(120, 102),
+            Size = new Size(260, 23),
+            UseSystemPasswordChar = true,
+            PlaceholderText = "для входа через браузер (необязательно)",
+        };
+        _oauthClientSecretTextBox.Leave += OnOAuthClientSecretLeave;
+
+        var manualTokenLabel = new Label
+        {
+            AutoSize = true,
+            Location = new Point(16, 134),
             Text = "Или вставьте Personal Access Token:",
         };
 
         _tokenTextBox = new TextBox
         {
-            Location = new Point(16, 130),
+            Location = new Point(16, 158),
             Size = new Size(488, 23),
             UseSystemPasswordChar = true,
         };
@@ -133,14 +150,14 @@ internal sealed class SettingsForm : Form
         _tokenStatusLabel = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 162),
+            Location = new Point(16, 190),
             Size = new Size(488, 40),
             ForeColor = SystemColors.GrayText,
         };
 
         var saveButton = new Button
         {
-            Location = new Point(16, 208),
+            Location = new Point(16, 236),
             Size = new Size(100, 28),
             Text = "Сохранить",
         };
@@ -148,7 +165,7 @@ internal sealed class SettingsForm : Form
 
         var verifyButton = new Button
         {
-            Location = new Point(124, 208),
+            Location = new Point(124, 236),
             Size = new Size(100, 28),
             Text = "Проверить",
         };
@@ -156,7 +173,7 @@ internal sealed class SettingsForm : Form
 
         var clearButton = new Button
         {
-            Location = new Point(232, 208),
+            Location = new Point(232, 236),
             Size = new Size(100, 28),
             Text = "Очистить",
         };
@@ -165,13 +182,13 @@ internal sealed class SettingsForm : Form
         var reposLabel = new Label
         {
             AutoSize = true,
-            Location = new Point(16, 252),
+            Location = new Point(16, 280),
             Text = "Репозитории (порядок = порядок на обоях):",
         };
 
         _repoListBox = new ListBox
         {
-            Location = new Point(16, 276),
+            Location = new Point(16, 304),
             Size = new Size(488, 110),
             IntegralHeight = false,
         };
@@ -179,7 +196,7 @@ internal sealed class SettingsForm : Form
 
         _repoInputTextBox = new TextBox
         {
-            Location = new Point(16, 394),
+            Location = new Point(16, 422),
             Size = new Size(360, 23),
             PlaceholderText = "owner/repo или https://github.com/owner/repo",
         };
@@ -187,7 +204,7 @@ internal sealed class SettingsForm : Form
 
         var addRepoButton = new Button
         {
-            Location = new Point(384, 392),
+            Location = new Point(384, 420),
             Size = new Size(120, 28),
             Text = "Добавить",
         };
@@ -195,7 +212,7 @@ internal sealed class SettingsForm : Form
 
         _removeRepoButton = new Button
         {
-            Location = new Point(16, 430),
+            Location = new Point(16, 458),
             Size = new Size(100, 28),
             Text = "Удалить",
         };
@@ -203,7 +220,7 @@ internal sealed class SettingsForm : Form
 
         _moveUpButton = new Button
         {
-            Location = new Point(124, 430),
+            Location = new Point(124, 458),
             Size = new Size(100, 28),
             Text = "Вверх",
         };
@@ -211,7 +228,7 @@ internal sealed class SettingsForm : Form
 
         _moveDownButton = new Button
         {
-            Location = new Point(232, 430),
+            Location = new Point(232, 458),
             Size = new Size(100, 28),
             Text = "Вниз",
         };
@@ -219,7 +236,7 @@ internal sealed class SettingsForm : Form
 
         var displayGroup = new GroupBox
         {
-            Location = new Point(16, 472),
+            Location = new Point(16, 500),
             Size = new Size(488, 58),
             Text = "Экран",
         };
@@ -243,7 +260,7 @@ internal sealed class SettingsForm : Form
 
         var behaviorGroup = new GroupBox
         {
-            Location = new Point(16, 538),
+            Location = new Point(16, 566),
             Size = new Size(488, 172),
             Text = "Поведение",
         };
@@ -325,10 +342,10 @@ internal sealed class SettingsForm : Form
         var repoHintLabel = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 716),
+            Location = new Point(16, 744),
             Size = new Size(488, 24),
             ForeColor = SystemColors.GrayText,
-            Text = "Токен хранится в Credential Manager. OAuth открывает github.com в браузере.",
+            Text = "Токен и Client Secret — в Credential Manager. Device Flow не требует Secret.",
         };
 
         Controls.AddRange([
@@ -339,6 +356,8 @@ internal sealed class SettingsForm : Form
             oauthClientIdLabel,
             _oauthClientIdTextBox,
             oauthRegisterLinkLabel,
+            oauthClientSecretLabel,
+            _oauthClientSecretTextBox,
             manualTokenLabel,
             _tokenTextBox,
             _tokenStatusLabel,
@@ -360,6 +379,7 @@ internal sealed class SettingsForm : Form
         PopulateMonitorComboBox();
         LoadBehaviorSettings();
         LoadOAuthClientId();
+        LoadOAuthClientSecret();
         RefreshRepoListBox();
         UpdateTokenStatus();
     }
@@ -389,6 +409,43 @@ internal sealed class SettingsForm : Form
                 MessageBoxIcon.Error);
         }
     }
+
+    private void LoadOAuthClientSecret()
+    {
+        if (GitHubOAuthClientSecretCredentialStore.Exists())
+        {
+            _oauthClientSecretTextBox.PlaceholderText = "сохранён в Credential Manager";
+        }
+    }
+
+    private void OnOAuthClientSecretLeave(object? sender, EventArgs e) => SaveOAuthClientSecret();
+
+    private void SaveOAuthClientSecret()
+    {
+        var secret = _oauthClientSecretTextBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            return;
+        }
+
+        try
+        {
+            GitHubOAuthClientSecretCredentialStore.Save(secret);
+            _oauthClientSecretTextBox.Clear();
+            _oauthClientSecretTextBox.PlaceholderText = "сохранён в Credential Manager";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось сохранить OAuth Client Secret:\n{ex.Message}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
+    private static string? ResolveStoredOAuthClientSecret() =>
+        GitHubOAuthClientSecretCredentialStore.Read();
 
     private void OnOAuthRegisterLinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
     {
@@ -729,6 +786,7 @@ internal sealed class SettingsForm : Form
     private async Task RunOAuthSignInAsync(bool useDeviceFlowOnly)
     {
         SaveOAuthClientId();
+        SaveOAuthClientSecret();
 
         if (GitHubOAuthDefaults.ResolveClientId(_oauthClientIdTextBox.Text.Trim()) is null)
         {
@@ -736,7 +794,8 @@ internal sealed class SettingsForm : Form
                 "Сначала создайте OAuth App на GitHub:\n\n" +
                 "• Callback URL: http://127.0.0.1:8791/callback\n" +
                 "• Включите Device Flow\n" +
-                "• Вставьте Client ID в поле «OAuth Client ID»\n\n" +
+                "• Client ID — строка вида Ov23li… (не номер из URL)\n" +
+                "• Client Secret — для входа через браузер (или используйте Device Flow)\n\n" +
                 "Открыть страницу регистрации OAuth App?",
                 Text,
                 MessageBoxButtons.YesNo,
@@ -759,7 +818,9 @@ internal sealed class SettingsForm : Form
 
         try
         {
-            using var oauth = new GitHubOAuthService(_oauthClientIdTextBox.Text.Trim());
+            using var oauth = new GitHubOAuthService(
+                _oauthClientIdTextBox.Text.Trim(),
+                ResolveStoredOAuthClientSecret());
             using var cancellationSource = new CancellationTokenSource(TimeSpan.FromMinutes(10));
 
             var result = useDeviceFlowOnly

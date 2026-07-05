@@ -71,8 +71,9 @@ dotnet publish src -p:PublishProfile=win-x64
    - **Homepage URL:** `https://github.com/rkfsociety/GitHubWallpaper`
    - **Authorization callback URL:** `http://127.0.0.1:8791/callback`
    - Включите **Enable Device Flow**
-3. Скопируйте **Client ID** в поле «OAuth Client ID» в настройках.
-4. Нажмите **Войти через GitHub** — откроется github.com, подтвердите доступ.
+3. Скопируйте **Client ID** (строка вида `Ov23li…`, не номер из URL страницы) в настройки.
+4. Для входа через браузер — **Client Secret** (кнопка Generate a new client secret). Для **Device Flow** secret не нужен.
+5. Нажмите **Войти через GitHub** — откроется github.com, подтвердите доступ.
 
 При проблемах с callback используйте ссылку **Вход по коду устройства** (`github.com/login/device`).
 

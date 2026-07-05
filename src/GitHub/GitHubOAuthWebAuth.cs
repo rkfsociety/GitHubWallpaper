@@ -38,7 +38,10 @@ internal sealed class GitHubOAuthWebAuth : IDisposable
     /// <summary>
     /// Запускает веб-авторизацию: браузер → github.com → callback на localhost.
     /// </summary>
-    public async Task<string> SignInAsync(string clientId, CancellationToken cancellationToken = default)
+    public async Task<string> SignInAsync(
+        string clientId,
+        string? clientSecret = null,
+        CancellationToken cancellationToken = default)
     {
         var (verifier, challenge, state) = GitHubPkce.CreateAuthorizationRequest();
         var authorizeUri = BuildAuthorizeUri(clientId, challenge, state);
@@ -77,7 +80,7 @@ internal sealed class GitHubOAuthWebAuth : IDisposable
                 throw new GitHubOAuthException("GitHub не вернул код авторизации.");
             }
 
-            var token = await ExchangeCodeAsync(clientId, code, verifier, cancellationToken)
+            var token = await ExchangeCodeAsync(clientId, code, verifier, clientSecret, cancellationToken)
                 .ConfigureAwait(false);
 
             await WriteResponseAsync(context, success: true).ConfigureAwait(false);
@@ -225,18 +228,28 @@ internal sealed class GitHubOAuthWebAuth : IDisposable
         string clientId,
         string code,
         string verifier,
+        string? clientSecret,
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, GitHubOAuthDefaults.AccessTokenUrl);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        var payload = new
-        {
-            client_id = clientId,
-            redirect_uri = GitHubOAuthDefaults.RedirectUri,
-            code,
-            code_verifier = verifier,
-        };
+        var payload = string.IsNullOrWhiteSpace(clientSecret)
+            ? (object)new
+            {
+                client_id = clientId,
+                redirect_uri = GitHubOAuthDefaults.RedirectUri,
+                code,
+                code_verifier = verifier,
+            }
+            : new
+            {
+                client_id = clientId,
+                client_secret = clientSecret.Trim(),
+                redirect_uri = GitHubOAuthDefaults.RedirectUri,
+                code,
+                code_verifier = verifier,
+            };
 
         request.Content = new StringContent(
             JsonSerializer.Serialize(payload),

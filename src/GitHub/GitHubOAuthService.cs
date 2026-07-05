@@ -9,10 +9,12 @@ internal sealed class GitHubOAuthService : IDisposable
     private readonly GitHubOAuthWebAuth _webAuth = new();
     private readonly GitHubOAuthDeviceAuth _deviceAuth = new();
     private readonly string? _clientId;
+    private readonly string? _clientSecret;
 
-    public GitHubOAuthService(string? settingsClientId = null)
+    public GitHubOAuthService(string? settingsClientId = null, string? storedClientSecret = null)
     {
         _clientId = GitHubOAuthDefaults.ResolveClientId(settingsClientId);
+        _clientSecret = GitHubOAuthDefaults.ResolveClientSecret(storedClientSecret);
     }
 
     /// <summary>Результат успешного входа.</summary>
@@ -28,7 +30,9 @@ internal sealed class GitHubOAuthService : IDisposable
 
         try
         {
-            var token = await _webAuth.SignInAsync(clientId, cancellationToken).ConfigureAwait(false);
+            var token = await _webAuth
+                .SignInAsync(clientId, _clientSecret, cancellationToken)
+                .ConfigureAwait(false);
             return new SignInResult(token, GitHubOAuthMethod.WebBrowser, null);
         }
         catch (GitHubOAuthException webEx) when (ShouldFallbackToDeviceFlow(webEx))
@@ -80,7 +84,9 @@ internal sealed class GitHubOAuthService : IDisposable
 
     private static bool ShouldFallbackToDeviceFlow(GitHubOAuthException exception) =>
         exception.Message.Contains("локальный порт", StringComparison.OrdinalIgnoreCase)
-        || exception.Message.Contains("callback", StringComparison.OrdinalIgnoreCase);
+        || exception.Message.Contains("callback", StringComparison.OrdinalIgnoreCase)
+        || exception.Message.Contains("client_id and/or client_secret", StringComparison.OrdinalIgnoreCase)
+        || exception.Message.Contains("incorrect_client_credentials", StringComparison.OrdinalIgnoreCase);
 }
 
 internal enum GitHubOAuthMethod

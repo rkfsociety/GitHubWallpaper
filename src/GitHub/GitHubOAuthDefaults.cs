@@ -45,5 +45,25 @@ internal static class GitHubOAuthDefaults
         return string.IsNullOrWhiteSpace(EmbeddedClientId) ? null : EmbeddedClientId.Trim();
     }
 
+    /// <summary>
+    /// Возвращает client_secret для веб-flow или <c>null</c>, если не задан.
+    /// Переопределяется <c>GITHUBWALLPAPER_OAUTH_CLIENT_SECRET</c> или Credential Manager.
+    /// </summary>
+    public static string? ResolveClientSecret(string? storedClientSecret = null)
+    {
+        var fromEnvironment = Environment.GetEnvironmentVariable("GITHUBWALLPAPER_OAUTH_CLIENT_SECRET");
+        if (!string.IsNullOrWhiteSpace(fromEnvironment))
+        {
+            return fromEnvironment.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(storedClientSecret))
+        {
+            return storedClientSecret.Trim();
+        }
+
+        return null;
+    }
+
     public static string RegistrationUrl => "https://github.com/settings/applications/new";
 }
