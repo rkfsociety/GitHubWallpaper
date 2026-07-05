@@ -21,6 +21,7 @@ internal sealed class RepoPoller : IDisposable
 
     private IReadOnlyList<RepoReference> _repositories = [DefaultRepository];
     private ActivityPollIntervals _intervals = PollIntervals.ForActivityPreset(PollIntervalPreset.Normal);
+    private CardDisplaySettings _cardDisplay = CardDisplaySettings.CreateDefault();
     private CancellationTokenSource? _cts;
     private Task? _loopTask;
     private bool _paused;
@@ -92,6 +93,17 @@ internal sealed class RepoPoller : IDisposable
         lock (_sync)
         {
             _intervals = PollIntervals.ForActivityPreset(preset);
+        }
+    }
+
+    /// <summary>Задаёт, какие секции карточки нужно опрашивать у GitHub API.</summary>
+    public void ConfigureCardDisplay(CardDisplaySettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        lock (_sync)
+        {
+            _cardDisplay = settings.Clone();
         }
     }
 
@@ -227,10 +239,12 @@ internal sealed class RepoPoller : IDisposable
         var now = DateTimeOffset.UtcNow;
         var repositories = Repositories;
         ActivityPollIntervals intervals;
+        CardDisplaySettings display;
 
         lock (_sync)
         {
             intervals = _intervals;
+            display = _cardDisplay;
         }
 
         foreach (var repository in repositories)
@@ -246,27 +260,32 @@ internal sealed class RepoPoller : IDisposable
 
             if (state.FatalError is null)
             {
-                if (IsDue(state.LastCommitsPoll, intervals.Commits, includeNeverPolled))
+                if (display.ShowCommits
+                    && IsDue(state.LastCommitsPoll, intervals.Commits, includeNeverPolled))
                 {
                     await PollCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (IsDue(state.LastPullsPoll, intervals.PullRequests, includeNeverPolled))
+                if ((display.ShowPullRequests || display.ShowStats)
+                    && IsDue(state.LastPullsPoll, intervals.PullRequests, includeNeverPolled))
                 {
                     await PollPullsAsync(repository, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (IsDue(state.LastIssuesPoll, intervals.Issues, includeNeverPolled))
+                if (display.ShowIssues
+                    && IsDue(state.LastIssuesPoll, intervals.Issues, includeNeverPolled))
                 {
                     await PollIssuesAsync(repository, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (IsDue(state.LastReleasesPoll, intervals.Releases, includeNeverPolled))
+                if (display.ShowRelease
+                    && IsDue(state.LastReleasesPoll, intervals.Releases, includeNeverPolled))
                 {
                     await PollReleasesAsync(repository, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (IsDue(state.LastCiPoll, intervals.CiRuns, includeNeverPolled))
+                if (display.ShowCi
+                    && IsDue(state.LastCiPoll, intervals.CiRuns, includeNeverPolled))
                 {
                     await PollCiRunAsync(repository, cancellationToken).ConfigureAwait(false);
                 }
@@ -275,12 +294,14 @@ internal sealed class RepoPoller : IDisposable
                     ? PendingHeatmapPollInterval
                     : intervals.Heatmap;
 
-                if (IsDue(state.LastHeatmapPoll, heatmapInterval, includeNeverPolled))
+                if (display.ShowHeatmap
+                    && IsDue(state.LastHeatmapPoll, heatmapInterval, includeNeverPolled))
                 {
                     await PollHeatmapAsync(repository, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (IsDue(state.LastEventsPoll, intervals.Events, includeNeverPolled))
+                if (display.ShowFeed
+                    && IsDue(state.LastEventsPoll, intervals.Events, includeNeverPolled))
                 {
                     await PollEventsAsync(repository, cancellationToken).ConfigureAwait(false);
                 }

@@ -48,8 +48,19 @@ internal sealed class SettingsForm : Form
     private CheckBox _pauseBatteryCheckBox = null!;
     private CheckBox _autoCheckUpdatesCheckBox = null!;
     private ComboBox _monitorComboBox = null!;
+    private SettingsCard _cardDisplayCard = null!;
+    private CheckBox _showDescriptionCheckBox = null!;
+    private CheckBox _showStatsCheckBox = null!;
+    private CheckBox _showCiCheckBox = null!;
+    private CheckBox _showReleaseCheckBox = null!;
+    private CheckBox _showHeatmapCheckBox = null!;
+    private CheckBox _showFeedCheckBox = null!;
+    private CheckBox _showPullRequestsCheckBox = null!;
+    private CheckBox _showIssuesCheckBox = null!;
+    private CheckBox _showCommitsCheckBox = null!;
     private bool _suppressBehaviorEvents;
     private bool _suppressGridEvents;
+    private bool _suppressCardDisplayEvents;
 
     public SettingsForm(
         GitHubSession githubSession,
@@ -110,6 +121,7 @@ internal sealed class SettingsForm : Form
 
         PopulateMonitorComboBox();
         LoadBehaviorSettings();
+        LoadCardDisplaySettings();
         LoadOAuthClientId();
         LoadOAuthClientSecret();
         LoadGridLayout();
@@ -206,6 +218,7 @@ internal sealed class SettingsForm : Form
     private void BuildMainColumns(TableLayoutPanel page)
     {
         BuildReposCard(page);
+        BuildCardDisplayCard(page);
 
         var settingsRow = new TableLayoutPanel
         {
@@ -615,6 +628,136 @@ internal sealed class SettingsForm : Form
         body.Controls.Add(layout);
         _reposCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
         AddPageRow(_reposCard);
+    }
+
+    private void BuildCardDisplayCard(TableLayoutPanel page)
+    {
+        _cardDisplayCard = new SettingsCard("Содержимое карточек", ContentWidth);
+        var body = _cardDisplayCard.Body;
+        var innerWidth = SettingsCard.BodyWidth(ContentWidth);
+
+        var layout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            ColumnCount = 3,
+            Dock = DockStyle.Top,
+            Width = innerWidth,
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
+
+        void AddDisplayRow(int row, params CheckBox[] boxes)
+        {
+            layout.RowCount = row + 1;
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            for (var column = 0; column < boxes.Length; column++)
+            {
+                boxes[column].Dock = DockStyle.Top;
+                boxes[column].Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
+                layout.Controls.Add(boxes[column], column, row);
+            }
+        }
+
+        _showDescriptionCheckBox = CreateDisplayCheckBox("Описание");
+        _showStatsCheckBox = CreateDisplayCheckBox("Статистика (★, форки, PR, issues)");
+        _showCiCheckBox = CreateDisplayCheckBox("CI статус");
+        AddDisplayRow(0, _showDescriptionCheckBox, _showStatsCheckBox, _showCiCheckBox);
+
+        _showReleaseCheckBox = CreateDisplayCheckBox("Последний релиз");
+        _showHeatmapCheckBox = CreateDisplayCheckBox("Активность (heatmap)");
+        _showFeedCheckBox = CreateDisplayCheckBox("Лента событий");
+        AddDisplayRow(1, _showReleaseCheckBox, _showHeatmapCheckBox, _showFeedCheckBox);
+
+        _showPullRequestsCheckBox = CreateDisplayCheckBox("Pull requests");
+        _showIssuesCheckBox = CreateDisplayCheckBox("Issues");
+        _showCommitsCheckBox = CreateDisplayCheckBox("Последние коммиты");
+        AddDisplayRow(2, _showPullRequestsCheckBox, _showIssuesCheckBox, _showCommitsCheckBox);
+
+        body.Controls.Add(layout);
+        _cardDisplayCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+        AddPageRow(_cardDisplayCard);
+    }
+
+    private CheckBox CreateDisplayCheckBox(string text)
+    {
+        var checkBox = new CheckBox { AutoSize = true, Text = text };
+        SettingsTheme.ApplyToCheckBox(checkBox);
+        checkBox.CheckedChanged += OnCardDisplayChanged;
+        return checkBox;
+    }
+
+    private void LoadCardDisplaySettings()
+    {
+        var display = _settingsStore.Load().CardDisplay;
+
+        _suppressCardDisplayEvents = true;
+
+        _showDescriptionCheckBox.Checked = display.ShowDescription;
+        _showStatsCheckBox.Checked = display.ShowStats;
+        _showCiCheckBox.Checked = display.ShowCi;
+        _showReleaseCheckBox.Checked = display.ShowRelease;
+        _showHeatmapCheckBox.Checked = display.ShowHeatmap;
+        _showFeedCheckBox.Checked = display.ShowFeed;
+        _showPullRequestsCheckBox.Checked = display.ShowPullRequests;
+        _showIssuesCheckBox.Checked = display.ShowIssues;
+        _showCommitsCheckBox.Checked = display.ShowCommits;
+
+        _suppressCardDisplayEvents = false;
+    }
+
+    private void OnCardDisplayChanged(object? sender, EventArgs e)
+    {
+        if (_suppressCardDisplayEvents)
+        {
+            return;
+        }
+
+        SaveCardDisplaySettings();
+    }
+
+    private CardDisplaySettings ReadCardDisplaySettings() => new()
+    {
+        ShowDescription = _showDescriptionCheckBox.Checked,
+        ShowStats = _showStatsCheckBox.Checked,
+        ShowCi = _showCiCheckBox.Checked,
+        ShowRelease = _showReleaseCheckBox.Checked,
+        ShowHeatmap = _showHeatmapCheckBox.Checked,
+        ShowFeed = _showFeedCheckBox.Checked,
+        ShowPullRequests = _showPullRequestsCheckBox.Checked,
+        ShowIssues = _showIssuesCheckBox.Checked,
+        ShowCommits = _showCommitsCheckBox.Checked,
+    };
+
+    private void SaveCardDisplaySettings()
+    {
+        try
+        {
+            var settings = _settingsStore.Load();
+            settings.CardDisplay = ReadCardDisplaySettings();
+            _settingsStore.Save(settings);
+
+            _repoPoller.ConfigureCardDisplay(settings.CardDisplay);
+
+            _wallpaperController.PostMessageAsJson(new
+            {
+                type = "display:update",
+                payload = settings.CardDisplay.ToBridgePayload(),
+            });
+
+            RefreshAllCardHeights();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось сохранить настройки карточек:\n{ex.Message}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 
     private void BuildDisplayCard(TableLayoutPanel row)

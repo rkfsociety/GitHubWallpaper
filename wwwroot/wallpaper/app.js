@@ -29,6 +29,18 @@
     rows: DEFAULT_GRID_ROWS,
   };
 
+  const displaySettings = {
+    description: true,
+    stats: true,
+    ci: true,
+    release: true,
+    heatmap: true,
+    feed: true,
+    pullRequests: true,
+    issues: true,
+    commits: true,
+  };
+
   const layoutPresets = {
     default: { minCardRem: 20, estCardPx: 640, commitLimit: 5, heroPx: 220 },
     compact: { minCardRem: 18, estCardPx: 560, commitLimit: 4, heroPx: 100 },
@@ -319,23 +331,78 @@
     const key = repoKey(entry.owner, entry.repo);
     const metadata = entry.metadata;
     const fullName = metadata?.fullName || key;
-    const description = metadata?.description
-      ? `<p class="repo-card__description">${escapeHtml(metadata.description)}</p>`
-      : "";
+    const description =
+      displaySettings.description && metadata?.description
+        ? `<p class="repo-card__description">${escapeHtml(metadata.description)}</p>`
+        : "";
     const stars = formatCount(metadata?.stars ?? 0);
     const forks = formatCount(metadata?.forks ?? 0);
     const pullCount = formatCount(entry.pulls?.length ?? 0);
-    const issueCount = formatCount(entry.issues?.length ?? 0);
-    const ciBadge = window.WallpaperCiBadge?.render(entry.ciRun) || "";
-    const heatmap = window.WallpaperHeatmap?.render(entry.heatmap?.weeks) || "";
-    const feed = window.WallpaperFeed?.render(entry.activityFeed) || "";
+    const issueCount = formatCount(metadata?.openIssues ?? entry.issues?.length ?? 0);
+    const ciBadge = displaySettings.ci ? window.WallpaperCiBadge?.render(entry.ciRun) || "" : "";
+    const heatmapBlock = displaySettings.heatmap
+      ? `
+        <section class="repo-card__heatmap">
+          <h3 class="repo-card__section-title">Активность</h3>
+          ${window.WallpaperHeatmap?.render(entry.heatmap?.weeks) || ""}
+        </section>`
+      : "";
+    const feedBlock = displaySettings.feed
+      ? `
+        <section class="repo-card__feed">
+          <h3 class="repo-card__section-title">Лента</h3>
+          ${window.WallpaperFeed?.render(entry.activityFeed) || ""}
+        </section>`
+      : "";
     const error = entry.lastError
       ? `<p class="repo-card__error" role="alert">${escapeHtml(formatPollError(entry.lastError))}</p>`
       : "";
     const loadingClass = metadata ? "" : " is-loading";
     const latestRelease = entry.releases?.[0];
-    const releaseLine = latestRelease
-      ? `<p class="repo-card__release">Последний релиз: <span class="repo-card__release-name">${escapeHtml(latestRelease.name || latestRelease.tagName)}</span></p>`
+    const releaseLine =
+      displaySettings.release && latestRelease
+        ? `<p class="repo-card__release">Последний релиз: <span class="repo-card__release-name">${escapeHtml(latestRelease.name || latestRelease.tagName)}</span></p>`
+        : "";
+    const statsBlock = displaySettings.stats
+      ? `
+        <div class="repo-card__stats">
+          <span class="repo-card__stat" title="Звёзды">${icons.star}<span>${stars}</span></span>
+          <span class="repo-card__stat" title="Форки">${icons.fork}<span>${forks}</span></span>
+          <span class="repo-card__stat" title="Открытые PR">${icons.pr}<span>${pullCount}</span></span>
+          <span class="repo-card__stat" title="Открытые issues">${icons.issue}<span>${issueCount}</span></span>
+        </div>`
+      : "";
+
+    let columnsBlock = "";
+    if (displaySettings.pullRequests || displaySettings.issues) {
+      const pullSection = displaySettings.pullRequests
+        ? `
+          <section class="repo-card__mini-section">
+            <h3 class="repo-card__section-title">Pull requests</h3>
+            ${renderMiniList(entry.pulls, "Загрузка PR…")}
+          </section>`
+        : "";
+      const issueSection = displaySettings.issues
+        ? `
+          <section class="repo-card__mini-section">
+            <h3 class="repo-card__section-title">Issues</h3>
+            ${renderMiniList(entry.issues, "Загрузка issues…")}
+          </section>`
+        : "";
+
+      columnsBlock = `
+        <div class="repo-card__columns">
+          ${pullSection}
+          ${issueSection}
+        </div>`;
+    }
+
+    const commitsBlock = displaySettings.commits
+      ? `
+        <section class="repo-card__commits">
+          <h3 class="repo-card__section-title">Последние коммиты</h3>
+          ${renderCommits(entry)}
+        </section>`
       : "";
 
     return `
@@ -350,41 +417,13 @@
           ${description}
         </header>
 
-        <div class="repo-card__stats">
-          <span class="repo-card__stat" title="Звёзды">${icons.star}<span>${stars}</span></span>
-          <span class="repo-card__stat" title="Форки">${icons.fork}<span>${forks}</span></span>
-          <span class="repo-card__stat" title="Открытые PR">${icons.pr}<span>${pullCount}</span></span>
-          <span class="repo-card__stat" title="Открытые issues">${icons.issue}<span>${issueCount}</span></span>
-        </div>
-
+        ${statsBlock}
         ${releaseLine}
         ${error}
-
-        <section class="repo-card__heatmap">
-          <h3 class="repo-card__section-title">Активность</h3>
-          ${heatmap}
-        </section>
-
-        <section class="repo-card__feed">
-          <h3 class="repo-card__section-title">Лента</h3>
-          ${feed}
-        </section>
-
-        <div class="repo-card__columns">
-          <section class="repo-card__mini-section">
-            <h3 class="repo-card__section-title">Pull requests</h3>
-            ${renderMiniList(entry.pulls, "Загрузка PR…")}
-          </section>
-          <section class="repo-card__mini-section">
-            <h3 class="repo-card__section-title">Issues</h3>
-            ${renderMiniList(entry.issues, "Загрузка issues…")}
-          </section>
-        </div>
-
-        <section class="repo-card__commits">
-          <h3 class="repo-card__section-title">Последние коммиты</h3>
-          ${renderCommits(entry)}
-        </section>
+        ${heatmapBlock}
+        ${feedBlock}
+        ${columnsBlock}
+        ${commitsBlock}
       </article>
     `;
   }
@@ -436,6 +475,37 @@
     if (Number.isFinite(rows) && rows >= 1) {
       gridSettings.rows = rows;
     }
+  }
+
+  function applyDisplaySettings(payload, options = {}) {
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+
+    const keys = [
+      "description",
+      "stats",
+      "ci",
+      "release",
+      "heatmap",
+      "feed",
+      "pullRequests",
+      "issues",
+      "commits",
+    ];
+
+    for (const key of keys) {
+      if (typeof payload[key] === "boolean") {
+        displaySettings[key] = payload[key];
+      }
+    }
+
+    if (options.silent) {
+      return;
+    }
+
+    refreshAllRepoCards();
+    scheduleFitContent();
   }
 
   function computeLayout(viewport) {
@@ -652,6 +722,9 @@
         if (data.layout) {
           applyGridSettings(data.layout);
         }
+        if (data.display) {
+          applyDisplaySettings(data.display, { silent: true });
+        }
         initRepos(data.payload);
         dispatchBridgeEvent("wallpaper:repos-init", data);
         return;
@@ -659,6 +732,10 @@
         applyGridSettings(data.payload);
         updateLayout(lastViewport);
         dispatchBridgeEvent("wallpaper:layout-update", data);
+        return;
+      case "display:update":
+        applyDisplaySettings(data.payload);
+        dispatchBridgeEvent("wallpaper:display-update", data);
         return;
       case "repo:metadata": {
         const entry = ensureRepo(data.owner, data.repo);

@@ -147,6 +147,7 @@ internal sealed class Bridge : IDisposable
     {
         PushAuthStatus();
         PushLayout();
+        PushDisplaySettings();
         PushRepoList();
         PushCachedState();
     }
@@ -163,6 +164,17 @@ internal sealed class Bridge : IDisposable
                 columns = settings.GridColumns,
                 rows = settings.GridRows,
             },
+        });
+    }
+
+    private void PushDisplaySettings()
+    {
+        var settings = _settingsStore.Load();
+
+        Post(new
+        {
+            type = "display:update",
+            payload = settings.CardDisplay.ToBridgePayload(),
         });
     }
 
@@ -225,6 +237,7 @@ internal sealed class Bridge : IDisposable
                 columns = settings.GridColumns,
                 rows = settings.GridRows,
             },
+            display = settings.CardDisplay.ToBridgePayload(),
         });
     }
 

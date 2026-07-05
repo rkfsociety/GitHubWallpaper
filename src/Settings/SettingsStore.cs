@@ -140,6 +140,7 @@ internal sealed class SettingsStore
         }
 
         settings.Repositories = slugs;
+        settings.CardDisplay ??= CardDisplaySettings.CreateDefault();
         return settings;
     }
 

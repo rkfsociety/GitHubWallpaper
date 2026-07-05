@@ -46,6 +46,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         var settings = settingsStore.Load();
         _repoPoller.ConfigurePollIntervals(settings.PollIntervalPreset);
+        _repoPoller.ConfigureCardDisplay(settings.CardDisplay);
         SyncAutostart(settings.AutoStart);
         AutostartManager.RefreshPathIfEnabled();
         _autoPauseMonitor.Configure(settings);

@@ -40,4 +40,7 @@ internal sealed class AppSettings
     public bool AutoCheckForUpdates { get; set; } = true;
 
     public DateTimeOffset? LastUpdateCheckUtc { get; set; }
+
+    /// <summary>Какие блоки показывать на карточках репозиториев.</summary>
+    public CardDisplaySettings CardDisplay { get; set; } = CardDisplaySettings.CreateDefault();
 }
