@@ -24,6 +24,9 @@ internal static class SettingsTheme
     public const int ControlCornerRadius = 8;
     public const int SectionPadding = 16;
     public const int SectionGap = 14;
+    public const int ContentPadding = 12;
+    public const int SectionTitleHeight = 24;
+    public const int SectionTitleGap = 10;
 
     public static Font TitleFont { get; } = new("Segoe UI Semibold", 10.5F, FontStyle.Bold);
     public static Font SectionFont { get; } = new("Segoe UI Semibold", 10F, FontStyle.Bold);

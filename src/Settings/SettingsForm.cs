@@ -34,7 +34,7 @@ internal sealed class SettingsForm : Form
     private Button _authLogoutButton = null!;
     private Label _repoHintLabel = null!;
     private int _authSignInContentHeight;
-    private const int AuthSignedInContentHeight = 42;
+    private const int AuthSignedInContentHeight = 50;
     private GridLayoutEditor _gridLayoutEditor = null!;
     private TextBox _repoInputTextBox = null!;
     private Button _removeRepoButton = null!;
@@ -98,16 +98,18 @@ internal sealed class SettingsForm : Form
 
         BuildAuthSection(content, FormContentWidth);
 
-        var bottomRow = new FlowLayoutPanel
+        var bottomRow = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = SettingsTheme.BackgroundTop,
-            FlowDirection = FlowDirection.LeftToRight,
+            ColumnCount = 2,
             Margin = Padding.Empty,
-            WrapContents = false,
+            RowCount = 1,
             Width = FormContentWidth,
         };
+        bottomRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, GridColumnWidth));
+        bottomRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, SideColumnWidth));
         SettingsTheme.EnableDoubleBuffer(bottomRow);
 
         var rightColumn = new FlowLayoutPanel
@@ -125,7 +127,7 @@ internal sealed class SettingsForm : Form
         BuildReposSection(bottomRow, GridColumnWidth);
         BuildDisplaySection(rightColumn, SideColumnWidth);
         BuildBehaviorSection(rightColumn, SideColumnWidth);
-        bottomRow.Controls.Add(rightColumn);
+        bottomRow.Controls.Add(rightColumn, 1, 0);
         content.Controls.Add(bottomRow);
 
         var repoHintLabel = CreateMutedLabel(
@@ -179,7 +181,7 @@ internal sealed class SettingsForm : Form
     {
         _authSection = new GlassSection("Авторизация GitHub", sectionWidth);
         var panel = _authSection.ContentPanel;
-        var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
+        var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
         _authSignInPanel = new Panel
         {
@@ -204,13 +206,13 @@ internal sealed class SettingsForm : Form
             AutoSize = true,
             Font = SettingsTheme.SectionFont,
             ForeColor = SettingsTheme.TextPrimary,
-            Location = new Point(0, 8),
+            Location = new Point(0, 10),
             Text = "Авторизован",
         };
 
         _authLogoutButton = new GhostButton
         {
-            Location = new Point(innerWidth - 108, 0),
+            Location = new Point(innerWidth - 108, 6),
             Size = new Size(108, 34),
             Text = "Выйти",
         };
@@ -422,11 +424,11 @@ internal sealed class SettingsForm : Form
         }
     }
 
-    private void BuildReposSection(FlowLayoutPanel parent, int sectionWidth)
+    private void BuildReposSection(TableLayoutPanel parent, int sectionWidth)
     {
         var section = new GlassSection("Сетка обоев", sectionWidth);
         var panel = section.ContentPanel;
-        var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
+        var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
         var layout = new TableLayoutPanel
         {
@@ -501,7 +503,7 @@ internal sealed class SettingsForm : Form
         _removeRepoButton = new GhostButton
         {
             AutoSize = false,
-            Margin = Padding.Empty,
+            Margin = new Padding(0, 6, 0, 0),
             Size = new Size(124, 34),
             Text = "Удалить",
         };
@@ -509,30 +511,35 @@ internal sealed class SettingsForm : Form
         layout.Controls.Add(_removeRepoButton, 0, 3);
 
         panel.Controls.Add(layout);
+        layout.PerformLayout();
         section.SetContentHeight(layout.PreferredSize.Height);
-        parent.Controls.Add(section);
+        parent.Controls.Add(section, 0, 0);
     }
 
     private void BuildDisplaySection(FlowLayoutPanel parent, int sectionWidth)
     {
         var section = new GlassSection("Экран", sectionWidth);
         var panel = section.ContentPanel;
-        var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
+        var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
         var monitorLabel = CreateFieldLabel("Монитор:");
-        monitorLabel.Location = new Point(0, 6);
+        monitorLabel.Location = new Point(0, 10);
 
         _monitorComboBox = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
-            Location = new Point(72, 2),
-            Size = new Size(innerWidth - 72, 28),
         };
         SettingsTheme.ApplyToComboBox(_monitorComboBox);
         _monitorComboBox.SelectedIndexChanged += OnBehaviorChanged;
 
-        section.SetContentHeight(40);
-        panel.Controls.AddRange([monitorLabel, _monitorComboBox]);
+        var monitorField = new ComboField(_monitorComboBox)
+        {
+            Location = new Point(76, 6),
+            Width = innerWidth - 76,
+        };
+
+        section.SetContentHeight(44);
+        panel.Controls.AddRange([monitorLabel, monitorField]);
         parent.Controls.Add(section);
     }
 
@@ -540,14 +547,14 @@ internal sealed class SettingsForm : Form
     {
         var section = new GlassSection("Поведение", sectionWidth);
         var panel = section.ContentPanel;
-        var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
+        var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
         var pollLabel = CreateMutedLabel("Интервал опроса GitHub API:");
-        pollLabel.Location = new Point(0, 0);
+        pollLabel.Location = new Point(0, 4);
         pollLabel.AutoSize = true;
 
-        const int radioTop = 28;
-        const int radioGap = 26;
+        const int radioTop = 32;
+        const int radioGap = 28;
 
         _economyRadio = new RadioButton
         {
@@ -576,8 +583,8 @@ internal sealed class SettingsForm : Form
         SettingsTheme.ApplyToRadio(_frequentRadio);
         _frequentRadio.CheckedChanged += OnBehaviorChanged;
 
-        const int checkboxTop = radioTop + radioGap * 3 + 8;
-        const int checkboxGap = 28;
+        const int checkboxTop = radioTop + radioGap * 3 + 12;
+        const int checkboxGap = 30;
 
         _autoStartCheckBox = new CheckBox
         {
@@ -616,7 +623,7 @@ internal sealed class SettingsForm : Form
         SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        section.SetContentHeight(checkboxTop + checkboxGap * 3 + 30);
+        section.SetContentHeight(checkboxTop + checkboxGap * 3 + 34);
         panel.Controls.AddRange([
             pollLabel,
             _economyRadio,

@@ -14,6 +14,20 @@ internal sealed class ThemedScrollPanel : Panel
         SettingsTheme.PaintFormBackground(e.Graphics, ClientRectangle);
 }
 
+/// <summary>Контент секции без собственного фона — виден «стеклянный» слой родителя.</summary>
+internal sealed class GlassContentPanel : Panel
+{
+    public GlassContentPanel()
+    {
+        BackColor = Color.Transparent;
+        SettingsTheme.EnableDoubleBuffer(this);
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+    }
+}
+
 /// <summary>Секция с «стеклянным» фоном и заголовком.</summary>
 internal sealed class GlassSection : Panel
 {
@@ -22,28 +36,28 @@ internal sealed class GlassSection : Panel
         SettingsTheme.ApplySurfaceBackground(this);
         Width = width;
         Margin = new Padding(0, 0, 0, SettingsTheme.SectionGap);
-        Padding = new Padding(
-            SettingsTheme.SectionPadding,
-            SettingsTheme.SectionPadding,
-            SettingsTheme.SectionPadding,
-            SettingsTheme.SectionPadding);
 
         var titleLabel = new Label
         {
             AutoSize = true,
+            BackColor = Color.Transparent,
             Font = SettingsTheme.SectionFont,
             ForeColor = SettingsTheme.TextPrimary,
             Location = new Point(SettingsTheme.SectionPadding, SettingsTheme.SectionPadding),
             Text = title,
         };
 
-        ContentPanel = new Panel
+        var contentTop = SettingsTheme.SectionPadding
+            + SettingsTheme.SectionTitleHeight
+            + SettingsTheme.SectionTitleGap;
+
+        ContentPanel = new GlassContentPanel
         {
-            BackColor = SettingsTheme.BackgroundTop,
-            Location = new Point(SettingsTheme.SectionPadding, SettingsTheme.SectionPadding + 28),
-            Width = width - SettingsTheme.SectionPadding * 2,
+            Location = new Point(
+                SettingsTheme.SectionPadding + SettingsTheme.ContentPadding,
+                contentTop),
+            Width = width - (SettingsTheme.SectionPadding + SettingsTheme.ContentPadding) * 2,
         };
-        SettingsTheme.EnableDoubleBuffer(ContentPanel);
 
         Controls.Add(ContentPanel);
         Controls.Add(titleLabel);
@@ -51,11 +65,14 @@ internal sealed class GlassSection : Panel
 
     public Panel ContentPanel { get; }
 
+    public static int ContentWidth(int sectionWidth) =>
+        sectionWidth - (SettingsTheme.SectionPadding + SettingsTheme.ContentPadding) * 2;
+
     /// <summary>Задаёт высоту контента и полную высоту секции с учётом заголовка и отступов.</summary>
     public void SetContentHeight(int height)
     {
         ContentPanel.Height = height;
-        Height = Padding.Top + ContentPanel.Top + height + Padding.Bottom;
+        Height = ContentPanel.Bottom + SettingsTheme.SectionPadding;
     }
 
     protected override void OnPaintBackground(PaintEventArgs e)
@@ -188,6 +205,35 @@ internal sealed class TextField : Panel
         Padding = new Padding(12, 0, 12, 0);
         inner.Dock = DockStyle.Fill;
         inner.Margin = Padding.Empty;
+        Controls.Add(inner);
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        var bounds = ClientRectangle;
+        bounds.Width -= 1;
+        bounds.Height -= 1;
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+        using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
+        using var fill = new SolidBrush(SettingsTheme.InputFill);
+        e.Graphics.FillPath(fill, path);
+        using var border = new Pen(SettingsTheme.InputBorder, 1f);
+        e.Graphics.DrawPath(border, path);
+    }
+}
+
+/// <summary>Обёртка для выпадающего списка со скруглённой рамкой.</summary>
+internal sealed class ComboField : Panel
+{
+    public ComboField(ComboBox inner, int height = 32)
+    {
+        SettingsTheme.ApplySurfaceBackground(this);
+        Height = height;
+        Padding = new Padding(10, 0, 8, 0);
+        inner.Dock = DockStyle.Fill;
+        inner.Margin = Padding.Empty;
+        inner.FlatStyle = FlatStyle.Flat;
         Controls.Add(inner);
     }
 
