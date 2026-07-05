@@ -60,6 +60,7 @@ internal sealed class SettingsForm : Form
     private bool _suppressBehaviorEvents;
     private bool _suppressGridEvents;
     private bool _suppressCardDisplayEvents;
+    private bool _windowPositionApplied;
 
     public SettingsForm(
         GitHubSession githubSession,
@@ -83,7 +84,7 @@ internal sealed class SettingsForm : Form
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         MinimizeBox = false;
-        StartPosition = FormStartPosition.CenterScreen;
+        StartPosition = FormStartPosition.Manual;
         ShowInTaskbar = true;
         BackColor = SettingsTheme.BackgroundTop;
         ForeColor = SettingsTheme.TextPrimary;
@@ -130,6 +131,7 @@ internal sealed class SettingsForm : Form
 
         Load += (_, _) => RefreshAllCardHeights();
         Shown += (_, _) => RefreshAllCardHeights();
+        FormClosing += (_, _) => SaveWindowPosition();
     }
 
     private void RefreshAllCardHeights()
@@ -184,6 +186,55 @@ internal sealed class SettingsForm : Form
         _contentPanel.AutoScrollMinSize = needsScroll
             ? new Size(ContentWidth + FormPadding * 2, height)
             : Size.Empty;
+
+        ApplyWindowPosition();
+    }
+
+    private void ApplyWindowPosition()
+    {
+        if (_windowPositionApplied)
+        {
+            return;
+        }
+
+        _windowPositionApplied = true;
+
+        var settings = _settingsStore.Load();
+        if (settings.SettingsWindowLeft is int left && settings.SettingsWindowTop is int top)
+        {
+            Location = ClampToWorkingArea(new Point(left, top));
+            return;
+        }
+
+        CenterOnWorkingArea();
+    }
+
+    private void CenterOnWorkingArea()
+    {
+        var screen = Screen.FromPoint(Cursor.Position);
+        var area = screen.WorkingArea;
+        var x = area.Left + Math.Max(0, (area.Width - Width) / 2);
+        var y = area.Top + Math.Max(0, (area.Height - Height) / 2);
+        Location = new Point(x, y);
+    }
+
+    private Point ClampToWorkingArea(Point location)
+    {
+        var screen = Screen.FromPoint(location);
+        var area = screen.WorkingArea;
+        var maxX = Math.Max(area.Left, area.Right - Width);
+        var maxY = Math.Max(area.Top, area.Bottom - Height);
+        return new Point(
+            Math.Clamp(location.X, area.Left, maxX),
+            Math.Clamp(location.Y, area.Top, maxY));
+    }
+
+    private void SaveWindowPosition()
+    {
+        var settings = _settingsStore.Load();
+        settings.SettingsWindowLeft = Location.X;
+        settings.SettingsWindowTop = Location.Y;
+        _settingsStore.Save(settings);
     }
 
     private void ApplyPagePadding(int padding)

@@ -43,4 +43,10 @@ internal sealed class AppSettings
 
     /// <summary>Какие блоки показывать на карточках репозиториев.</summary>
     public CardDisplaySettings CardDisplay { get; set; } = CardDisplaySettings.CreateDefault();
+
+    /// <summary>Последняя позиция окна настроек (левый верхний угол). Null — центрировать при первом открытии.</summary>
+    public int? SettingsWindowLeft { get; set; }
+
+    /// <summary>Последняя позиция окна настроек (левый верхний угол). Null — центрировать при первом открытии.</summary>
+    public int? SettingsWindowTop { get; set; }
 }
