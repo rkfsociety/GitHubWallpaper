@@ -25,6 +25,10 @@ C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в
 
 **Сейчас:** push в `main` → CI обновляет единственный Release `latest` с portable exe.
 
+## Git (агент)
+
+После каждой завершённой задачи: **коммит и сразу push** в `main`. Не спрашивать подтверждение. Без push CI не соберёт новый release.
+
 ## Архитектура
 
 ```
