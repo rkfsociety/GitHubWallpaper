@@ -109,6 +109,12 @@ internal sealed class GridLayoutEditor : UserControl
     public bool TryAddRepository(string slug)
     {
         var emptyIndex = Array.FindIndex(_slots, slot => string.IsNullOrWhiteSpace(slot));
+        if (emptyIndex < 0 && !TryExpandColumnsByOne())
+        {
+            return false;
+        }
+
+        emptyIndex = Array.FindIndex(_slots, slot => string.IsNullOrWhiteSpace(slot));
         if (emptyIndex < 0)
         {
             return false;
@@ -145,6 +151,29 @@ internal sealed class GridLayoutEditor : UserControl
         _slots.Count(slot => !string.IsNullOrWhiteSpace(slot));
 
     private int SlotCapacity => GridColumns * GridRows;
+
+    private bool TryExpandColumnsByOne()
+    {
+        if (GridColumns >= MaxGridSize)
+        {
+            return false;
+        }
+
+        var occupied = CollectOccupiedRepos(_slots);
+        var newColumns = GridColumns + 1;
+        var newCapacity = newColumns * GridRows;
+
+        _suppressEvents = true;
+        _columnsUpDown.Value = newColumns;
+        _suppressEvents = false;
+
+        _slots = CompactSlots(occupied, newCapacity);
+        RebuildGrid();
+        _lastGridColumns = newColumns;
+        _lastGridRows = GridRows;
+        RefreshSlotPanels();
+        return true;
+    }
 
     private static NumericUpDown CreateGridSizeUpDown(decimal value)
     {

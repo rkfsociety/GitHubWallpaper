@@ -884,7 +884,7 @@ internal sealed class SettingsForm : Form
         if (!_gridLayoutEditor.TryAddRepository(reference.Slug))
         {
             MessageBox.Show(
-                "Сетка заполнена. Увеличьте число строк или колонок, либо удалите репозиторий.",
+                "Сетка заполнена — достигнут максимум колонок (6). Удалите репозиторий.",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
