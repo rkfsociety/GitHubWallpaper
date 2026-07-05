@@ -9,7 +9,8 @@ namespace GitHubWallpaper.Settings;
 /// </summary>
 internal sealed class SettingsForm : Form
 {
-    private const int FormPadding = 24;
+    private const int FormPadding = 28;
+    private const int CompactVerticalPadding = 16;
     private const int ContentWidth = 880;
     private const int ColumnGap = 16;
     private const int SidebarWidth = 320;
@@ -97,7 +98,10 @@ internal sealed class SettingsForm : Form
         Font = SettingsTheme.BodyFont;
         SettingsTheme.EnableDoubleBuffer(this);
 
-        _contentPanel = new ThemedContentPanel();
+        _contentPanel = new ThemedContentPanel
+        {
+            Padding = new Padding(FormPadding),
+        };
         _pageLayout = new TableLayoutPanel
         {
             AutoSize = true,
@@ -105,7 +109,6 @@ internal sealed class SettingsForm : Form
             BackColor = SettingsTheme.BackgroundTop,
             ColumnCount = 1,
             Dock = DockStyle.Top,
-            Location = new Point(FormPadding, FormPadding),
             Padding = Padding.Empty,
             Width = ContentWidth,
         };
@@ -200,7 +203,7 @@ internal sealed class SettingsForm : Form
 
         if (height > maxHeight)
         {
-            ApplyPagePadding(12);
+            ApplyPagePadding(CompactVerticalPadding);
             height = RemeasureContentHeight();
         }
 
@@ -263,9 +266,9 @@ internal sealed class SettingsForm : Form
         _settingsStore.Save(settings);
     }
 
-    private void ApplyPagePadding(int padding)
+    private void ApplyPagePadding(int verticalPadding)
     {
-        _pageLayout.Location = new Point(padding, padding);
+        _contentPanel.Padding = new Padding(FormPadding, verticalPadding, FormPadding, verticalPadding);
     }
 
     private int RemeasureContentHeight()
@@ -273,8 +276,7 @@ internal sealed class SettingsForm : Form
         UpdateAuthCardHeight();
         RefreshSettingsCardHeights();
         _pageLayout.PerformLayout();
-        var padding = _pageLayout.Location.Y;
-        return padding + _pageLayout.Height + padding;
+        return _contentPanel.Padding.Vertical + _pageLayout.Height;
     }
 
     private int GetMaxClientHeight()
