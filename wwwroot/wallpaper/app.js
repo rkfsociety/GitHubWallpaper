@@ -9,6 +9,21 @@
 
   const cardElements = new Map();
 
+  const layoutState = {
+    density: "default",
+    columns: 1,
+    commitLimit: 5,
+  };
+
+  const layoutPresets = {
+    default: { minCardRem: 20, estCardPx: 520, commitLimit: 5, heroPx: 220 },
+    compact: { minCardRem: 18, estCardPx: 460, commitLimit: 4, heroPx: 100 },
+    dense: { minCardRem: 16, estCardPx: 380, commitLimit: 3, heroPx: 80 },
+    tight: { minCardRem: 14, estCardPx: 300, commitLimit: 2, heroPx: 64 },
+  };
+
+  let lastViewport = null;
+
   const icons = {
     star:
       '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>',
@@ -170,6 +185,7 @@
     }
 
     refreshAllRepoCards();
+    updateLayout(lastViewport);
   }
 
   function dispatchBridgeEvent(name, detail) {
@@ -210,7 +226,7 @@
     }
 
     const items = commits
-      .slice(0, 5)
+      .slice(0, layoutState.commitLimit)
       .map((commit) => {
         const sha = shortSha(commit.sha);
         const message = escapeHtml(commit.message || "Без сообщения");
@@ -384,6 +400,95 @@
     }
   }
 
+  function computeLayout(viewport, repoCount) {
+    if (!viewport || repoCount === 0) {
+      return { density: "default", columns: 1, commitLimit: 5 };
+    }
+
+    const paddingPx = 48;
+    const gapPx = 16;
+    const availWidth = Math.max(320, viewport.width - viewport.safeLeft - viewport.safeRight - paddingPx);
+    const availHeight = Math.max(320, viewport.height - viewport.safeTop - viewport.safeBottom - paddingPx);
+    const densities = ["default", "compact", "dense", "tight"];
+
+    for (const density of densities) {
+      const preset = layoutPresets[density];
+      const minCardPx = preset.minCardRem * 16;
+      const maxColsByWidth = Math.max(
+        1,
+        Math.min(repoCount, Math.floor((availWidth + gapPx) / (minCardPx + gapPx))),
+      );
+
+      let columns = maxColsByWidth;
+      for (let cols = maxColsByWidth; cols <= repoCount; cols += 1) {
+        const rows = Math.ceil(repoCount / cols);
+        const gridHeight = rows * preset.estCardPx + Math.max(0, rows - 1) * gapPx;
+        const totalHeight = preset.heroPx + gridHeight;
+
+        if (totalHeight <= availHeight) {
+          columns = cols;
+        }
+      }
+
+      const rows = Math.ceil(repoCount / columns);
+      const gridHeight = rows * preset.estCardPx + Math.max(0, rows - 1) * gapPx;
+      const totalHeight = preset.heroPx + gridHeight;
+
+      if (totalHeight <= availHeight || density === "tight") {
+        return { density, columns, commitLimit: preset.commitLimit };
+      }
+    }
+
+    const preset = layoutPresets.tight;
+    const columns = Math.max(
+      1,
+      Math.min(repoCount, Math.floor((availWidth + gapPx) / (preset.minCardRem * 16 + gapPx))),
+    );
+    return { density: "tight", columns, commitLimit: preset.commitLimit };
+  }
+
+  function applyLayout(layout) {
+    const changed =
+      layoutState.density !== layout.density ||
+      layoutState.columns !== layout.columns ||
+      layoutState.commitLimit !== layout.commitLimit;
+
+    layoutState.density = layout.density;
+    layoutState.columns = layout.columns;
+    layoutState.commitLimit = layout.commitLimit;
+
+    document.body.dataset.layout = layout.density;
+    document.body.dataset.repoCount = String(Object.keys(state.repos).length);
+    repoGrid.style.setProperty("--grid-columns", String(layout.columns));
+
+    if (changed) {
+      refreshAllRepoCards();
+    }
+  }
+
+  function updateLayout(viewport) {
+    if (viewport) {
+      lastViewport = viewport;
+    }
+
+    if (!lastViewport) {
+      return;
+    }
+
+    const root = document.documentElement;
+    const { width, height, safeTop, safeRight, safeBottom, safeLeft } = lastViewport;
+
+    root.style.setProperty("--safe-top", `${safeTop}px`);
+    root.style.setProperty("--safe-right", `${safeRight}px`);
+    root.style.setProperty("--safe-bottom", `${safeBottom}px`);
+    root.style.setProperty("--safe-left", `${safeLeft}px`);
+    root.style.setProperty("--viewport-width", `${width}px`);
+    root.style.setProperty("--viewport-height", `${height}px`);
+
+    const repoCount = Object.keys(state.repos).length;
+    applyLayout(computeLayout(lastViewport, repoCount));
+  }
+
   function handleBridgeMessage(data) {
     if (!data || typeof data.type !== "string") {
       return;
@@ -472,6 +577,9 @@
         dispatchBridgeEvent("wallpaper:repo-poll-failed", data);
         return;
       }
+      case "viewport:update":
+        updateLayout(data.payload);
+        return;
       default:
         return;
     }

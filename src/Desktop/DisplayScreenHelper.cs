@@ -36,4 +36,32 @@ internal static class DisplayScreenHelper
         var primary = screen.Primary ? " (основной)" : string.Empty;
         return $"{index + 1}: {screen.Bounds.Width}×{screen.Bounds.Height}{primary}";
     }
+
+    /// <summary>
+    /// Размер монитора и отступы рабочей области относительно панели задач и системных краёв.
+    /// </summary>
+    public static ViewportInsets GetViewportInsets(Screen screen)
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+
+        var bounds = screen.Bounds;
+        var work = screen.WorkingArea;
+
+        return new ViewportInsets(
+            bounds.Width,
+            bounds.Height,
+            Math.Max(0, work.Top - bounds.Top),
+            Math.Max(0, bounds.Right - work.Right),
+            Math.Max(0, bounds.Bottom - work.Bottom),
+            Math.Max(0, work.Left - bounds.Left));
+    }
 }
+
+/// <summary>Размеры viewport обоев с учётом панели задач.</summary>
+internal readonly record struct ViewportInsets(
+    int Width,
+    int Height,
+    int SafeTop,
+    int SafeRight,
+    int SafeBottom,
+    int SafeLeft);

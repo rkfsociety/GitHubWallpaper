@@ -18,6 +18,7 @@ public sealed class WallpaperController : IDisposable
     private bool _paused;
     private string? _displayDeviceName;
     private bool _displaySettingsHooked;
+    private bool _viewportHooksAttached;
 
     /// <summary>Обои прикреплены к рабочему столу.</summary>
     public bool IsApplied => _surface?.IsAttached ?? false;
@@ -93,6 +94,7 @@ public sealed class WallpaperController : IDisposable
         cancellationToken.ThrowIfCancellationRequested();
 
         _surface ??= new WallpaperSurface();
+        EnsureViewportHooks(_surface);
 
         await _surface.InitializeAsync().ConfigureAwait(true);
         cancellationToken.ThrowIfCancellationRequested();
@@ -275,14 +277,70 @@ public sealed class WallpaperController : IDisposable
         if (_surface is null)
             return;
 
-        var bounds = DisplayScreenHelper.Resolve(_displayDeviceName).Bounds;
+        var screen = DisplayScreenHelper.Resolve(_displayDeviceName);
+        var bounds = screen.Bounds;
 
-        void Apply() => _surface.SetDisplayBounds(bounds);
+        void Apply()
+        {
+            _surface.SetDisplayBounds(bounds);
+            PostViewportUpdate(screen);
+        }
 
         if (_surface.InvokeRequired)
             _surface.BeginInvoke(Apply);
         else
             Apply();
+    }
+
+    private void EnsureViewportHooks(WallpaperSurface surface)
+    {
+        if (_viewportHooksAttached)
+            return;
+
+        surface.SizeChanged += OnSurfaceSizeChanged;
+
+        if (surface.WebView.CoreWebView2 is { } core)
+            core.NavigationCompleted += OnNavigationCompleted;
+        else
+            surface.WebView.CoreWebView2InitializationCompleted += OnCoreWebView2InitializationCompleted;
+
+        _viewportHooksAttached = true;
+    }
+
+    private void OnSurfaceSizeChanged(object? sender, EventArgs e) =>
+        PostViewportUpdate(DisplayScreenHelper.Resolve(_displayDeviceName));
+
+    private void OnCoreWebView2InitializationCompleted(object? sender, CoreWebView2InitializationCompletedEventArgs e)
+    {
+        if (e.IsSuccess && _surface?.WebView.CoreWebView2 is { } core)
+            core.NavigationCompleted += OnNavigationCompleted;
+    }
+
+    private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+    {
+        if (e.IsSuccess)
+            PostViewportUpdate(DisplayScreenHelper.Resolve(_displayDeviceName));
+    }
+
+    private void PostViewportUpdate(Screen screen)
+    {
+        if (_surface is null || !_surface.IsCoreInitialized)
+            return;
+
+        var viewport = DisplayScreenHelper.GetViewportInsets(screen);
+        PostMessageAsJson(new
+        {
+            type = "viewport:update",
+            payload = new
+            {
+                width = viewport.Width,
+                height = viewport.Height,
+                safeTop = viewport.SafeTop,
+                safeRight = viewport.SafeRight,
+                safeBottom = viewport.SafeBottom,
+                safeLeft = viewport.SafeLeft,
+            },
+        });
     }
 
     private void EnsureDisplaySettingsHook()
