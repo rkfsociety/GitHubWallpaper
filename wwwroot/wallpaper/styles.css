@@ -1,0 +1,137 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: #e6edf3;
+  background: #0d1117;
+}
+
+.wallpaper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(56, 139, 253, 0.12), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(136, 87, 255, 0.08), transparent 50%),
+    linear-gradient(160deg, #0d1117 0%, #161b22 45%, #0d1117 100%);
+}
+
+.wallpaper__glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(56, 139, 253, 0.06), transparent 55%);
+  pointer-events: none;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  max-width: 42rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.hero__mark {
+  color: #e6edf3;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 24px rgba(56, 139, 253, 0.35));
+}
+
+.hero__title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #e6edf3 0%, #8b949e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero__subtitle {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: #8b949e;
+  line-height: 1.5;
+}
+
+.hero__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid rgba(48, 54, 61, 0.8);
+  border-radius: 999px;
+  background: rgba(22, 27, 34, 0.75);
+  font-size: 0.95rem;
+  color: #8b949e;
+}
+
+.hero__hint strong {
+  color: #58a6ff;
+  font-weight: 600;
+}
+
+.hero__hint-dot {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #3fb950;
+  box-shadow: 0 0 8px rgba(63, 185, 80, 0.6);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+}
+
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(1, 4, 9, 0.72);
+  backdrop-filter: blur(4px);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #8b949e;
+  letter-spacing: 0.02em;
+}
+
+.pause-overlay[hidden] {
+  display: none;
+}
+
+body.is-paused .hero__hint-dot {
+  animation: none;
+  background: #d29922;
+  box-shadow: 0 0 8px rgba(210, 153, 34, 0.5);
+}
