@@ -148,6 +148,7 @@ internal sealed class GlowButton : ThemedButtonBase
 
     public GlowButton()
     {
+        BackColor = SettingsTheme.Accent;
         ForeColor = Color.White;
         Font = new Font("Segoe UI Semibold", 9.25F, FontStyle.Bold);
         MouseEnter += (_, _) => { _hover = true; Invalidate(); };

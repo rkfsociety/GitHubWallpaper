@@ -377,7 +377,7 @@ internal sealed class SettingsForm : Form
         var innerWidth = SettingsCard.BodyWidth(ContentWidth);
 
         _authSignInPanel = CreateAuthSignInPanel(innerWidth);
-        _authSignedInPanel = CreateAuthSignedInPanel(innerWidth);
+        _authSignedInPanel = CreateAuthSignedInPanel(WorkspaceMainWidth);
         AddPageRow(_authCard);
     }
 
@@ -395,47 +395,33 @@ internal sealed class SettingsForm : Form
     {
         var panel = new Panel
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = SettingsTheme.CardFill,
             Dock = DockStyle.Top,
+            Height = SettingsTheme.ControlHeight,
             Width = innerWidth,
         };
-
-        var row = new TableLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.CardFill,
-            ColumnCount = 2,
-            Dock = DockStyle.Top,
-            Width = innerWidth,
-        };
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108f));
-        row.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
 
         _authUserLabel = new Label
         {
             AutoEllipsis = true,
-            Dock = DockStyle.Fill,
             Font = SettingsTheme.SectionFont,
             ForeColor = SettingsTheme.TextPrimary,
+            Location = new Point(0, 0),
+            Size = new Size(innerWidth - 116, SettingsTheme.ControlHeight),
             Text = "Авторизован",
             TextAlign = ContentAlignment.MiddleLeft,
         };
 
         _authLogoutButton = new OutlineButton(SettingsTheme.AccentPurple)
         {
-            Dock = DockStyle.Fill,
-            Margin = new Padding(8, 0, 0, 0),
+            Location = new Point(innerWidth - 108, 0),
+            Size = new Size(108, SettingsTheme.ControlHeight),
             Text = "Выйти",
         };
         _authLogoutButton.Click += OnLogoutClick;
 
-        row.Controls.Add(_authUserLabel, 0, 0);
-        row.Controls.Add(_authLogoutButton, 1, 0);
-        panel.Controls.Add(row);
+        panel.Controls.Add(_authUserLabel);
+        panel.Controls.Add(_authLogoutButton);
         return panel;
     }
 
@@ -625,22 +611,13 @@ internal sealed class SettingsForm : Form
         if (signedIn)
         {
             _authSignedInPanel.Dock = DockStyle.Top;
-            _authSignedInPanel.Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
+            _authSignedInPanel.Margin = Padding.Empty;
             _authSignedInPanel.Width = WorkspaceMainWidth;
-            if (!_reposLeftPanel.Controls.Contains(_authSignedInPanel))
-            {
-                _reposLeftPanel.Controls.Add(_authSignedInPanel);
-                _reposLeftPanel.Controls.SetChildIndex(_authSignedInPanel, 0);
-            }
         }
         else
         {
             _authSignInPanel.Dock = DockStyle.Top;
             _authCard.Body.Controls.Add(_authSignInPanel);
-            if (_reposLeftPanel.Controls.Contains(_authSignedInPanel))
-            {
-                _reposLeftPanel.Controls.Remove(_authSignedInPanel);
-            }
         }
 
         UpdateAuthCardHeight();
@@ -790,33 +767,37 @@ internal sealed class SettingsForm : Form
         _repoInputTextBox.KeyDown += OnRepoInputKeyDown;
         AddBodyRow(new TextField(_repoInputTextBox) { Dock = DockStyle.Top, Width = innerWidth });
 
-        var actionsRow = new TableLayoutPanel
+        var actionsRow = new Panel
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = SettingsTheme.CardFill,
-            ColumnCount = 2,
             Dock = DockStyle.Top,
+            Height = SettingsTheme.ControlHeight,
             Width = innerWidth,
         };
-        actionsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128f));
-        actionsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128f));
-        actionsRow.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
 
-        var addRepoButton = new GlowButton { Dock = DockStyle.Fill, Text = "Добавить" };
+        const int actionButtonWidth = 128;
+        var addRepoButton = new GlowButton
+        {
+            Location = Point.Empty,
+            Size = new Size(actionButtonWidth, SettingsTheme.ControlHeight),
+            Text = "Добавить",
+        };
         addRepoButton.Click += OnAddRepoClick;
 
         _removeRepoButton = new GhostButton
         {
-            Dock = DockStyle.Fill,
-            Margin = new Padding(8, 0, 0, 0),
+            Location = new Point(actionButtonWidth + 8, 0),
+            Size = new Size(actionButtonWidth, SettingsTheme.ControlHeight),
             Text = "Удалить",
         };
         _removeRepoButton.Click += OnRemoveRepoClick;
 
-        actionsRow.Controls.Add(addRepoButton, 0, 0);
-        actionsRow.Controls.Add(_removeRepoButton, 1, 0);
+        actionsRow.Controls.Add(addRepoButton);
+        actionsRow.Controls.Add(_removeRepoButton);
         AddBodyRow(actionsRow);
+
+        _authSignedInPanel.Visible = false;
+        AddBodyRow(_authSignedInPanel);
 
         panel.Controls.Add(layout);
         return panel;
