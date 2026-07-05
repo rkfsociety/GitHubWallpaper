@@ -37,6 +37,13 @@ internal sealed class GlassSection : Panel
 
     public Panel ContentPanel { get; }
 
+    /// <summary>Задаёт высоту контента и полную высоту секции с учётом заголовка и отступов.</summary>
+    public void SetContentHeight(int height)
+    {
+        ContentPanel.Height = height;
+        Height = ContentPanel.Top + height + SettingsTheme.SectionPadding;
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         var bounds = ClientRectangle;

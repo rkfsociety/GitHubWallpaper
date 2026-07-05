@@ -234,8 +234,7 @@ internal sealed class SettingsForm : Form
         clearButton.Click += OnClearClick;
 
         y += 46;
-        panel.Height = y;
-        section.Height = y + SettingsTheme.SectionPadding + 36;
+        section.SetContentHeight(y);
 
         panel.Controls.AddRange([
             _signInWithGitHubButton,
@@ -302,8 +301,7 @@ internal sealed class SettingsForm : Form
         };
         _removeRepoButton.Click += OnRemoveRepoClick;
 
-        panel.Height = 280;
-        section.Height = 280 + SettingsTheme.SectionPadding + 36;
+        section.SetContentHeight(280);
         panel.Controls.AddRange([
             reposHint,
             _gridLayoutEditor,
@@ -333,8 +331,7 @@ internal sealed class SettingsForm : Form
         SettingsTheme.ApplyToComboBox(_monitorComboBox);
         _monitorComboBox.SelectedIndexChanged += OnBehaviorChanged;
 
-        panel.Height = 40;
-        section.Height = 40 + SettingsTheme.SectionPadding + 36;
+        section.SetContentHeight(40);
         panel.Controls.AddRange([monitorLabel, _monitorComboBox]);
         content.Controls.Add(section);
     }
@@ -411,8 +408,7 @@ internal sealed class SettingsForm : Form
         SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        panel.Height = 164;
-        section.Height = 164 + SettingsTheme.SectionPadding + 36;
+        section.SetContentHeight(164);
         panel.Controls.AddRange([
             pollLabel,
             _economyRadio,
