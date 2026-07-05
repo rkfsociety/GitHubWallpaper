@@ -9,7 +9,10 @@ namespace GitHubWallpaper.Settings;
 /// </summary>
 internal sealed class SettingsForm : Form
 {
-    private const int ContentWidth = 520;
+    private const int FormContentWidth = 880;
+    private const int GridColumnWidth = 520;
+    private const int ColumnGap = 14;
+    private static int SideColumnWidth => FormContentWidth - GridColumnWidth - ColumnGap;
 
     private readonly GitHubSession _githubSession;
     private readonly SettingsStore _settingsStore;
@@ -60,7 +63,7 @@ internal sealed class SettingsForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(560, 860);
+        ClientSize = new Size(FormContentWidth + 40, 620);
         ShowInTaskbar = true;
         BackColor = SettingsTheme.BackgroundTop;
         ForeColor = SettingsTheme.TextPrimary;
@@ -87,14 +90,39 @@ internal sealed class SettingsForm : Form
         scroll.Controls.Add(content);
         scroll.Resize += (_, _) => SyncContentWidth(scroll, content);
 
-        BuildAuthSection(content);
-        BuildReposSection(content);
-        BuildDisplaySection(content);
-        BuildBehaviorSection(content);
+        BuildAuthSection(content, FormContentWidth);
+
+        var bottomRow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent,
+            FlowDirection = FlowDirection.LeftToRight,
+            Margin = Padding.Empty,
+            WrapContents = false,
+            Width = FormContentWidth,
+        };
+
+        var rightColumn = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent,
+            FlowDirection = FlowDirection.TopDown,
+            Margin = new Padding(ColumnGap, 0, 0, 0),
+            WrapContents = false,
+            Width = SideColumnWidth,
+        };
+
+        BuildReposSection(bottomRow, GridColumnWidth);
+        BuildDisplaySection(rightColumn, SideColumnWidth);
+        BuildBehaviorSection(rightColumn, SideColumnWidth);
+        bottomRow.Controls.Add(rightColumn);
+        content.Controls.Add(bottomRow);
 
         var repoHintLabel = CreateMutedLabel(
             "Токен и Client Secret — в Credential Manager. Device Flow не требует Secret.");
-        repoHintLabel.Width = ContentWidth;
+        repoHintLabel.Width = FormContentWidth;
         repoHintLabel.Height = 36;
         content.Controls.Add(repoHintLabel);
 
@@ -130,16 +158,17 @@ internal sealed class SettingsForm : Form
         content.PerformLayout();
         var maxHeight = Screen.FromControl(this).WorkingArea.Height - 48;
         var desiredHeight = Math.Min(content.PreferredSize.Height, maxHeight);
-        ClientSize = new Size(ClientSize.Width, Math.Max(desiredHeight, 520));
+        ClientSize = new Size(ClientSize.Width, Math.Max(desiredHeight, 480));
     }
 
     protected override void OnPaintBackground(PaintEventArgs e) =>
         SettingsTheme.PaintFormBackground(e.Graphics, ClientRectangle);
 
-    private void BuildAuthSection(FlowLayoutPanel content)
+    private void BuildAuthSection(FlowLayoutPanel parent, int sectionWidth)
     {
-        var section = new GlassSection("Авторизация GitHub", ContentWidth);
+        var section = new GlassSection("Авторизация GitHub", sectionWidth);
         var panel = section.ContentPanel;
+        var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
         var y = 0;
 
         _signInWithGitHubButton = new GlowButton
@@ -162,7 +191,7 @@ internal sealed class SettingsForm : Form
         _createTokenLinkLabel = new LinkLabel
         {
             AutoSize = true,
-            Location = new Point(372, y + 8),
+            Location = new Point(innerWidth - 108, y + 8),
             Text = "Токен вручную",
         };
         SettingsTheme.ApplyToLink(_createTokenLinkLabel);
@@ -181,13 +210,13 @@ internal sealed class SettingsForm : Form
         var oauthClientIdField = new TextField(_oauthClientIdTextBox)
         {
             Location = new Point(112, y),
-            Width = 300,
+            Width = innerWidth - 112 - 136,
         };
 
         var oauthRegisterLinkLabel = new LinkLabel
         {
             AutoSize = true,
-            Location = new Point(420, y + 8),
+            Location = new Point(innerWidth - 128, y + 8),
             Text = "Создать OAuth App",
         };
         SettingsTheme.ApplyToLink(oauthRegisterLinkLabel);
@@ -207,7 +236,7 @@ internal sealed class SettingsForm : Form
         var oauthClientSecretField = new TextField(_oauthClientSecretTextBox)
         {
             Location = new Point(112, y),
-            Width = 376,
+            Width = innerWidth - 112,
         };
 
         y += 44;
@@ -220,18 +249,18 @@ internal sealed class SettingsForm : Form
         _tokenTextBox = new ThemedTextBox
         {
             UseSystemPasswordChar = true,
-            Width = ContentWidth - SettingsTheme.SectionPadding * 2,
+            Width = innerWidth,
         };
         var tokenField = new TextField(_tokenTextBox)
         {
             Location = new Point(0, y),
-            Width = ContentWidth - SettingsTheme.SectionPadding * 2,
+            Width = innerWidth,
         };
         y += 38;
 
         _tokenStatusLabel = CreateMutedLabel(string.Empty);
         _tokenStatusLabel.Location = new Point(0, y);
-        _tokenStatusLabel.Size = new Size(ContentWidth - SettingsTheme.SectionPadding * 2, 42);
+        _tokenStatusLabel.Size = new Size(innerWidth, 42);
         y += 48;
 
         var saveButton = new GlowButton
@@ -278,14 +307,14 @@ internal sealed class SettingsForm : Form
             clearButton,
         ]);
 
-        content.Controls.Add(section);
+        parent.Controls.Add(section);
     }
 
-    private void BuildReposSection(FlowLayoutPanel content)
+    private void BuildReposSection(FlowLayoutPanel parent, int sectionWidth)
     {
-        var section = new GlassSection("Сетка обоев", ContentWidth);
+        var section = new GlassSection("Сетка обоев", sectionWidth);
         var panel = section.ContentPanel;
-        var innerWidth = ContentWidth - SettingsTheme.SectionPadding * 2;
+        var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
 
         var reposHint = CreateMutedLabel("Перетащите репозитории между ячейками");
         reposHint.Location = new Point(0, 0);
@@ -335,14 +364,14 @@ internal sealed class SettingsForm : Form
             _removeRepoButton,
         ]);
 
-        content.Controls.Add(section);
+        parent.Controls.Add(section);
     }
 
-    private void BuildDisplaySection(FlowLayoutPanel content)
+    private void BuildDisplaySection(FlowLayoutPanel parent, int sectionWidth)
     {
-        var section = new GlassSection("Экран", ContentWidth);
+        var section = new GlassSection("Экран", sectionWidth);
         var panel = section.ContentPanel;
-        var innerWidth = ContentWidth - SettingsTheme.SectionPadding * 2;
+        var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
 
         var monitorLabel = CreateFieldLabel("Монитор:");
         monitorLabel.Location = new Point(0, 6);
@@ -358,24 +387,25 @@ internal sealed class SettingsForm : Form
 
         section.SetContentHeight(40);
         panel.Controls.AddRange([monitorLabel, _monitorComboBox]);
-        content.Controls.Add(section);
+        parent.Controls.Add(section);
     }
 
-    private void BuildBehaviorSection(FlowLayoutPanel content)
+    private void BuildBehaviorSection(FlowLayoutPanel parent, int sectionWidth)
     {
-        var section = new GlassSection("Поведение", ContentWidth);
+        var section = new GlassSection("Поведение", sectionWidth);
         var panel = section.ContentPanel;
-
-        var innerWidth = ContentWidth - SettingsTheme.SectionPadding * 2;
 
         var pollLabel = CreateMutedLabel("Интервал опроса GitHub API:");
         pollLabel.Location = new Point(0, 0);
         pollLabel.AutoSize = true;
 
+        const int radioTop = 28;
+        const int radioGap = 26;
+
         _economyRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(0, 28),
+            Location = new Point(0, radioTop),
             Text = "Экономный (15 / 10 мин)",
         };
         SettingsTheme.ApplyToRadio(_economyRadio);
@@ -384,7 +414,7 @@ internal sealed class SettingsForm : Form
         _normalRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(innerWidth / 3, 28),
+            Location = new Point(0, radioTop + radioGap),
             Text = "Нормальный (5 / 2 мин)",
         };
         SettingsTheme.ApplyToRadio(_normalRadio);
@@ -393,14 +423,14 @@ internal sealed class SettingsForm : Form
         _frequentRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(innerWidth * 2 / 3, 28),
+            Location = new Point(0, radioTop + radioGap * 2),
             Text = "Частый (2 / 1 мин)",
         };
         SettingsTheme.ApplyToRadio(_frequentRadio);
         _frequentRadio.CheckedChanged += OnBehaviorChanged;
 
-        const int checkboxTop = 64;
-        const int checkboxGap = 30;
+        const int checkboxTop = radioTop + radioGap * 3 + 8;
+        const int checkboxGap = 28;
 
         _autoStartCheckBox = new CheckBox
         {
@@ -450,7 +480,7 @@ internal sealed class SettingsForm : Form
             _autoCheckUpdatesCheckBox,
         ]);
 
-        content.Controls.Add(section);
+        parent.Controls.Add(section);
     }
 
     private static Label CreateFieldLabel(string text)
