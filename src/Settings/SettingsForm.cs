@@ -1,5 +1,6 @@
 using GitHubWallpaper.Desktop;
 using GitHubWallpaper.GitHub;
+using GitHubWallpaper.Settings.Ui;
 
 namespace GitHubWallpaper.Settings;
 
@@ -8,29 +9,31 @@ namespace GitHubWallpaper.Settings;
 /// </summary>
 internal sealed class SettingsForm : Form
 {
+    private const int ContentWidth = 520;
+
     private readonly GitHubSession _githubSession;
     private readonly SettingsStore _settingsStore;
     private readonly RepoPoller _repoPoller;
     private readonly AutoPauseMonitor _autoPauseMonitor;
     private readonly WallpaperController _wallpaperController;
-    private readonly TextBox _tokenTextBox;
-    private readonly Label _tokenStatusLabel;
-    private readonly Button _signInWithGitHubButton;
-    private readonly LinkLabel _deviceSignInLinkLabel;
-    private readonly LinkLabel _createTokenLinkLabel;
-    private readonly TextBox _oauthClientIdTextBox;
-    private readonly TextBox _oauthClientSecretTextBox;
-    private readonly GridLayoutEditor _gridLayoutEditor;
-    private readonly TextBox _repoInputTextBox;
-    private readonly Button _removeRepoButton;
-    private readonly RadioButton _economyRadio;
-    private readonly RadioButton _normalRadio;
-    private readonly RadioButton _frequentRadio;
-    private readonly CheckBox _autoStartCheckBox;
-    private readonly CheckBox _pauseFullscreenCheckBox;
-    private readonly CheckBox _pauseBatteryCheckBox;
-    private readonly CheckBox _autoCheckUpdatesCheckBox;
-    private readonly ComboBox _monitorComboBox;
+    private TextBox _tokenTextBox = null!;
+    private Label _tokenStatusLabel = null!;
+    private Button _signInWithGitHubButton = null!;
+    private LinkLabel _deviceSignInLinkLabel = null!;
+    private LinkLabel _createTokenLinkLabel = null!;
+    private TextBox _oauthClientIdTextBox = null!;
+    private TextBox _oauthClientSecretTextBox = null!;
+    private GridLayoutEditor _gridLayoutEditor = null!;
+    private TextBox _repoInputTextBox = null!;
+    private Button _removeRepoButton = null!;
+    private RadioButton _economyRadio = null!;
+    private RadioButton _normalRadio = null!;
+    private RadioButton _frequentRadio = null!;
+    private CheckBox _autoStartCheckBox = null!;
+    private CheckBox _pauseFullscreenCheckBox = null!;
+    private CheckBox _pauseBatteryCheckBox = null!;
+    private CheckBox _autoCheckUpdatesCheckBox = null!;
+    private ComboBox _monitorComboBox = null!;
     private bool _suppressBehaviorEvents;
     private bool _suppressGridEvents;
 
@@ -53,24 +56,71 @@ internal sealed class SettingsForm : Form
         _wallpaperController = wallpaperController;
 
         Text = "GitHub Wallpaper — Настройки";
-        FormBorderStyle = FormBorderStyle.FixedDialog;
+        FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(520, 820);
+        ClientSize = new Size(560, 860);
         ShowInTaskbar = true;
+        BackColor = SettingsTheme.BackgroundTop;
+        ForeColor = SettingsTheme.TextPrimary;
+        Font = SettingsTheme.BodyFont;
+        SettingsTheme.EnableDoubleBuffer(this);
 
-        var tokenLabel = new Label
+        var scroll = new Panel
         {
-            AutoSize = true,
-            Location = new Point(16, 16),
-            Text = "Авторизация GitHub:",
+            AutoScroll = true,
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
         };
 
-        _signInWithGitHubButton = new Button
+        var content = new FlowLayoutPanel
         {
-            Location = new Point(16, 40),
-            Size = new Size(180, 30),
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            FlowDirection = FlowDirection.TopDown,
+            Location = new Point(0, 0),
+            Padding = new Padding(20, 16, 20, 16),
+            WrapContents = false,
+        };
+        scroll.Controls.Add(content);
+        scroll.Resize += (_, _) => content.Width = Math.Max(ContentWidth, scroll.ClientSize.Width - 4);
+        content.Width = ContentWidth;
+
+        BuildAuthSection(content);
+        BuildReposSection(content);
+        BuildDisplaySection(content);
+        BuildBehaviorSection(content);
+
+        var repoHintLabel = CreateMutedLabel(
+            "Токен и Client Secret — в Credential Manager. Device Flow не требует Secret.");
+        repoHintLabel.Width = ContentWidth;
+        repoHintLabel.Height = 36;
+        content.Controls.Add(repoHintLabel);
+
+        Controls.Add(scroll);
+
+        PopulateMonitorComboBox();
+        LoadBehaviorSettings();
+        LoadOAuthClientId();
+        LoadOAuthClientSecret();
+        LoadGridLayout();
+        UpdateTokenStatus();
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e) =>
+        SettingsTheme.PaintFormBackground(e.Graphics, ClientRectangle);
+
+    private void BuildAuthSection(FlowLayoutPanel content)
+    {
+        var section = new GlassSection("Авторизация GitHub", ContentWidth);
+        var panel = section.ContentPanel;
+        var y = 0;
+
+        _signInWithGitHubButton = new GlowButton
+        {
+            Location = new Point(0, y),
+            Size = new Size(196, 34),
             Text = "Войти через GitHub",
         };
         _signInWithGitHubButton.Click += OnSignInWithGitHubClick;
@@ -78,237 +128,292 @@ internal sealed class SettingsForm : Form
         _deviceSignInLinkLabel = new LinkLabel
         {
             AutoSize = true,
-            Location = new Point(204, 46),
+            Location = new Point(208, y + 8),
             Text = "Вход по коду устройства",
         };
+        SettingsTheme.ApplyToLink(_deviceSignInLinkLabel);
         _deviceSignInLinkLabel.LinkClicked += OnDeviceSignInLinkClicked;
 
         _createTokenLinkLabel = new LinkLabel
         {
             AutoSize = true,
-            Location = new Point(360, 46),
+            Location = new Point(372, y + 8),
             Text = "Токен вручную",
         };
+        SettingsTheme.ApplyToLink(_createTokenLinkLabel);
         _createTokenLinkLabel.LinkClicked += OnCreateTokenLinkClicked;
 
-        var oauthClientIdLabel = new Label
-        {
-            AutoSize = true,
-            Location = new Point(16, 78),
-            Text = "OAuth Client ID:",
-        };
+        y += 44;
 
-        _oauthClientIdTextBox = new TextBox
+        var oauthClientIdLabel = CreateFieldLabel("OAuth Client ID");
+        oauthClientIdLabel.Location = new Point(0, y + 6);
+        _oauthClientIdTextBox = new ThemedTextBox
         {
-            Location = new Point(120, 74),
-            Size = new Size(260, 23),
             PlaceholderText = "из GitHub → Developer settings",
+            Width = 280,
         };
         _oauthClientIdTextBox.Leave += OnOAuthClientIdLeave;
+        var oauthClientIdField = new TextField(_oauthClientIdTextBox)
+        {
+            Location = new Point(112, y),
+            Width = 300,
+        };
 
         var oauthRegisterLinkLabel = new LinkLabel
         {
             AutoSize = true,
-            Location = new Point(388, 78),
+            Location = new Point(420, y + 8),
             Text = "Создать OAuth App",
         };
+        SettingsTheme.ApplyToLink(oauthRegisterLinkLabel);
         oauthRegisterLinkLabel.LinkClicked += OnOAuthRegisterLinkClicked;
 
-        var oauthClientSecretLabel = new Label
-        {
-            AutoSize = true,
-            Location = new Point(16, 106),
-            Text = "OAuth Client Secret:",
-        };
+        y += 38;
 
-        _oauthClientSecretTextBox = new TextBox
+        var oauthClientSecretLabel = CreateFieldLabel("Client Secret");
+        oauthClientSecretLabel.Location = new Point(0, y + 6);
+        _oauthClientSecretTextBox = new ThemedTextBox
         {
-            Location = new Point(120, 102),
-            Size = new Size(260, 23),
-            UseSystemPasswordChar = true,
             PlaceholderText = "для входа через браузер (необязательно)",
+            UseSystemPasswordChar = true,
+            Width = 280,
         };
         _oauthClientSecretTextBox.Leave += OnOAuthClientSecretLeave;
-
-        var manualTokenLabel = new Label
+        var oauthClientSecretField = new TextField(_oauthClientSecretTextBox)
         {
-            AutoSize = true,
-            Location = new Point(16, 134),
-            Text = "Или вставьте Personal Access Token:",
+            Location = new Point(112, y),
+            Width = 376,
         };
 
-        _tokenTextBox = new TextBox
+        y += 44;
+
+        var manualTokenLabel = CreateMutedLabel("Или вставьте Personal Access Token:");
+        manualTokenLabel.Location = new Point(0, y);
+        manualTokenLabel.AutoSize = true;
+        y += 22;
+
+        _tokenTextBox = new ThemedTextBox
         {
-            Location = new Point(16, 158),
-            Size = new Size(488, 23),
             UseSystemPasswordChar = true,
+            Width = ContentWidth - SettingsTheme.SectionPadding * 2,
         };
-
-        _tokenStatusLabel = new Label
+        var tokenField = new TextField(_tokenTextBox)
         {
-            AutoSize = false,
-            Location = new Point(16, 190),
-            Size = new Size(488, 40),
-            ForeColor = SystemColors.GrayText,
+            Location = new Point(0, y),
+            Width = ContentWidth - SettingsTheme.SectionPadding * 2,
         };
+        y += 38;
 
-        var saveButton = new Button
+        _tokenStatusLabel = CreateMutedLabel(string.Empty);
+        _tokenStatusLabel.Location = new Point(0, y);
+        _tokenStatusLabel.Size = new Size(ContentWidth - SettingsTheme.SectionPadding * 2, 42);
+        y += 48;
+
+        var saveButton = new GlowButton
         {
-            Location = new Point(16, 236),
-            Size = new Size(100, 28),
+            Location = new Point(0, y),
+            Size = new Size(112, 34),
             Text = "Сохранить",
         };
         saveButton.Click += OnSaveClick;
 
-        var verifyButton = new Button
+        var verifyButton = new GhostButton
         {
-            Location = new Point(124, 236),
-            Size = new Size(100, 28),
+            Location = new Point(120, y),
+            Size = new Size(112, 34),
             Text = "Проверить",
         };
         verifyButton.Click += OnVerifyClick;
 
-        var clearButton = new Button
+        var clearButton = new GhostButton
         {
-            Location = new Point(232, 236),
-            Size = new Size(100, 28),
+            Location = new Point(240, y),
+            Size = new Size(112, 34),
             Text = "Очистить",
         };
         clearButton.Click += OnClearClick;
 
-        var reposLabel = new Label
-        {
-            AutoSize = true,
-            Location = new Point(16, 280),
-            Text = "Сетка обоев (перетащите репозитории между ячейками):",
-        };
+        y += 46;
+        panel.Height = y;
+        section.Height = y + SettingsTheme.SectionPadding + 36;
+
+        panel.Controls.AddRange([
+            _signInWithGitHubButton,
+            _deviceSignInLinkLabel,
+            _createTokenLinkLabel,
+            oauthClientIdLabel,
+            oauthClientIdField,
+            oauthRegisterLinkLabel,
+            oauthClientSecretLabel,
+            oauthClientSecretField,
+            manualTokenLabel,
+            tokenField,
+            _tokenStatusLabel,
+            saveButton,
+            verifyButton,
+            clearButton,
+        ]);
+
+        content.Controls.Add(section);
+    }
+
+    private void BuildReposSection(FlowLayoutPanel content)
+    {
+        var section = new GlassSection("Сетка обоев", ContentWidth);
+        var panel = section.ContentPanel;
+        var innerWidth = ContentWidth - SettingsTheme.SectionPadding * 2;
+
+        var reposHint = CreateMutedLabel("Перетащите репозитории между ячейками");
+        reposHint.Location = new Point(0, 0);
+        reposHint.AutoSize = true;
 
         _gridLayoutEditor = new GridLayoutEditor
         {
-            Location = new Point(16, 304),
-            Size = new Size(488, 148),
+            Location = new Point(0, 22),
+            Size = new Size(innerWidth, 168),
         };
         _gridLayoutEditor.LayoutChanged += OnGridLayoutChanged;
 
-        _repoInputTextBox = new TextBox
+        _repoInputTextBox = new ThemedTextBox
         {
-            Location = new Point(16, 460),
-            Size = new Size(360, 23),
             PlaceholderText = "owner/repo или https://github.com/owner/repo",
+            Width = innerWidth - 132,
         };
         _repoInputTextBox.KeyDown += OnRepoInputKeyDown;
-
-        var addRepoButton = new Button
+        var repoInputField = new TextField(_repoInputTextBox)
         {
-            Location = new Point(384, 458),
-            Size = new Size(120, 28),
+            Location = new Point(0, 198),
+            Width = innerWidth - 132,
+        };
+
+        var addRepoButton = new GlowButton
+        {
+            Location = new Point(innerWidth - 124, 198),
+            Size = new Size(124, 34),
             Text = "Добавить",
         };
         addRepoButton.Click += OnAddRepoClick;
 
-        _removeRepoButton = new Button
+        _removeRepoButton = new GhostButton
         {
-            Location = new Point(16, 494),
-            Size = new Size(120, 28),
+            Location = new Point(0, 240),
+            Size = new Size(124, 34),
             Text = "Удалить",
         };
         _removeRepoButton.Click += OnRemoveRepoClick;
 
-        var displayGroup = new GroupBox
-        {
-            Location = new Point(16, 536),
-            Size = new Size(488, 58),
-            Text = "Экран",
-        };
+        panel.Height = 280;
+        section.Height = 280 + SettingsTheme.SectionPadding + 36;
+        panel.Controls.AddRange([
+            reposHint,
+            _gridLayoutEditor,
+            repoInputField,
+            addRepoButton,
+            _removeRepoButton,
+        ]);
 
-        var monitorLabel = new Label
-        {
-            AutoSize = true,
-            Location = new Point(12, 28),
-            Text = "Монитор:",
-        };
+        content.Controls.Add(section);
+    }
+
+    private void BuildDisplaySection(FlowLayoutPanel content)
+    {
+        var section = new GlassSection("Экран", ContentWidth);
+        var panel = section.ContentPanel;
+        var innerWidth = ContentWidth - SettingsTheme.SectionPadding * 2;
+
+        var monitorLabel = CreateFieldLabel("Монитор:");
+        monitorLabel.Location = new Point(0, 6);
 
         _monitorComboBox = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
-            Location = new Point(84, 24),
-            Size = new Size(392, 23),
+            Location = new Point(72, 2),
+            Size = new Size(innerWidth - 72, 28),
         };
+        SettingsTheme.ApplyToComboBox(_monitorComboBox);
         _monitorComboBox.SelectedIndexChanged += OnBehaviorChanged;
 
-        displayGroup.Controls.AddRange([monitorLabel, _monitorComboBox]);
+        panel.Height = 40;
+        section.Height = 40 + SettingsTheme.SectionPadding + 36;
+        panel.Controls.AddRange([monitorLabel, _monitorComboBox]);
+        content.Controls.Add(section);
+    }
 
-        var behaviorGroup = new GroupBox
-        {
-            Location = new Point(16, 602),
-            Size = new Size(488, 172),
-            Text = "Поведение",
-        };
+    private void BuildBehaviorSection(FlowLayoutPanel content)
+    {
+        var section = new GlassSection("Поведение", ContentWidth);
+        var panel = section.ContentPanel;
 
-        var pollLabel = new Label
-        {
-            AutoSize = true,
-            Location = new Point(12, 28),
-            Text = "Интервал опроса GitHub API:",
-        };
+        var pollLabel = CreateMutedLabel("Интервал опроса GitHub API:");
+        pollLabel.Location = new Point(0, 0);
+        pollLabel.AutoSize = true;
 
         _economyRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(12, 52),
+            Location = new Point(0, 24),
             Text = "Экономный (15 / 10 мин)",
         };
+        SettingsTheme.ApplyToRadio(_economyRadio);
         _economyRadio.CheckedChanged += OnBehaviorChanged;
 
         _normalRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(168, 52),
+            Location = new Point(168, 24),
             Text = "Нормальный (5 / 2 мин)",
         };
+        SettingsTheme.ApplyToRadio(_normalRadio);
         _normalRadio.CheckedChanged += OnBehaviorChanged;
 
         _frequentRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(324, 52),
+            Location = new Point(336, 24),
             Text = "Частый (2 / 1 мин)",
         };
+        SettingsTheme.ApplyToRadio(_frequentRadio);
         _frequentRadio.CheckedChanged += OnBehaviorChanged;
 
         _autoStartCheckBox = new CheckBox
         {
             AutoSize = true,
-            Location = new Point(12, 84),
+            Location = new Point(0, 56),
             Text = "Запускать при старте Windows",
         };
+        SettingsTheme.ApplyToCheckBox(_autoStartCheckBox);
         _autoStartCheckBox.CheckedChanged += OnBehaviorChanged;
 
         _pauseFullscreenCheckBox = new CheckBox
         {
             AutoSize = true,
-            Location = new Point(12, 110),
+            Location = new Point(0, 82),
             Text = "Пауза при полноэкранных приложениях",
         };
+        SettingsTheme.ApplyToCheckBox(_pauseFullscreenCheckBox);
         _pauseFullscreenCheckBox.CheckedChanged += OnBehaviorChanged;
 
         _pauseBatteryCheckBox = new CheckBox
         {
             AutoSize = true,
-            Location = new Point(12, 126),
+            Location = new Point(0, 108),
             Text = "Пауза при работе от батареи",
         };
+        SettingsTheme.ApplyToCheckBox(_pauseBatteryCheckBox);
         _pauseBatteryCheckBox.CheckedChanged += OnBehaviorChanged;
 
         _autoCheckUpdatesCheckBox = new CheckBox
         {
             AutoSize = true,
-            Location = new Point(12, 148),
+            Location = new Point(0, 134),
             Text = "Проверять обновления автоматически (раз в сутки)",
         };
+        SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        behaviorGroup.Controls.AddRange([
+        panel.Height = 164;
+        section.Height = 164 + SettingsTheme.SectionPadding + 36;
+        panel.Controls.AddRange([
             pollLabel,
             _economyRadio,
             _normalRadio,
@@ -319,47 +424,29 @@ internal sealed class SettingsForm : Form
             _autoCheckUpdatesCheckBox,
         ]);
 
-        var repoHintLabel = new Label
+        content.Controls.Add(section);
+    }
+
+    private static Label CreateFieldLabel(string text)
+    {
+        var label = new Label
+        {
+            AutoSize = true,
+            Text = text,
+        };
+        SettingsTheme.ApplyToLabel(label);
+        return label;
+    }
+
+    private static Label CreateMutedLabel(string text)
+    {
+        var label = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 784),
-            Size = new Size(488, 24),
-            ForeColor = SystemColors.GrayText,
-            Text = "Токен и Client Secret — в Credential Manager. Device Flow не требует Secret.",
+            Text = text,
         };
-
-        Controls.AddRange([
-            tokenLabel,
-            _signInWithGitHubButton,
-            _deviceSignInLinkLabel,
-            _createTokenLinkLabel,
-            oauthClientIdLabel,
-            _oauthClientIdTextBox,
-            oauthRegisterLinkLabel,
-            oauthClientSecretLabel,
-            _oauthClientSecretTextBox,
-            manualTokenLabel,
-            _tokenTextBox,
-            _tokenStatusLabel,
-            saveButton,
-            verifyButton,
-            clearButton,
-            reposLabel,
-            _gridLayoutEditor,
-            _repoInputTextBox,
-            addRepoButton,
-            _removeRepoButton,
-            displayGroup,
-            behaviorGroup,
-            repoHintLabel,
-        ]);
-
-        PopulateMonitorComboBox();
-        LoadBehaviorSettings();
-        LoadOAuthClientId();
-        LoadOAuthClientSecret();
-        LoadGridLayout();
-        UpdateTokenStatus();
+        SettingsTheme.ApplyToLabel(label, muted: true);
+        return label;
     }
 
     private void LoadGridLayout()

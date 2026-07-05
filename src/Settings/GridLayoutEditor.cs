@@ -1,3 +1,5 @@
+using GitHubWallpaper.Settings.Ui;
+
 namespace GitHubWallpaper.Settings;
 
 /// <summary>
@@ -18,31 +20,39 @@ internal sealed class GridLayoutEditor : UserControl
 
     public GridLayoutEditor()
     {
+        BackColor = Color.Transparent;
+        SettingsTheme.EnableDoubleBuffer(this);
+
         var sizePanel = new FlowLayoutPanel
         {
             AutoSize = true,
+            BackColor = Color.Transparent,
             Dock = DockStyle.Top,
             WrapContents = false,
             Padding = new Padding(0, 0, 0, 8),
         };
 
-        sizePanel.Controls.Add(new Label
+        var columnsLabel = new Label
         {
             AutoSize = true,
             Margin = new Padding(0, 6, 8, 0),
             Text = "Колонки:",
-        });
+        };
+        SettingsTheme.ApplyToLabel(columnsLabel, muted: true);
+        sizePanel.Controls.Add(columnsLabel);
 
         _columnsUpDown = CreateGridSizeUpDown(3);
         _columnsUpDown.ValueChanged += OnGridSizeChanged;
         sizePanel.Controls.Add(_columnsUpDown);
 
-        sizePanel.Controls.Add(new Label
+        var rowsLabel = new Label
         {
             AutoSize = true,
             Margin = new Padding(16, 6, 8, 0),
             Text = "Строки:",
-        });
+        };
+        SettingsTheme.ApplyToLabel(rowsLabel, muted: true);
+        sizePanel.Controls.Add(rowsLabel);
 
         _rowsUpDown = CreateGridSizeUpDown(2);
         _rowsUpDown.ValueChanged += OnGridSizeChanged;
@@ -52,6 +62,7 @@ internal sealed class GridLayoutEditor : UserControl
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent,
             ColumnCount = 3,
             RowCount = 2,
             Dock = DockStyle.Top,
@@ -128,14 +139,18 @@ internal sealed class GridLayoutEditor : UserControl
 
     private int SlotCapacity => GridColumns * GridRows;
 
-    private static NumericUpDown CreateGridSizeUpDown(decimal value) =>
-        new()
+    private static NumericUpDown CreateGridSizeUpDown(decimal value)
+    {
+        var numeric = new NumericUpDown
         {
             Minimum = MinGridSize,
             Maximum = MaxGridSize,
             Width = 52,
             Value = value,
         };
+        SettingsTheme.ApplyToNumeric(numeric);
+        return numeric;
+    }
 
     private static int ClampGridSize(int value) =>
         Math.Clamp(value, MinGridSize, MaxGridSize);
@@ -184,7 +199,7 @@ internal sealed class GridLayoutEditor : UserControl
 
         for (var row = 0; row < GridRows; row++)
         {
-            _table.RowStyles.Add(new RowStyle(SizeType.Absolute, 44f));
+            _table.RowStyles.Add(new RowStyle(SizeType.Absolute, 48f));
         }
 
         for (var index = 0; index < SlotCapacity; index++)
@@ -287,20 +302,22 @@ internal sealed class GridLayoutEditor : UserControl
     private sealed class GridSlotPanel : Panel
     {
         private readonly Label _label;
+        private bool _selected;
 
         public GridSlotPanel(int slotIndex)
         {
             SlotIndex = slotIndex;
             AllowDrop = true;
-            BackColor = Color.FromArgb(34, 39, 46);
-            BorderStyle = BorderStyle.FixedSingle;
-            Padding = new Padding(6, 8, 6, 8);
+            BackColor = Color.Transparent;
+            Padding = new Padding(8, 10, 8, 10);
+            SettingsTheme.EnableDoubleBuffer(this);
 
             _label = new Label
             {
                 AutoEllipsis = true,
+                BackColor = Color.Transparent,
                 Dock = DockStyle.Fill,
-                ForeColor = Color.Gainsboro,
+                Font = new Font("Segoe UI", 8.75F),
                 TextAlign = ContentAlignment.MiddleCenter,
             };
 
@@ -314,15 +331,51 @@ internal sealed class GridLayoutEditor : UserControl
 
         public bool IsSelected
         {
-            get => BorderStyle == BorderStyle.Fixed3D;
-            set => BorderStyle = value ? BorderStyle.Fixed3D : BorderStyle.FixedSingle;
+            get => _selected;
+            set
+            {
+                _selected = value;
+                Invalidate();
+            }
         }
 
         public void SetRepository(string? slug)
         {
             RepositorySlug = string.IsNullOrWhiteSpace(slug) ? null : slug.Trim();
             _label.Text = RepositorySlug ?? "— пусто —";
-            _label.ForeColor = RepositorySlug is null ? Color.Gray : Color.Gainsboro;
+            _label.ForeColor = RepositorySlug is null
+                ? SettingsTheme.SlotEmpty
+                : SettingsTheme.TextPrimary;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var bounds = ClientRectangle;
+            bounds.Width -= 1;
+            bounds.Height -= 1;
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
+            using var fill = new SolidBrush(SettingsTheme.SlotFill);
+            e.Graphics.FillPath(fill, path);
+
+            var borderColor = _selected ? SettingsTheme.SlotSelected : SettingsTheme.GlassBorder;
+            var borderWidth = _selected ? 2f : 1f;
+            using var border = new Pen(borderColor, borderWidth);
+            e.Graphics.DrawPath(border, path);
+
+            if (_selected)
+            {
+                using var glow = new SolidBrush(Color.FromArgb(36, SettingsTheme.Accent));
+                var glowBounds = Rectangle.Inflate(bounds, 2, 2);
+                using var glowPath = SettingsTheme.CreateRoundedRectangle(glowBounds, SettingsTheme.ControlCornerRadius + 1);
+                e.Graphics.FillPath(glow, glowPath);
+                e.Graphics.FillPath(fill, path);
+                e.Graphics.DrawPath(border, path);
+            }
+
+            base.OnPaint(e);
         }
     }
 }
