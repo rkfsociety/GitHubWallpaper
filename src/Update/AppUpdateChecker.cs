@@ -1,7 +1,8 @@
-using System.Net.Http.Headers;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using GitHubWallpaper.GitHub;
 
 namespace GitHubWallpaper.Update;
 
@@ -25,20 +26,31 @@ internal sealed class AppUpdateChecker : IDisposable
         @"GitHubWallpaper\s+(?<version>\d+\.\d+\.\d+(?:[-\w.]*)?)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-    private readonly HttpClient _httpClient;
-    private readonly bool _ownsHttpClient;
+    private readonly GitHubApiClient? _apiClient;
+    private readonly bool _ownsApiClient;
+    private readonly HttpClient _downloadClient;
+    private readonly bool _ownsDownloadClient;
 
-    public AppUpdateChecker(HttpClient? httpClient = null)
+    public AppUpdateChecker(GitHubApiClient? apiClient = null, HttpClient? downloadClient = null)
     {
-        if (httpClient is null)
+        if (apiClient is null)
         {
-            _httpClient = CreateHttpClient();
-            _ownsHttpClient = true;
+            _apiClient = new GitHubApiClient();
+            _ownsApiClient = true;
         }
         else
         {
-            _httpClient = httpClient;
-            _ownsHttpClient = false;
+            _apiClient = apiClient;
+        }
+
+        if (downloadClient is null)
+        {
+            _downloadClient = CreateDownloadClient();
+            _ownsDownloadClient = true;
+        }
+        else
+        {
+            _downloadClient = downloadClient;
         }
     }
 
@@ -58,22 +70,21 @@ internal sealed class AppUpdateChecker : IDisposable
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, AppUpdateDefaults.ReleaseApiUrl);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-
-            using var response = await _httpClient
-                .SendAsync(request, cancellationToken)
-                .ConfigureAwait(false);
-
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
+            GitHubApiResult release;
+            try
             {
-                return new AppUpdateCheckResult.Failed(
-                    $"GitHub API вернул HTTP {(int)response.StatusCode}.");
+                release = await _apiClient!
+                    .GetAsync(
+                        $"/repos/{AppUpdateDefaults.Owner}/{AppUpdateDefaults.Repo}/releases/tags/{AppUpdateDefaults.ReleaseTag}",
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (GitHubApiException ex)
+            {
+                return new AppUpdateCheckResult.Failed(MapApiException(ex));
             }
 
-            using var document = JsonDocument.Parse(body);
+            using var document = JsonDocument.Parse(release.Body);
             var root = document.RootElement;
 
             if (!root.TryGetProperty("assets", out var assetsElement)
@@ -163,9 +174,14 @@ internal sealed class AppUpdateChecker : IDisposable
 
     public void Dispose()
     {
-        if (_ownsHttpClient)
+        if (_ownsApiClient)
         {
-            _httpClient.Dispose();
+            _apiClient?.Dispose();
+        }
+
+        if (_ownsDownloadClient)
+        {
+            _downloadClient.Dispose();
         }
     }
 
@@ -178,7 +194,7 @@ internal sealed class AppUpdateChecker : IDisposable
         {
             try
             {
-                using var response = await _httpClient
+                using var response = await _downloadClient
                     .GetAsync(versionJsonUrl, cancellationToken)
                     .ConfigureAwait(false);
 
@@ -223,6 +239,22 @@ internal sealed class AppUpdateChecker : IDisposable
         return null;
     }
 
+    private static string MapApiException(GitHubApiException ex) =>
+        ex.StatusCode switch
+        {
+            HttpStatusCode.Forbidden when IsRateLimitBody(ex.ResponseBody) =>
+                "Исчерпан лимит запросов GitHub API. Добавьте PAT в настройках или повторите позже.",
+
+            HttpStatusCode.Unauthorized =>
+                "Токен GitHub недействителен. Откройте Настройки и обновите PAT.",
+
+            _ => $"GitHub API вернул HTTP {(int)ex.StatusCode}.",
+        };
+
+    private static bool IsRateLimitBody(string? body) =>
+        body is not null
+        && body.Contains("rate limit", StringComparison.OrdinalIgnoreCase);
+
     private static string? TryParseVersionFromJson(string? jsonText)
     {
         if (string.IsNullOrWhiteSpace(jsonText))
@@ -246,17 +278,14 @@ internal sealed class AppUpdateChecker : IDisposable
         return match.Success ? match.Groups["version"].Value.Trim() : null;
     }
 
-    private static HttpClient CreateHttpClient()
+    private static HttpClient CreateDownloadClient()
     {
         var client = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(30),
         };
 
-        client.DefaultRequestHeaders.UserAgent.Add(
-            new ProductInfoHeaderValue("GitHubWallpaper", GetVersionText()));
-        client.DefaultRequestHeaders.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"GitHubWallpaper/{GetVersionText()}");
 
         return client;
     }

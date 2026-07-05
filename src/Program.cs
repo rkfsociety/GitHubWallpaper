@@ -51,7 +51,7 @@ internal static class Program
         var autoPauseMonitor = new AutoPauseMonitor(pauseCoordinator);
         var githubSession = new GitHubSession();
         var settingsStore = new SettingsStore();
-        var appUpdateService = new AppUpdateService(settingsStore);
+        var appUpdateService = new AppUpdateService(settingsStore, githubSession.Client);
         var repoPoller = new RepoPoller(githubSession.Client);
         var trayService = new TrayService(
             wallpaperController,

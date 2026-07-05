@@ -1,3 +1,4 @@
+using GitHubWallpaper.GitHub;
 using GitHubWallpaper.Settings;
 
 namespace GitHubWallpaper.Update;
@@ -5,12 +6,13 @@ namespace GitHubWallpaper.Update;
 /// <summary>Проверка и установка обновлений из GitHub Releases.</summary>
 internal sealed class AppUpdateService : IDisposable
 {
-    private readonly AppUpdateChecker _checker = new();
+    private readonly AppUpdateChecker _checker;
     private readonly SettingsStore _settingsStore;
 
-    public AppUpdateService(SettingsStore settingsStore)
+    public AppUpdateService(SettingsStore settingsStore, GitHubApiClient? githubApiClient = null)
     {
         _settingsStore = settingsStore;
+        _checker = new AppUpdateChecker(githubApiClient);
     }
 
     public Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default) =>
