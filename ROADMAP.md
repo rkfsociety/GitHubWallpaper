@@ -54,7 +54,7 @@
 - [x] `RateLimitGuard` — отслеживание `X-RateLimit-*`, backoff при 403
 - [x] `RepoPoller` — опрос мета-данных и коммитов
 - [x] `Bridge` — push JSON в WebView2 через `PostWebMessageAsJson`
-- [ ] Виджет `repo-card` — stars, forks, последние 5 коммитов
+- [x] Виджет `repo-card` — stars, forks, последние 5 коммитов
 
 ### GitHub API (этап 2)
 
