@@ -107,9 +107,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $tag = "latest"
+          $sha = "${{ github.sha }}"
           $version = "${{ steps.version.outputs.version }}"
-          $shortSha = "${{ github.sha }}".Substring(0, 7)
+          $shortSha = $sha.Substring(0, 7)
           $notes = @"
           ## GitHubWallpaper
 
@@ -120,23 +122,19 @@ jobs:
           Требуется [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
           "@.Trim()
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
             Write-Host "Deleting release $tag (and tag) before recreate"
             gh release delete $tag --yes --cleanup-tag
+            if ($LASTEXITCODE -ne 0) { throw "gh release delete failed" }
           }
 
-          git tag -d $tag 2>$null
-          git tag -a $tag -m "Build $version" "${{ github.sha }}"
-          git push origin $tag --force
-
           gh release create $tag publish/GitHubWallpaper.exe publish/version.json `
+            --target $sha `
             --title "GitHubWallpaper $version" `
             --notes $notes `
             --latest
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
 
           # Удалить старые релизы с версионными тегами v1.0.*
           $oldTags = gh release list --limit 100 --json tagName -q ".[].tagName" |
