@@ -216,8 +216,23 @@ internal sealed class SettingsForm : Form
             return;
         }
 
-        var layout = _reposCard.Body.Controls[0];
-        _reposCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+        _reposCard.ApplyBodyHeight(MeasureReposCardBodyHeight());
+    }
+
+    private int MeasureReposCardBodyHeight()
+    {
+        var height = 0;
+        foreach (Control control in _reposCard.Body.Controls)
+        {
+            if (!control.Visible)
+            {
+                continue;
+            }
+
+            height += SettingsCard.MeasureControl(control) + control.Margin.Vertical;
+        }
+
+        return Math.Max(1, height);
     }
 
     private void RefreshDisplayCardHeight()
@@ -286,16 +301,17 @@ internal sealed class SettingsForm : Form
 
         _authSignInPanel = CreateAuthSignInPanel(innerWidth);
         _authSignedInPanel = CreateAuthSignedInPanel(innerWidth);
-
-        body.Controls.Add(_authSignInPanel);
-        body.Controls.Add(_authSignedInPanel);
         AddPageRow(_authCard);
     }
 
     private void UpdateAuthCardHeight()
     {
-        var active = _authSignedInPanel.Visible ? _authSignedInPanel : _authSignInPanel;
-        _authCard.ApplyBodyHeight(SettingsCard.MeasureControl(active));
+        if (!_authCard.Visible)
+        {
+            return;
+        }
+
+        _authCard.ApplyBodyHeight(SettingsCard.MeasureControl(_authSignInPanel));
     }
 
     private Panel CreateAuthSignedInPanel(int innerWidth)
@@ -306,7 +322,6 @@ internal sealed class SettingsForm : Form
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = SettingsTheme.CardFill,
             Dock = DockStyle.Top,
-            Visible = false,
             Width = innerWidth,
         };
 
@@ -519,14 +534,31 @@ internal sealed class SettingsForm : Form
         var signedIn = _githubSession.HasStoredToken;
         _repoHintLabel.Visible = !signedIn;
         _authCard.SetTitleVisible(!signedIn);
+        _authCard.Visible = !signedIn;
 
         _authCard.Body.Controls.Clear();
-        var activePanel = signedIn ? _authSignedInPanel : _authSignInPanel;
-        activePanel.Visible = true;
-        activePanel.Dock = DockStyle.Top;
-        _authCard.Body.Controls.Add(activePanel);
+        _authSignInPanel.Visible = !signedIn;
+        _authSignedInPanel.Visible = signedIn;
+
+        if (signedIn)
+        {
+            _authSignedInPanel.Dock = DockStyle.Top;
+            _authSignedInPanel.Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
+            if (!_reposCard.Body.Controls.Contains(_authSignedInPanel))
+            {
+                _reposCard.Body.Controls.Add(_authSignedInPanel);
+                _reposCard.Body.Controls.SetChildIndex(_authSignedInPanel, 0);
+            }
+        }
+        else
+        {
+            _authSignInPanel.Dock = DockStyle.Top;
+            _authCard.Body.Controls.Add(_authSignInPanel);
+            _reposCard.Body.Controls.Remove(_authSignedInPanel);
+        }
 
         UpdateAuthCardHeight();
+        RefreshReposCardHeight();
     }
 
     private void SetAuthUserLogin(string? login)
@@ -671,7 +703,7 @@ internal sealed class SettingsForm : Form
         AddBodyRow(CreateCardDisplayPanel(innerWidth));
 
         body.Controls.Add(layout);
-        _reposCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+        _reposCard.ApplyBodyHeight(MeasureReposCardBodyHeight());
         AddPageRow(_reposCard);
     }
 

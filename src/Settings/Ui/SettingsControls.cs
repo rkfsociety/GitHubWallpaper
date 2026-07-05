@@ -134,6 +134,12 @@ internal abstract class ThemedButtonBase : Button
         Height = SettingsTheme.ControlHeight;
         SettingsTheme.EnableDoubleBuffer(this);
     }
+
+    protected override void OnPaintBackground(PaintEventArgs pevent)
+    {
+        using var brush = new SolidBrush(BackColor);
+        pevent.Graphics.FillRectangle(brush, ClientRectangle);
+    }
 }
 
 internal sealed class GlowButton : ThemedButtonBase
@@ -230,7 +236,12 @@ internal sealed class OutlineButton : ThemedButtonBase
         bounds.Width -= 1;
         bounds.Height -= 1;
         using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
-        using var fill = new SolidBrush(Color.FromArgb(_hover ? 32 : 16, _accent));
+        using (var baseFill = new SolidBrush(SettingsTheme.CardFill))
+        {
+            pevent.Graphics.FillPath(baseFill, path);
+        }
+
+        using var fill = new SolidBrush(Color.FromArgb(_hover ? 48 : 24, _accent));
         pevent.Graphics.FillPath(fill, path);
         using var border = new Pen(_accent, 1.5f);
         pevent.Graphics.DrawPath(border, path);
