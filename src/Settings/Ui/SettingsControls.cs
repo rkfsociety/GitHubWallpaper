@@ -311,11 +311,25 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
     public ThemedNumericUpDown()
     {
         SettingsTheme.ApplyToNumeric(this);
+        InterceptArrowKeys = true;
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        HideUpDownButtons();
+    }
+
+    protected override void OnControlAdded(ControlEventArgs e)
+    {
+        base.OnControlAdded(e);
+        HideUpDownButtons();
     }
 
     protected override void OnLayout(LayoutEventArgs e)
     {
         base.OnLayout(e);
+        HideUpDownButtons();
 
         foreach (Control control in Controls)
         {
@@ -326,24 +340,52 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
 
             textBox.BorderStyle = BorderStyle.None;
             textBox.TextAlign = HorizontalAlignment.Center;
-            var offsetY = Math.Max(0, (Height - textBox.Height) / 2);
-            if (textBox.Top != offsetY)
+            textBox.SetBounds(0, 0, Width, Height);
+        }
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        if (Focused)
+        {
+            if (e.Delta > 0)
             {
-                textBox.Top = offsetY;
+                Value = Math.Min(Maximum, Value + Increment);
             }
+            else if (e.Delta < 0)
+            {
+                Value = Math.Max(Minimum, Value - Increment);
+            }
+        }
+
+        base.OnMouseWheel(e);
+    }
+
+    private void HideUpDownButtons()
+    {
+        foreach (Control control in Controls)
+        {
+            if (control is TextBox)
+            {
+                continue;
+            }
+
+            control.Visible = false;
+            control.Enabled = false;
+            control.Size = Size.Empty;
         }
     }
 }
 
 internal sealed class NumericField : Panel
 {
-    public NumericField(NumericUpDown inner, int width = 56, int height = SettingsTheme.ControlHeight)
+    public NumericField(NumericUpDown inner, int width = 52, int height = SettingsTheme.ControlHeight)
     {
         BackColor = SettingsTheme.CardFill;
         SettingsTheme.EnableDoubleBuffer(this);
         Width = width;
         Height = height;
-        Padding = new Padding(8, SettingsTheme.InputPaddingY, 4, SettingsTheme.InputPaddingY);
+        Padding = Padding.Empty;
         inner.BorderStyle = BorderStyle.None;
         inner.TextAlign = HorizontalAlignment.Center;
         inner.Margin = Padding.Empty;

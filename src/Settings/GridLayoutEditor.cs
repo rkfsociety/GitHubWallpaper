@@ -27,51 +27,47 @@ internal sealed class GridLayoutEditor : UserControl
     {
         SettingsTheme.ApplyCardContentBackground(this);
 
-        var sizePanel = new FlowLayoutPanel
+        var sizePanel = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Dock = DockStyle.Fill,
-            WrapContents = false,
-            Padding = new Padding(0, 0, 0, 10),
+            ColumnCount = 4,
+            Dock = DockStyle.Top,
+            Margin = new Padding(0, 0, 0, 10),
+            RowCount = 1,
         };
         SettingsTheme.ApplyCardContentBackground(sizePanel);
+        sizePanel.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
+        sizePanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        sizePanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        sizePanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        sizePanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
-        var columnsLabel = new Label
-        {
-            AutoSize = true,
-            Margin = new Padding(0, 10, 8, 0),
-            Text = "Колонки:",
-        };
-        SettingsTheme.ApplyToLabel(columnsLabel, muted: true);
-        sizePanel.Controls.Add(columnsLabel);
+        var columnsLabel = CreateGridSizeLabel("Колонки:");
+        sizePanel.Controls.Add(columnsLabel, 0, 0);
 
         _columnsUpDown = CreateGridSizeUpDown(3);
         _columnsUpDown.ValueChanged += OnGridSizeChanged;
-        sizePanel.Controls.Add(new NumericField(_columnsUpDown));
+        sizePanel.Controls.Add(new NumericField(_columnsUpDown) { Margin = new Padding(0, 0, 16, 0) }, 1, 0);
 
-        var rowsLabel = new Label
-        {
-            AutoSize = true,
-            Margin = new Padding(16, 10, 8, 0),
-            Text = "Строки:",
-        };
-        SettingsTheme.ApplyToLabel(rowsLabel, muted: true);
-        sizePanel.Controls.Add(rowsLabel);
+        var rowsLabel = CreateGridSizeLabel("Строки:");
+        sizePanel.Controls.Add(rowsLabel, 2, 0);
 
         _rowsUpDown = CreateGridSizeUpDown(2);
         _rowsUpDown.ValueChanged += OnGridSizeChanged;
-        sizePanel.Controls.Add(new NumericField(_rowsUpDown));
+        sizePanel.Controls.Add(new NumericField(_rowsUpDown), 3, 0);
 
         _table = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
             ColumnCount = 3,
             RowCount = 2,
             Dock = DockStyle.Fill,
+            Padding = new Padding(2),
         };
-        SettingsTheme.ApplyCardContentBackground(_table);
+        _table.BackColor = SettingsTheme.InnerPanelFill;
 
         var root = new TableLayoutPanel
         {
@@ -205,6 +201,20 @@ internal sealed class GridLayoutEditor : UserControl
         return true;
     }
 
+    private static Label CreateGridSizeLabel(string text)
+    {
+        var label = new Label
+        {
+            AutoSize = true,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 8, 0),
+            Text = text,
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+        SettingsTheme.ApplyToLabel(label, muted: true);
+        return label;
+    }
+
     private static NumericUpDown CreateGridSizeUpDown(decimal value)
     {
         var numeric = new ThemedNumericUpDown
@@ -311,7 +321,7 @@ internal sealed class GridLayoutEditor : UserControl
             var panel = new GridSlotPanel(index)
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(4),
+                Margin = new Padding(3),
             };
             panel.MouseDown += OnSlotMouseDown;
             panel.DragEnter += OnSlotDragEnter;
@@ -427,7 +437,7 @@ internal sealed class GridLayoutEditor : UserControl
         {
             SlotIndex = slotIndex;
             AllowDrop = true;
-            SettingsTheme.ApplySurfaceBackground(this);
+            BackColor = SettingsTheme.InnerPanelFill;
             Padding = new Padding(8, 10, 8, 10);
 
             _label = new PassThroughLabel
@@ -470,12 +480,21 @@ internal sealed class GridLayoutEditor : UserControl
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             var bounds = ClientRectangle;
-            bounds.Width -= 1;
-            bounds.Height -= 1;
-            e.Graphics.SetClip(ClientRectangle);
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            var hostColor = Parent?.BackColor ?? SettingsTheme.InnerPanelFill;
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            using (var hostFill = new SolidBrush(hostColor))
+            {
+                e.Graphics.FillRectangle(hostFill, bounds);
+            }
 
+            bounds.Width -= 1;
+            bounds.Height -= 1;
             using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
             using var fill = new SolidBrush(SettingsTheme.SlotFill);
             e.Graphics.FillPath(fill, path);
@@ -488,8 +507,7 @@ internal sealed class GridLayoutEditor : UserControl
             if (_selected)
             {
                 using var glow = new SolidBrush(Color.FromArgb(36, SettingsTheme.Accent));
-                using var glowPath = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
-                e.Graphics.FillPath(glow, glowPath);
+                e.Graphics.FillPath(glow, path);
                 e.Graphics.FillPath(fill, path);
                 e.Graphics.DrawPath(border, path);
             }

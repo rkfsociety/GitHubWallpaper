@@ -781,7 +781,14 @@ internal sealed class SettingsForm : Form
         gridHost.Controls.Add(_gridLayoutEditor);
         AddBodyRow(gridHost);
 
-        var inputRow = new TableLayoutPanel
+        _repoInputTextBox = new ThemedTextBox
+        {
+            PlaceholderText = "owner/repo или https://github.com/owner/repo",
+        };
+        _repoInputTextBox.KeyDown += OnRepoInputKeyDown;
+        AddBodyRow(new TextField(_repoInputTextBox) { Dock = DockStyle.Top, Width = innerWidth });
+
+        var actionsRow = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -790,30 +797,24 @@ internal sealed class SettingsForm : Form
             Dock = DockStyle.Top,
             Width = innerWidth,
         };
-        inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128f));
-        inputRow.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
+        actionsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128f));
+        actionsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128f));
+        actionsRow.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
 
-        _repoInputTextBox = new ThemedTextBox
-        {
-            PlaceholderText = "owner/repo или https://github.com/owner/repo",
-        };
-        _repoInputTextBox.KeyDown += OnRepoInputKeyDown;
-
-        var addRepoButton = new GlowButton { Text = "Добавить" };
+        var addRepoButton = new GlowButton { Dock = DockStyle.Fill, Text = "Добавить" };
         addRepoButton.Click += OnAddRepoClick;
-
-        inputRow.Controls.Add(new TextField(_repoInputTextBox) { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 8, 0) }, 0, 0);
-        inputRow.Controls.Add(addRepoButton, 1, 0);
-        AddBodyRow(inputRow);
 
         _removeRepoButton = new GhostButton
         {
-            Size = new Size(128, SettingsTheme.ControlHeight),
+            Dock = DockStyle.Fill,
+            Margin = new Padding(8, 0, 0, 0),
             Text = "Удалить",
         };
         _removeRepoButton.Click += OnRemoveRepoClick;
-        AddBodyRow(_removeRepoButton);
+
+        actionsRow.Controls.Add(addRepoButton, 0, 0);
+        actionsRow.Controls.Add(_removeRepoButton, 1, 0);
+        AddBodyRow(actionsRow);
 
         panel.Controls.Add(layout);
         return panel;
