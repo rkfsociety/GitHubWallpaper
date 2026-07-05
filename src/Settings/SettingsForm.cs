@@ -26,6 +26,7 @@ internal sealed class SettingsForm : Form
     private LinkLabel _createTokenLinkLabel = null!;
     private TextBox _oauthClientIdTextBox = null!;
     private TextBox _oauthClientSecretTextBox = null!;
+    private ThemedScrollPanel _contentPanel = null!;
     private TableLayoutPanel _pageLayout = null!;
     private SettingsCard _authCard = null!;
     private SettingsCard _reposCard = null!;
@@ -73,14 +74,13 @@ internal sealed class SettingsForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(ContentWidth + FormPadding * 2, 720);
         ShowInTaskbar = true;
         BackColor = SettingsTheme.BackgroundTop;
         ForeColor = SettingsTheme.TextPrimary;
         Font = SettingsTheme.BodyFont;
         SettingsTheme.EnableDoubleBuffer(this);
 
-        var scroll = new ThemedScrollPanel();
+        _contentPanel = new ThemedScrollPanel();
         _pageLayout = new TableLayoutPanel
         {
             AutoSize = true,
@@ -105,8 +105,8 @@ internal sealed class SettingsForm : Form
         _repoHintLabel.MaximumSize = new Size(ContentWidth, 0);
         AddPageRow(_repoHintLabel);
 
-        scroll.Controls.Add(_pageLayout);
-        Controls.Add(scroll);
+        _contentPanel.Controls.Add(_pageLayout);
+        Controls.Add(_contentPanel);
 
         PopulateMonitorComboBox();
         LoadBehaviorSettings();
@@ -125,6 +125,20 @@ internal sealed class SettingsForm : Form
     {
         UpdateAuthView();
         RefreshReposCardHeight();
+        FitClientToContent();
+    }
+
+    private void FitClientToContent()
+    {
+        _pageLayout.PerformLayout();
+        var contentBottom = _pageLayout.Location.Y + _pageLayout.PreferredSize.Height;
+        var requiredHeight = contentBottom + FormPadding;
+        var clientWidth = ContentWidth + FormPadding * 2;
+        var maxHeight = Math.Max(480, Screen.FromControl(this).WorkingArea.Height - 48);
+        var needsScroll = requiredHeight > maxHeight;
+
+        _contentPanel.AutoScroll = needsScroll;
+        ClientSize = new Size(clientWidth, Math.Min(requiredHeight, maxHeight));
     }
 
     private void RefreshReposCardHeight()
@@ -418,6 +432,7 @@ internal sealed class SettingsForm : Form
         _repoHintLabel.Visible = !signedIn;
         _authCard.SetTitleVisible(!signedIn);
         UpdateAuthCardHeight();
+        FitClientToContent();
     }
 
     private void SetAuthUserLogin(string? login)
@@ -706,6 +721,7 @@ internal sealed class SettingsForm : Form
 
         ApplyGridLayout();
         RefreshReposCardHeight();
+        FitClientToContent();
     }
 
     private void LoadOAuthClientId()

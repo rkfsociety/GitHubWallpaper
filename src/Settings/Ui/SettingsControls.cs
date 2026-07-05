@@ -1,12 +1,12 @@
 namespace GitHubWallpaper.Settings.Ui;
 
-/// <summary>Прокручиваемая область с градиентным фоном.</summary>
+/// <summary>Область содержимого с градиентным фоном (прокрутка включается только при нехватке экрана).</summary>
 internal sealed class ThemedScrollPanel : Panel
 {
     public ThemedScrollPanel()
     {
         SettingsTheme.ApplySurfaceBackground(this);
-        AutoScroll = true;
+        AutoScroll = false;
         Dock = DockStyle.Fill;
     }
 
