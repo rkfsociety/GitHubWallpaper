@@ -22,7 +22,7 @@ C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в
 | 3 Мульти-репо и настройки | 🔄 в работе |
 | 4–5 | 🔲 |
 
-**Сейчас:** обои работают; по умолчанию опрашивается `microsoft/vscode` (`RepoPoller.DefaultRepository`). PAT — в `SettingsForm` → Credential Manager. Список репо и `settings.json` — **ещё нет** (этап 3).
+**Сейчас:** обои работают; список репо — `SettingsForm` → `SettingsStore` (`settings.json`); PAT — Credential Manager. Осталось на этапе 3: интервалы, автозапуск, пауза fullscreen/батарея.
 
 ## Архитектура
 
@@ -30,7 +30,8 @@ C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в
 TrayService / SettingsForm
         → WallpaperController → DesktopHost (WorkerW) → WebView2 (app.local)
         → RepoPoller → GitHubApiClient → Bridge (JSON → WebView2)
-PAT: GitHubPatCredentialStore (Credential Manager, не в JSON)
+PAT: GitHubPatCredentialStore (Credential Manager)
+Репо: SettingsStore → settings.json
 ```
 
 ## Ключевые пути
@@ -40,9 +41,9 @@ PAT: GitHubPatCredentialStore (Credential Manager, не в JSON)
 | Точка входа | `src/Program.cs`, `TrayApplicationContext.cs` |
 | Обои | `src/Desktop/` — `WallpaperController`, `Bridge`, `DesktopHost` |
 | GitHub | `src/GitHub/` — `GitHubApiClient`, `RepoPoller`, `RepoUrlParser` |
-| Настройки | `src/Settings/` — `SettingsForm`, `GitHubPatCredentialStore` |
+| Настройки | `src/Settings/` — `SettingsForm`, `SettingsStore`, `GitHubPatCredentialStore` |
 | UI обоев | `wwwroot/wallpaper/` — `index.html`, `app.js`, `styles.css` |
-| AppData (будущее) | `%APPDATA%\GitHubWallpaper\` (`AppPaths.AppData`) |
+| AppData | `%APPDATA%\GitHubWallpaper\` (`AppPaths.AppData`, `settings.json`) |
 | Публикация | `src/Properties/PublishProfiles/win-x64.pubxml` → `publish/` |
 
 ## Bridge: типы сообщений (C# → JS)

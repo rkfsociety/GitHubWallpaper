@@ -28,7 +28,8 @@ alwaysApply: true
 
 ## Следующие приоритеты (этап 3)
 
-- `SettingsStore` → `%APPDATA%\GitHubWallpaper\settings.json`
-- Список репозиториев в `SettingsForm` (добавить / удалить / порядок)
-- Подключить список к `RepoPoller.Start(repositories)`
-- Автозапуск, пресеты интервалов, пауза на fullscreen / батарее
+- ~~`SettingsStore` → `%APPDATA%\GitHubWallpaper\settings.json`~~
+- ~~Список репозиториев в `SettingsForm` (добавить / удалить / порядок)~~
+- ~~Подключить список к `RepoPoller.Start(repositories)`~~
+- Пресеты интервалов опроса: экономный / нормальный / частый
+- Автозапуск, пауза на fullscreen / батарее

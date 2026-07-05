@@ -11,17 +11,27 @@ internal sealed class TrayService : IDisposable
 {
     private readonly WallpaperController _wallpaperController;
     private readonly GitHubSession _githubSession;
+    private readonly SettingsStore _settingsStore;
+    private readonly RepoPoller _repoPoller;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _pauseMenuItem;
     private SettingsForm? _settingsForm;
     private bool _disposed;
 
-    public TrayService(WallpaperController wallpaperController, GitHubSession githubSession)
+    public TrayService(
+        WallpaperController wallpaperController,
+        GitHubSession githubSession,
+        SettingsStore settingsStore,
+        RepoPoller repoPoller)
     {
         ArgumentNullException.ThrowIfNull(wallpaperController);
         ArgumentNullException.ThrowIfNull(githubSession);
+        ArgumentNullException.ThrowIfNull(settingsStore);
+        ArgumentNullException.ThrowIfNull(repoPoller);
         _wallpaperController = wallpaperController;
         _githubSession = githubSession;
+        _settingsStore = settingsStore;
+        _repoPoller = repoPoller;
 
         _pauseMenuItem = new ToolStripMenuItem("Пауза", null, OnPauseClick);
 
@@ -83,7 +93,7 @@ internal sealed class TrayService : IDisposable
             return;
         }
 
-        _settingsForm = new SettingsForm(_githubSession);
+        _settingsForm = new SettingsForm(_githubSession, _settingsStore, _repoPoller);
         _settingsForm.FormClosed += (_, _) =>
         {
             _settingsForm?.Dispose();

@@ -34,6 +34,9 @@ internal sealed class RepoPoller : IDisposable
     /// <summary>Список коммитов обновлён.</summary>
     public event EventHandler<RepoPollUpdatedEventArgs<IReadOnlyList<RepoCommitSnapshot>>>? CommitsUpdated;
 
+    /// <summary>Список отслеживаемых репозиториев изменён.</summary>
+    public event EventHandler? RepositoriesChanged;
+
     /// <summary>Ошибка при опросе; цикл продолжает работу.</summary>
     public event EventHandler<RepoPollFailedEventArgs>? PollFailed;
 
@@ -76,6 +79,8 @@ internal sealed class RepoPoller : IDisposable
         {
             _repositories = list;
         }
+
+        RepositoriesChanged?.Invoke(this, EventArgs.Empty);
 
         StopCore();
 

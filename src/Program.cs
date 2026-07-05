@@ -1,5 +1,6 @@
 using GitHubWallpaper.Desktop;
 using GitHubWallpaper.GitHub;
+using GitHubWallpaper.Settings;
 using GitHubWallpaper.Tray;
 
 namespace GitHubWallpaper;
@@ -13,8 +14,9 @@ internal static class Program
 
         var wallpaperController = new WallpaperController();
         var githubSession = new GitHubSession();
+        var settingsStore = new SettingsStore();
         var repoPoller = new RepoPoller(githubSession.Client);
-        var trayService = new TrayService(wallpaperController, githubSession);
+        var trayService = new TrayService(wallpaperController, githubSession, settingsStore, repoPoller);
 
         try
         {
@@ -34,6 +36,11 @@ internal static class Program
             return;
         }
 
-        Application.Run(new TrayApplicationContext(wallpaperController, githubSession, repoPoller, trayService));
+        Application.Run(new TrayApplicationContext(
+            wallpaperController,
+            githubSession,
+            repoPoller,
+            trayService,
+            settingsStore));
     }
 }

@@ -123,12 +123,38 @@
       return;
     }
 
+    const newKeys = new Set();
+    const orderedEntries = [];
+
     for (const item of repositories) {
       if (!item?.owner || !item?.repo) {
         continue;
       }
 
-      ensureRepo(item.owner, item.repo);
+      const key = repoKey(item.owner, item.repo);
+      newKeys.add(key);
+      orderedEntries.push(ensureRepo(item.owner, item.repo));
+    }
+
+    for (const key of Object.keys(state.repos)) {
+      if (newKeys.has(key)) {
+        continue;
+      }
+
+      delete state.repos[key];
+      const card = cardElements.get(key);
+      if (card) {
+        card.remove();
+        cardElements.delete(key);
+      }
+    }
+
+    for (const entry of orderedEntries) {
+      const key = repoKey(entry.owner, entry.repo);
+      const card = cardElements.get(key);
+      if (card) {
+        repoGrid.appendChild(card);
+      }
     }
 
     refreshAllRepoCards();

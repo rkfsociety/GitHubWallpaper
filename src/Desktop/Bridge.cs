@@ -46,6 +46,7 @@ internal sealed class Bridge : IDisposable
         _repoPoller.MetadataUpdated += OnMetadataUpdated;
         _repoPoller.CommitsUpdated += OnCommitsUpdated;
         _repoPoller.PollFailed += OnPollFailed;
+        _repoPoller.RepositoriesChanged += OnRepositoriesChanged;
         _wallpaperController.Applied += OnWallpaperApplied;
         _githubSession.TokenChanged += OnTokenChanged;
 
@@ -63,6 +64,7 @@ internal sealed class Bridge : IDisposable
             _repoPoller.MetadataUpdated -= OnMetadataUpdated;
             _repoPoller.CommitsUpdated -= OnCommitsUpdated;
             _repoPoller.PollFailed -= OnPollFailed;
+            _repoPoller.RepositoriesChanged -= OnRepositoriesChanged;
             _wallpaperController.Applied -= OnWallpaperApplied;
             _githubSession.TokenChanged -= OnTokenChanged;
         }
@@ -71,6 +73,12 @@ internal sealed class Bridge : IDisposable
     }
 
     private void OnWallpaperApplied(object? sender, EventArgs e) => PushInitialState();
+
+    private void OnRepositoriesChanged(object? sender, EventArgs e)
+    {
+        PushRepoList();
+        PushCachedState();
+    }
 
     private void OnTokenChanged(object? sender, EventArgs e) => PushAuthStatus();
 

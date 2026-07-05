@@ -1,9 +1,9 @@
 using GitHubWallpaper.Desktop;
 using GitHubWallpaper.GitHub;
+using GitHubWallpaper.Settings;
 using GitHubWallpaper.Tray;
 
 namespace GitHubWallpaper;
-
 internal sealed class TrayApplicationContext : ApplicationContext
 {
     private readonly WallpaperController _wallpaperController;
@@ -16,7 +16,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         WallpaperController wallpaperController,
         GitHubSession githubSession,
         RepoPoller repoPoller,
-        TrayService trayService)
+        TrayService trayService,
+        SettingsStore settingsStore)
     {
         _wallpaperController = wallpaperController;
         _githubSession = githubSession;
@@ -26,7 +27,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _trayService.ExitRequested += OnExitRequested;
         _wallpaperController.Paused += OnWallpaperPaused;
         _wallpaperController.Resumed += OnWallpaperResumed;
-        _repoPoller.Start();
+        _repoPoller.Start(settingsStore.LoadRepositories());
         _bridge.Start();
     }
 

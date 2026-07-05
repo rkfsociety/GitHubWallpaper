@@ -9,4 +9,6 @@ internal static class AppPaths
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "GitHubWallpaper");
+
+    public static string SettingsFile => Path.Combine(AppData, "settings.json");
 }
