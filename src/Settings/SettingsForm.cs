@@ -897,17 +897,17 @@ internal sealed class SettingsForm : Form
         pollLabel.AutoSize = true;
         AddBodyRow(pollLabel);
 
-        _economyRadio = new RadioButton { Text = "Экономный (15 / 10 мин)" };
+        _economyRadio = new RadioButton { Text = "Экономный — каждые 20 минут" };
         SettingsTheme.ApplyToRadio(_economyRadio);
         _economyRadio.CheckedChanged += OnBehaviorChanged;
         AddBodyRow(_economyRadio);
 
-        _normalRadio = new RadioButton { Text = "Нормальный (5 / 2 мин)" };
+        _normalRadio = new RadioButton { Text = "Нормальный — каждые 10 минут" };
         SettingsTheme.ApplyToRadio(_normalRadio);
         _normalRadio.CheckedChanged += OnBehaviorChanged;
         AddBodyRow(_normalRadio);
 
-        _frequentRadio = new RadioButton { Text = "Частый (2 / 1 мин)" };
+        _frequentRadio = new RadioButton { Text = "Частый — каждую минуту" };
         SettingsTheme.ApplyToRadio(_frequentRadio);
         _frequentRadio.CheckedChanged += OnBehaviorChanged;
         AddBodyRow(_frequentRadio);

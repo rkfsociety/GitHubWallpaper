@@ -25,36 +25,34 @@ internal static class PollIntervals
         return (intervals.Metadata, intervals.Commits);
     }
 
-    /// <summary>Возвращает все интервалы опроса активности для пресета.</summary>
-    public static ActivityPollIntervals ForActivityPreset(PollIntervalPreset preset) =>
+    /// <summary>Базовый интервал опроса для пресета (один для всей активности карточки).</summary>
+    public static TimeSpan BaseInterval(PollIntervalPreset preset) =>
         preset switch
         {
-            PollIntervalPreset.Economy => new ActivityPollIntervals(
-                Metadata: TimeSpan.FromMinutes(10),
-                Commits: TimeSpan.FromMinutes(5),
-                PullRequests: TimeSpan.FromMinutes(6),
-                Issues: TimeSpan.FromMinutes(6),
-                Releases: TimeSpan.FromMinutes(20),
-                CiRuns: TimeSpan.FromMinutes(6),
-                Heatmap: TimeSpan.FromHours(2),
-                Events: TimeSpan.FromMinutes(4)),
-            PollIntervalPreset.Frequent => new ActivityPollIntervals(
-                Metadata: TimeSpan.FromMinutes(2),
-                Commits: TimeSpan.FromMinutes(1),
-                PullRequests: TimeSpan.FromSeconds(90),
-                Issues: TimeSpan.FromSeconds(90),
-                Releases: TimeSpan.FromMinutes(5),
-                CiRuns: TimeSpan.FromSeconds(90),
-                Heatmap: TimeSpan.FromMinutes(30),
-                Events: TimeSpan.FromMinutes(1)),
-            _ => new ActivityPollIntervals(
-                Metadata: TimeSpan.FromMinutes(5),
-                Commits: TimeSpan.FromMinutes(2),
-                PullRequests: TimeSpan.FromMinutes(3),
-                Issues: TimeSpan.FromMinutes(3),
-                Releases: TimeSpan.FromMinutes(10),
-                CiRuns: TimeSpan.FromMinutes(3),
-                Heatmap: TimeSpan.FromHours(1),
-                Events: TimeSpan.FromMinutes(2)),
+            PollIntervalPreset.Economy => TimeSpan.FromMinutes(20),
+            PollIntervalPreset.Frequent => TimeSpan.FromMinutes(1),
+            _ => TimeSpan.FromMinutes(10),
         };
+
+    /// <summary>Возвращает все интервалы опроса активности для пресета.</summary>
+    public static ActivityPollIntervals ForActivityPreset(PollIntervalPreset preset)
+    {
+        var baseInterval = BaseInterval(preset);
+        var heatmapInterval = preset switch
+        {
+            PollIntervalPreset.Economy => TimeSpan.FromHours(2),
+            PollIntervalPreset.Frequent => TimeSpan.FromMinutes(30),
+            _ => TimeSpan.FromHours(1),
+        };
+
+        return new ActivityPollIntervals(
+            Metadata: baseInterval,
+            Commits: baseInterval,
+            PullRequests: baseInterval,
+            Issues: baseInterval,
+            Releases: baseInterval,
+            CiRuns: baseInterval,
+            Heatmap: heatmapInterval,
+            Events: baseInterval);
+    }
 }
