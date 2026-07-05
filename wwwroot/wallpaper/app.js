@@ -127,7 +127,7 @@
     authBanner.hidden = false;
     authBanner.textContent =
       payload.message ||
-      "GitHub token не задан — лимит 60 запросов/час. Добавьте PAT в Настройках.";
+      "GitHub token не задан — лимит 60 запросов/час. Настройки → «Войти через GitHub».";
   }
 
   function initRepos(repositories) {

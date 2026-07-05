@@ -52,14 +52,30 @@ dotnet publish src -p:PublishProfile=win-x64
 ## Быстрый старт
 
 1. ПКМ по иконке в трее → **Настройки**.
-2. Вставьте [GitHub Personal Access Token](#создание-github-pat) и нажмите **Проверить** → **Сохранить**.
+2. Нажмите **Войти через GitHub** — откроется [github.com](https://github.com/login/oauth/authorize) в браузере, подтвердите доступ.
+3. Либо вставьте [Personal Access Token](#создание-github-pat) вручную → **Проверить** → **Сохранить**.
 3. Добавьте репозитории (`owner/repo` или URL) — по умолчанию уже есть `microsoft/vscode`.
 4. Данные подгрузятся за 2–3 минуты.
 5. **Пауза** / **Продолжить** в трее — приостановить рендер (в т.ч. автоматически при fullscreen / батарее).
 
 ![Окно настроек](docs/screenshots/settings.svg)
 
-## Создание GitHub PAT
+## Авторизация GitHub
+
+### Вход через браузер (рекомендуется)
+
+1. **Настройки** → **Создать OAuth App** (или [github.com/settings/applications/new](https://github.com/settings/applications/new)).
+2. Заполните:
+   - **Application name:** GitHub Wallpaper
+   - **Homepage URL:** `https://github.com/rkfsociety/GitHubWallpaper`
+   - **Authorization callback URL:** `http://127.0.0.1:8791/callback`
+   - Включите **Enable Device Flow**
+3. Скопируйте **Client ID** в поле «OAuth Client ID» в настройках.
+4. Нажмите **Войти через GitHub** — откроется github.com, подтвердите доступ.
+
+При проблемах с callback используйте ссылку **Вход по коду устройства** (`github.com/login/device`).
+
+### Создание GitHub PAT
 
 Токен хранится в **Windows Credential Manager**, не в файлах на диске.
 

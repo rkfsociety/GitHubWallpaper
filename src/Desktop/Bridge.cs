@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using GitHubWallpaper.Desktop;
 using System.Text.Json;
 using GitHubWallpaper.GitHub;
 using Microsoft.Web.WebView2.Core;
@@ -288,11 +289,7 @@ internal sealed class Bridge : IDisposable
                 return;
             }
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = uri.ToString(),
-                UseShellExecute = true,
-            });
+            BrowserLauncher.Open(uri.ToString());
         }
         catch (JsonException)
         {

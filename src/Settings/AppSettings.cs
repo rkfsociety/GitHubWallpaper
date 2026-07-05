@@ -19,4 +19,9 @@ internal sealed class AppSettings
     /// <see cref="Screen.DeviceName"/> выбранного монитора; пусто — основной монитор.
     /// </summary>
     public string DisplayDeviceName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Client ID OAuth App GitHub (публичный). Если пусто — используется встроенный или env.
+    /// </summary>
+    public string GitHubOAuthClientId { get; set; } = string.Empty;
 }

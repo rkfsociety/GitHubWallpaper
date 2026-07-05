@@ -152,7 +152,7 @@ internal sealed class TrayService : IDisposable
         _notifyIcon.ShowBalloonTip(
             5000,
             "GitHub Wallpaper",
-            "GitHub token не задан — лимит API 60 запросов/час. Откройте Настройки, чтобы добавить PAT.",
+            "GitHub token не задан — лимит API 60 запросов/час. Откройте Настройки → «Войти через GitHub».",
             ToolTipIcon.Warning);
     }
 

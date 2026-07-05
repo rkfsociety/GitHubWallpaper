@@ -15,6 +15,10 @@ internal sealed class SettingsForm : Form
     private readonly WallpaperController _wallpaperController;
     private readonly TextBox _tokenTextBox;
     private readonly Label _tokenStatusLabel;
+    private readonly Button _signInWithGitHubButton;
+    private readonly LinkLabel _deviceSignInLinkLabel;
+    private readonly LinkLabel _createTokenLinkLabel;
+    private readonly TextBox _oauthClientIdTextBox;
     private readonly ListBox _repoListBox;
     private readonly TextBox _repoInputTextBox;
     private readonly Button _removeRepoButton;
@@ -54,19 +58,73 @@ internal sealed class SettingsForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(520, 640);
+        ClientSize = new Size(520, 728);
         ShowInTaskbar = true;
 
         var tokenLabel = new Label
         {
             AutoSize = true,
             Location = new Point(16, 16),
-            Text = "GitHub Personal Access Token:",
+            Text = "Авторизация GitHub:",
+        };
+
+        _signInWithGitHubButton = new Button
+        {
+            Location = new Point(16, 40),
+            Size = new Size(180, 30),
+            Text = "Войти через GitHub",
+        };
+        _signInWithGitHubButton.Click += OnSignInWithGitHubClick;
+
+        _deviceSignInLinkLabel = new LinkLabel
+        {
+            AutoSize = true,
+            Location = new Point(204, 46),
+            Text = "Вход по коду устройства",
+        };
+        _deviceSignInLinkLabel.LinkClicked += OnDeviceSignInLinkClicked;
+
+        _createTokenLinkLabel = new LinkLabel
+        {
+            AutoSize = true,
+            Location = new Point(360, 46),
+            Text = "Токен вручную",
+        };
+        _createTokenLinkLabel.LinkClicked += OnCreateTokenLinkClicked;
+
+        var oauthClientIdLabel = new Label
+        {
+            AutoSize = true,
+            Location = new Point(16, 78),
+            Text = "OAuth Client ID:",
+        };
+
+        _oauthClientIdTextBox = new TextBox
+        {
+            Location = new Point(120, 74),
+            Size = new Size(260, 23),
+            PlaceholderText = "из GitHub → Developer settings",
+        };
+        _oauthClientIdTextBox.Leave += OnOAuthClientIdLeave;
+
+        var oauthRegisterLinkLabel = new LinkLabel
+        {
+            AutoSize = true,
+            Location = new Point(388, 78),
+            Text = "Создать OAuth App",
+        };
+        oauthRegisterLinkLabel.LinkClicked += OnOAuthRegisterLinkClicked;
+
+        var manualTokenLabel = new Label
+        {
+            AutoSize = true,
+            Location = new Point(16, 106),
+            Text = "Или вставьте Personal Access Token:",
         };
 
         _tokenTextBox = new TextBox
         {
-            Location = new Point(16, 40),
+            Location = new Point(16, 130),
             Size = new Size(488, 23),
             UseSystemPasswordChar = true,
         };
@@ -74,14 +132,14 @@ internal sealed class SettingsForm : Form
         _tokenStatusLabel = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 72),
-            Size = new Size(488, 32),
+            Location = new Point(16, 162),
+            Size = new Size(488, 40),
             ForeColor = SystemColors.GrayText,
         };
 
         var saveButton = new Button
         {
-            Location = new Point(16, 112),
+            Location = new Point(16, 208),
             Size = new Size(100, 28),
             Text = "Сохранить",
         };
@@ -89,7 +147,7 @@ internal sealed class SettingsForm : Form
 
         var verifyButton = new Button
         {
-            Location = new Point(124, 112),
+            Location = new Point(124, 208),
             Size = new Size(100, 28),
             Text = "Проверить",
         };
@@ -97,7 +155,7 @@ internal sealed class SettingsForm : Form
 
         var clearButton = new Button
         {
-            Location = new Point(232, 112),
+            Location = new Point(232, 208),
             Size = new Size(100, 28),
             Text = "Очистить",
         };
@@ -106,13 +164,13 @@ internal sealed class SettingsForm : Form
         var reposLabel = new Label
         {
             AutoSize = true,
-            Location = new Point(16, 156),
+            Location = new Point(16, 252),
             Text = "Репозитории (порядок = порядок на обоях):",
         };
 
         _repoListBox = new ListBox
         {
-            Location = new Point(16, 180),
+            Location = new Point(16, 276),
             Size = new Size(488, 110),
             IntegralHeight = false,
         };
@@ -120,7 +178,7 @@ internal sealed class SettingsForm : Form
 
         _repoInputTextBox = new TextBox
         {
-            Location = new Point(16, 298),
+            Location = new Point(16, 394),
             Size = new Size(360, 23),
             PlaceholderText = "owner/repo или https://github.com/owner/repo",
         };
@@ -128,7 +186,7 @@ internal sealed class SettingsForm : Form
 
         var addRepoButton = new Button
         {
-            Location = new Point(384, 296),
+            Location = new Point(384, 392),
             Size = new Size(120, 28),
             Text = "Добавить",
         };
@@ -136,7 +194,7 @@ internal sealed class SettingsForm : Form
 
         _removeRepoButton = new Button
         {
-            Location = new Point(16, 334),
+            Location = new Point(16, 430),
             Size = new Size(100, 28),
             Text = "Удалить",
         };
@@ -144,7 +202,7 @@ internal sealed class SettingsForm : Form
 
         _moveUpButton = new Button
         {
-            Location = new Point(124, 334),
+            Location = new Point(124, 430),
             Size = new Size(100, 28),
             Text = "Вверх",
         };
@@ -152,7 +210,7 @@ internal sealed class SettingsForm : Form
 
         _moveDownButton = new Button
         {
-            Location = new Point(232, 334),
+            Location = new Point(232, 430),
             Size = new Size(100, 28),
             Text = "Вниз",
         };
@@ -160,7 +218,7 @@ internal sealed class SettingsForm : Form
 
         var displayGroup = new GroupBox
         {
-            Location = new Point(16, 376),
+            Location = new Point(16, 472),
             Size = new Size(488, 58),
             Text = "Экран",
         };
@@ -184,7 +242,7 @@ internal sealed class SettingsForm : Form
 
         var behaviorGroup = new GroupBox
         {
-            Location = new Point(16, 442),
+            Location = new Point(16, 538),
             Size = new Size(488, 150),
             Text = "Поведение",
         };
@@ -257,14 +315,21 @@ internal sealed class SettingsForm : Form
         var repoHintLabel = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 600),
-            Size = new Size(488, 32),
+            Location = new Point(16, 696),
+            Size = new Size(488, 24),
             ForeColor = SystemColors.GrayText,
-            Text = "Токен хранится в Credential Manager. Остальные настройки — в settings.json.",
+            Text = "Токен хранится в Credential Manager. OAuth открывает github.com в браузере.",
         };
 
         Controls.AddRange([
             tokenLabel,
+            _signInWithGitHubButton,
+            _deviceSignInLinkLabel,
+            _createTokenLinkLabel,
+            oauthClientIdLabel,
+            _oauthClientIdTextBox,
+            oauthRegisterLinkLabel,
+            manualTokenLabel,
             _tokenTextBox,
             _tokenStatusLabel,
             saveButton,
@@ -284,8 +349,45 @@ internal sealed class SettingsForm : Form
 
         PopulateMonitorComboBox();
         LoadBehaviorSettings();
+        LoadOAuthClientId();
         RefreshRepoListBox();
         UpdateTokenStatus();
+    }
+
+    private void LoadOAuthClientId()
+    {
+        var settings = _settingsStore.Load();
+        _oauthClientIdTextBox.Text = settings.GitHubOAuthClientId;
+    }
+
+    private void OnOAuthClientIdLeave(object? sender, EventArgs e) => SaveOAuthClientId();
+
+    private void SaveOAuthClientId()
+    {
+        try
+        {
+            var settings = _settingsStore.Load();
+            settings.GitHubOAuthClientId = _oauthClientIdTextBox.Text.Trim();
+            _settingsStore.Save(settings);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось сохранить OAuth Client ID:\n{ex.Message}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
+    private void OnOAuthRegisterLinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
+    {
+        if (e.Link is not null)
+        {
+            e.Link.Visited = true;
+        }
+
+        BrowserLauncher.Open(GitHubOAuthDefaults.RegistrationUrl);
     }
 
     private void LoadBehaviorSettings()
@@ -585,8 +687,154 @@ internal sealed class SettingsForm : Form
     private void UpdateTokenStatus()
     {
         _tokenStatusLabel.Text = _githubSession.HasStoredToken
-            ? "Токен сохранён в Credential Manager. Введите новый, чтобы заменить."
-            : "Токен не задан — лимит API 60 запросов/час, только публичные репозитории.";
+            ? "Токен сохранён в Credential Manager. «Войти через GitHub» заменит текущий токен."
+            : "Войдите через GitHub в браузере или вставьте PAT вручную. Без токена — лимит 60 запросов/час.";
+    }
+
+    private async void OnSignInWithGitHubClick(object? sender, EventArgs e) =>
+        await RunOAuthSignInAsync(useDeviceFlowOnly: false).ConfigureAwait(true);
+
+    private async void OnDeviceSignInLinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
+    {
+        if (e.Link is not null)
+        {
+            e.Link.Visited = true;
+        }
+
+        await RunOAuthSignInAsync(useDeviceFlowOnly: true).ConfigureAwait(true);
+    }
+
+    private void OnCreateTokenLinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
+    {
+        if (e.Link is not null)
+        {
+            e.Link.Visited = true;
+        }
+
+        BrowserLauncher.Open("https://github.com/settings/tokens?type=beta");
+    }
+
+    private async Task RunOAuthSignInAsync(bool useDeviceFlowOnly)
+    {
+        SaveOAuthClientId();
+
+        if (GitHubOAuthDefaults.ResolveClientId(_oauthClientIdTextBox.Text.Trim()) is null)
+        {
+            var answer = MessageBox.Show(
+                "Сначала создайте OAuth App на GitHub:\n\n" +
+                "• Callback URL: http://127.0.0.1:8791/callback\n" +
+                "• Включите Device Flow\n" +
+                "• Вставьте Client ID в поле «OAuth Client ID»\n\n" +
+                "Открыть страницу регистрации OAuth App?",
+                Text,
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            if (answer == DialogResult.Yes)
+            {
+                BrowserLauncher.Open(GitHubOAuthDefaults.RegistrationUrl);
+            }
+
+            return;
+        }
+
+        _signInWithGitHubButton.Enabled = false;
+        _deviceSignInLinkLabel.Enabled = false;
+        UseWaitCursor = true;
+
+        var previousStatus = _tokenStatusLabel.Text;
+        var progress = new Progress<string>(message => _tokenStatusLabel.Text = message);
+
+        try
+        {
+            using var oauth = new GitHubOAuthService(_oauthClientIdTextBox.Text.Trim());
+            using var cancellationSource = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+
+            var result = useDeviceFlowOnly
+                ? await oauth.SignInWithDeviceFlowAsync(progress, cancellationSource.Token)
+                    .ConfigureAwait(true)
+                : await oauth.SignInAsync(progress, cancellationSource.Token).ConfigureAwait(true);
+
+            _githubSession.SaveToken(result.AccessToken);
+
+            var user = await _githubSession.Client.GetAuthenticatedUserAsync(cancellationSource.Token)
+                .ConfigureAwait(true);
+
+            var login = TryReadGitHubLogin(user.Body);
+            var methodText = result.Method == GitHubOAuthMethod.DeviceFlow
+                ? "код устройства"
+                : "браузер";
+
+            UpdateTokenStatus();
+            MessageBox.Show(
+                string.IsNullOrWhiteSpace(login)
+                    ? $"Авторизация через {methodText} успешна."
+                    : $"Вы вошли как {login} через {methodText}.",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            _tokenStatusLabel.Text = previousStatus;
+            MessageBox.Show(
+                "Время ожидания авторизации истекло.",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
+        catch (GitHubOAuthException ex)
+        {
+            _tokenStatusLabel.Text = previousStatus;
+            MessageBox.Show(
+                ex.Message,
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+        catch (GitHubApiException ex)
+        {
+            _tokenStatusLabel.Text = previousStatus;
+            var error = GitHubPollError.FromException(ex);
+            MessageBox.Show(
+                $"Токен получен, но проверка не прошла:\n{error.Message}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+        catch (Exception ex)
+        {
+            _tokenStatusLabel.Text = previousStatus;
+            MessageBox.Show(
+                $"Не удалось войти через GitHub:\n{ex.Message}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+        finally
+        {
+            _signInWithGitHubButton.Enabled = true;
+            _deviceSignInLinkLabel.Enabled = true;
+            UseWaitCursor = false;
+            UpdateTokenStatus();
+        }
+    }
+
+    private static string? TryReadGitHubLogin(string json)
+    {
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(json);
+            if (document.RootElement.TryGetProperty("login", out var loginElement))
+            {
+                return loginElement.GetString();
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+
+        return null;
     }
 
     private void OnSaveClick(object? sender, EventArgs e)
