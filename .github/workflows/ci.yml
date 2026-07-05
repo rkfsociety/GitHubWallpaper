@@ -13,6 +13,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $version = "1.0.0-pr.${{ github.run_number }}"
+          } else {
+            $version = "1.0.${{ github.run_number }}"
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Building version $version"
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -22,14 +34,20 @@ jobs:
         run: dotnet restore src
 
       - name: Build
-        run: dotnet build src -c Release --no-restore
+        run: dotnet build src -c Release --no-restore -p:Version=${{ steps.version.outputs.version }}
 
       - name: Publish (smoke test)
-        run: dotnet publish src -c Release -p:PublishProfile=win-x64 --no-restore
+        run: dotnet publish src -c Release -p:PublishProfile=win-x64 --no-restore -p:Version=${{ steps.version.outputs.version }}
 
       - name: Verify portable exe
         shell: pwsh
         run: |
           $exe = Get-Item publish/GitHubWallpaper.exe
           if ($exe.Length -lt 1MB) { throw "Published exe is unexpectedly small." }
+          $expected = "${{ steps.version.outputs.version }}"
+          $productVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe.FullName).ProductVersion
           Write-Host "GitHubWallpaper.exe size: $([math]::Round($exe.Length / 1MB, 2)) MB"
+          Write-Host "Product version: $productVersion"
+          if ($productVersion -notlike "$expected*") {
+            throw "Expected product version to start with '$expected', got '$productVersion'."
+          }
