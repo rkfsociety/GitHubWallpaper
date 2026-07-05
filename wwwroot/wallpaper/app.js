@@ -3,10 +3,11 @@
   const repoGrid = document.getElementById("repo-grid");
   const authBanner = document.getElementById("auth-banner");
   const wallpaperContent = document.getElementById("wallpaper-content");
-  const wallpaperScaler = document.getElementById("wallpaper-scaler");
+  const wallpaperRoot = document.querySelector(".wallpaper");
 
   const MANY_REPOS_THRESHOLD = 2;
-  const MIN_CONTENT_SCALE = 0.4;
+  const MIN_CONTENT_ZOOM = 0.4;
+  const FIT_RETRY_DELAYS_MS = [0, 120, 400, 1200];
 
   const state = {
     repos: Object.create(null),
@@ -420,7 +421,7 @@
   }
 
   function getAvailableContentSize() {
-    const wallpaper = wallpaperScaler?.parentElement;
+    const wallpaper = wallpaperRoot;
     if (!wallpaper) {
       return {
         width: Math.max(1, window.innerWidth),
@@ -441,54 +442,71 @@
     };
   }
 
+  function measureWallpaperSize() {
+    const target = wallpaperRoot || wallpaperContent || document.body;
+    return {
+      width: Math.max(target.scrollWidth, target.clientWidth),
+      height: Math.max(target.scrollHeight, target.clientHeight),
+    };
+  }
+
+  function forceReflow() {
+    void document.body.offsetHeight;
+  }
+
   function readPx(value) {
     const number = Number.parseFloat(value);
     return Number.isFinite(number) ? number : 0;
   }
 
   function scheduleFitContent() {
-    if (fitContentFrame) {
-      cancelAnimationFrame(fitContentFrame);
-    }
+    for (const delay of FIT_RETRY_DELAYS_MS) {
+      window.setTimeout(() => {
+        if (delay === 0) {
+          if (fitContentFrame) {
+            cancelAnimationFrame(fitContentFrame);
+          }
 
-    fitContentFrame = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        fitContentFrame = 0;
+          fitContentFrame = requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              fitContentFrame = 0;
+              fitContentToViewport();
+            });
+          });
+          return;
+        }
+
         fitContentToViewport();
-      });
-    });
+      }, delay);
+    }
   }
 
   function fitContentToViewport() {
-    if (!wallpaperContent || !wallpaperScaler || isFittingContent) {
+    if (isFittingContent) {
       return;
     }
 
     isFittingContent = true;
-
-    document.documentElement.style.setProperty("--content-scale", "1");
-    wallpaperScaler.style.height = "auto";
+    document.body.style.zoom = "1";
+    forceReflow();
 
     const { width: availWidth, height: availHeight } = getAvailableContentSize();
-    const naturalWidth = wallpaperContent.offsetWidth;
-    const naturalHeight = wallpaperContent.offsetHeight;
+    const { width: naturalWidth, height: naturalHeight } = measureWallpaperSize();
 
     if (naturalWidth <= 0 || naturalHeight <= 0) {
       isFittingContent = false;
       return;
     }
 
-    const scale = Math.min(1, availWidth / naturalWidth, availHeight / naturalHeight);
-    const rounded = Math.max(MIN_CONTENT_SCALE, Math.round(scale * 1000) / 1000);
-
-    document.documentElement.style.setProperty("--content-scale", String(rounded));
-    wallpaperScaler.style.height = `${Math.ceil(naturalHeight * rounded)}px`;
+    const zoom = Math.min(1, availWidth / naturalWidth, availHeight / naturalHeight);
+    const rounded = Math.max(MIN_CONTENT_ZOOM, Math.round(zoom * 1000) / 1000);
+    document.body.style.zoom = String(rounded);
 
     isFittingContent = false;
   }
 
   function ensureContentResizeObserver() {
-    if (!repoGrid || contentResizeObserver || typeof ResizeObserver === "undefined") {
+    if (!wallpaperRoot || contentResizeObserver || typeof ResizeObserver === "undefined") {
       return;
     }
 
@@ -497,7 +515,10 @@
         scheduleFitContent();
       }
     });
-    contentResizeObserver.observe(repoGrid);
+    contentResizeObserver.observe(wallpaperRoot);
+    if (repoGrid) {
+      contentResizeObserver.observe(repoGrid);
+    }
   }
 
   function applyLayout(layout) {
@@ -515,6 +536,7 @@
     document.body.dataset.manyRepos =
       Object.keys(state.repos).length >= MANY_REPOS_THRESHOLD ? "true" : "false";
     repoGrid.style.setProperty("--grid-columns", String(layout.columns));
+    repoGrid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
 
     if (changed) {
       refreshAllRepoCards();

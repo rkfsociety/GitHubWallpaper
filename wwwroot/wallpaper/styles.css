@@ -30,7 +30,6 @@ body {
   --heatmap-2: #006d32;
   --heatmap-3: #26a641;
   --heatmap-4: #39d353;
-  --content-scale: 1;
   --content-bottom-gap: 2rem;
   --content-side-gap: 2rem;
   --content-top-gap: 1.5rem;
@@ -70,16 +69,14 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
-  width: calc(100% / var(--content-scale, 1));
-  transform: scale(var(--content-scale, 1));
-  transform-origin: top center;
+  width: 100%;
 }
 
 .wallpaper__content:has(.repo-grid > div) {
   gap: 1.25rem;
 }
 
-body[data-many-repos="true"] .hero {
+.wallpaper__content:has(.repo-grid > div:nth-child(2)) .hero {
   display: none;
 }
 
