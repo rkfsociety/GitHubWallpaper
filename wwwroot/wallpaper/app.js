@@ -428,7 +428,7 @@
     `;
   }
 
-  function mountRepoCard(entry) {
+  function mountRepoCard(entry, options = {}) {
     const key = repoKey(entry.owner, entry.repo);
     let card = cardElements.get(key);
 
@@ -442,7 +442,10 @@
 
     const feedSection = card.querySelector(".repo-card__feed");
     window.WallpaperFeed?.markNewItemsAnimated(feedSection);
-    scheduleFitContent();
+
+    if (!options.deferLayout) {
+      scheduleEqualizeAndFit();
+    }
   }
 
   function refreshRepoCard(owner, repo) {
@@ -454,10 +457,63 @@
     mountRepoCard(entry);
   }
 
+  function equalizeRepoCardHeights() {
+    if (!repoGrid) {
+      return;
+    }
+
+    const columns = Math.max(1, layoutState.columns);
+    const rows = Math.max(1, layoutState.rows);
+    const slots = [...repoGrid.children];
+
+    for (const slot of slots) {
+      slot.style.minHeight = "";
+      const card = slot.querySelector(".repo-card");
+      if (card) {
+        card.style.minHeight = "";
+      }
+    }
+
+    if (slots.length <= 1) {
+      return;
+    }
+
+    for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
+      const rowSlots = slots.slice(rowIndex * columns, (rowIndex + 1) * columns);
+      if (rowSlots.length === 0) {
+        continue;
+      }
+
+      let maxHeight = 0;
+      for (const slot of rowSlots) {
+        maxHeight = Math.max(maxHeight, slot.offsetHeight);
+      }
+
+      if (maxHeight <= 0) {
+        continue;
+      }
+
+      for (const slot of rowSlots) {
+        slot.style.minHeight = `${maxHeight}px`;
+      }
+    }
+  }
+
   function refreshAllRepoCards() {
     for (const entry of Object.values(state.repos)) {
-      mountRepoCard(entry);
+      mountRepoCard(entry, { deferLayout: true });
     }
+
+    scheduleEqualizeAndFit();
+  }
+
+  function scheduleEqualizeAndFit() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        equalizeRepoCardHeights();
+        scheduleFitContent();
+      });
+    });
   }
 
   function applyGridSettings(payload) {
@@ -505,7 +561,6 @@
     }
 
     refreshAllRepoCards();
-    scheduleFitContent();
   }
 
   function computeLayout(viewport) {
@@ -621,6 +676,8 @@
     isFittingContent = true;
     document.body.style.zoom = "1";
     forceReflow();
+    equalizeRepoCardHeights();
+    forceReflow();
 
     const { width: availWidth, height: availHeight } = getAvailableContentSize();
     const { width: naturalWidth, height: naturalHeight } = measureWallpaperSize();
@@ -674,13 +731,19 @@
     repoGrid.style.setProperty("--grid-columns", String(layout.columns));
     repoGrid.style.setProperty("--grid-rows", String(layout.rows));
     repoGrid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
-    repoGrid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(0, auto))`;
+
+    const stretchRows =
+      Object.keys(state.repos).length >= MANY_REPOS_THRESHOLD || layout.columns * layout.rows >= 4;
+    repoGrid.style.gridTemplateRows = stretchRows
+      ? `repeat(${layout.rows}, minmax(0, 1fr))`
+      : `repeat(${layout.rows}, minmax(0, auto))`;
 
     if (changed) {
       refreshAllRepoCards();
+      return;
     }
 
-    scheduleFitContent();
+    scheduleEqualizeAndFit();
   }
 
   function updateLayout(viewport) {
