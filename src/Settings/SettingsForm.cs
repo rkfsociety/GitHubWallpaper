@@ -575,16 +575,18 @@ internal sealed class SettingsForm : Form
         }
         catch (GitHubApiException ex)
         {
+            var error = GitHubPollError.FromException(ex);
             MessageBox.Show(
-                $"Токен отклонён GitHub API:\n{ex.Message}",
+                $"{error.Message}\n{error.Hint}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
         }
         catch (Exception ex)
         {
+            var error = GitHubPollError.FromException(ex);
             MessageBox.Show(
-                $"Не удалось проверить токен:\n{ex.Message}",
+                $"Не удалось проверить токен:\n{error.Message}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);

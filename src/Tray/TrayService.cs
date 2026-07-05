@@ -154,4 +154,17 @@ internal sealed class TrayService : IDisposable
             "GitHub token не задан — лимит API 60 запросов/час. Откройте Настройки, чтобы добавить PAT.",
             ToolTipIcon.Warning);
     }
+
+    /// <summary>Однократное уведомление в трее об ошибке доступа к репозиторию.</summary>
+    public void NotifyRepositoryError(string repositorySlug, string message)
+    {
+        if (_disposed)
+            return;
+
+        _notifyIcon.ShowBalloonTip(
+            7000,
+            $"GitHub Wallpaper — {repositorySlug}",
+            message,
+            ToolTipIcon.Warning);
+    }
 }

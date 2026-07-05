@@ -450,8 +450,11 @@ internal sealed class Bridge : IDisposable
     private static object CreatePollFailedMessage(
         RepoReference repository,
         RepoPollKind kind,
-        Exception exception) =>
-        new
+        Exception exception)
+    {
+        var error = GitHubPollError.FromException(exception);
+
+        return new
         {
             type = "repo:poll-failed",
             owner = repository.Owner,
@@ -459,9 +462,12 @@ internal sealed class Bridge : IDisposable
             payload = new
             {
                 kind = kind.ToString().ToLowerInvariant(),
-                message = exception.Message,
+                code = error.CodeName,
+                message = error.Message,
+                hint = error.Hint,
             },
         };
+    }
 
     internal static string Serialize(object message) =>
         JsonSerializer.Serialize(message, JsonOptions);

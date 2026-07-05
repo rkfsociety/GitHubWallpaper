@@ -231,6 +231,31 @@
     return `<ul class="repo-card__commit-list">${items}</ul>`;
   }
 
+  function formatPollError(payload) {
+    if (!payload) {
+      return "Ошибка опроса";
+    }
+
+    const titles = {
+      not_found: "Репозиторий не найден",
+      forbidden: "Нет доступа к репозиторию",
+      unauthorized: "Токен недействителен",
+      rate_limited: "Лимит GitHub API исчерпан",
+      network: "Сеть недоступна",
+      server_error: "Ошибка сервера GitHub",
+    };
+
+    const title = titles[payload.code] || "Ошибка опроса";
+    const hint = payload.hint ? ` ${payload.hint}` : "";
+    return `${title}. ${payload.message || ""}${hint}`.trim();
+  }
+
+  function clearRepoError(entry) {
+    if (entry.lastError) {
+      delete entry.lastError;
+    }
+  }
+
   function renderRepoCard(entry) {
     const key = repoKey(entry.owner, entry.repo);
     const metadata = entry.metadata;
@@ -247,7 +272,7 @@
     const heatmap = window.WallpaperHeatmap?.render(entry.heatmap?.weeks) || "";
     const feed = window.WallpaperFeed?.render(entry.activityFeed) || "";
     const error = entry.lastError
-      ? `<p class="repo-card__error">${escapeHtml(entry.lastError.message || "Ошибка опроса")}</p>`
+      ? `<p class="repo-card__error" role="alert">${escapeHtml(formatPollError(entry.lastError))}</p>`
       : "";
     const loadingClass = metadata ? "" : " is-loading";
     const latestRelease = entry.releases?.[0];
@@ -382,6 +407,7 @@
       case "repo:metadata": {
         const entry = ensureRepo(data.owner, data.repo);
         entry.metadata = data.payload;
+        clearRepoError(entry);
         refreshRepoCard(data.owner, data.repo);
         dispatchBridgeEvent("wallpaper:repo-metadata", data);
         return;
@@ -389,6 +415,7 @@
       case "repo:commits": {
         const entry = ensureRepo(data.owner, data.repo);
         entry.commits = data.payload;
+        clearRepoError(entry);
         refreshRepoCard(data.owner, data.repo);
         dispatchBridgeEvent("wallpaper:repo-commits", data);
         return;

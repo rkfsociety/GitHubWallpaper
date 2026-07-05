@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore src
+
+      - name: Build
+        run: dotnet build src -c Release --no-restore
+
+      - name: Publish (smoke test)
+        run: dotnet publish src -c Release -p:PublishProfile=win-x64 --no-restore
+
+      - name: Verify portable exe
+        shell: pwsh
+        run: |
+          $exe = Get-Item publish/GitHubWallpaper.exe
+          if ($exe.Length -lt 1MB) { throw "Published exe is unexpectedly small." }
+          Write-Host "GitHubWallpaper.exe size: $([math]::Round($exe.Length / 1MB, 2)) MB"

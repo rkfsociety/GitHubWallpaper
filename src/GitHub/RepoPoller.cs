@@ -242,39 +242,42 @@ internal sealed class RepoPoller : IDisposable
                 await PollMetadataAsync(repository, cancellationToken).ConfigureAwait(false);
             }
 
-            if (IsDue(state.LastCommitsPoll, intervals.Commits, includeNeverPolled))
+            if (state.FatalError is null)
             {
-                await PollCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
-            }
+                if (IsDue(state.LastCommitsPoll, intervals.Commits, includeNeverPolled))
+                {
+                    await PollCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
+                }
 
-            if (IsDue(state.LastPullsPoll, intervals.PullRequests, includeNeverPolled))
-            {
-                await PollPullsAsync(repository, cancellationToken).ConfigureAwait(false);
-            }
+                if (IsDue(state.LastPullsPoll, intervals.PullRequests, includeNeverPolled))
+                {
+                    await PollPullsAsync(repository, cancellationToken).ConfigureAwait(false);
+                }
 
-            if (IsDue(state.LastIssuesPoll, intervals.Issues, includeNeverPolled))
-            {
-                await PollIssuesAsync(repository, cancellationToken).ConfigureAwait(false);
-            }
+                if (IsDue(state.LastIssuesPoll, intervals.Issues, includeNeverPolled))
+                {
+                    await PollIssuesAsync(repository, cancellationToken).ConfigureAwait(false);
+                }
 
-            if (IsDue(state.LastReleasesPoll, intervals.Releases, includeNeverPolled))
-            {
-                await PollReleasesAsync(repository, cancellationToken).ConfigureAwait(false);
-            }
+                if (IsDue(state.LastReleasesPoll, intervals.Releases, includeNeverPolled))
+                {
+                    await PollReleasesAsync(repository, cancellationToken).ConfigureAwait(false);
+                }
 
-            if (IsDue(state.LastCiPoll, intervals.CiRuns, includeNeverPolled))
-            {
-                await PollCiRunAsync(repository, cancellationToken).ConfigureAwait(false);
-            }
+                if (IsDue(state.LastCiPoll, intervals.CiRuns, includeNeverPolled))
+                {
+                    await PollCiRunAsync(repository, cancellationToken).ConfigureAwait(false);
+                }
 
-            if (IsDue(state.LastHeatmapPoll, intervals.Heatmap, includeNeverPolled))
-            {
-                await PollHeatmapAsync(repository, cancellationToken).ConfigureAwait(false);
-            }
+                if (IsDue(state.LastHeatmapPoll, intervals.Heatmap, includeNeverPolled))
+                {
+                    await PollHeatmapAsync(repository, cancellationToken).ConfigureAwait(false);
+                }
 
-            if (IsDue(state.LastEventsPoll, intervals.Events, includeNeverPolled))
-            {
-                await PollEventsAsync(repository, cancellationToken).ConfigureAwait(false);
+                if (IsDue(state.LastEventsPoll, intervals.Events, includeNeverPolled))
+                {
+                    await PollEventsAsync(repository, cancellationToken).ConfigureAwait(false);
+                }
             }
         }
     }
@@ -286,10 +289,11 @@ internal sealed class RepoPoller : IDisposable
 
     private async Task PollMetadataAsync(RepoReference repository, CancellationToken cancellationToken)
     {
+        var state = GetState(repository);
+
         try
         {
             var path = $"/repos/{repository.Owner}/{repository.Repo}";
-            var state = GetState(repository);
             var result = await GetCachedAsync(state, EndpointKind.Metadata, path, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -305,12 +309,23 @@ internal sealed class RepoPoller : IDisposable
             {
                 state.Metadata = snapshot;
                 state.LastMetadataPoll = DateTimeOffset.UtcNow;
+                state.FatalError = null;
             }
 
             MetadataUpdated?.Invoke(this, new RepoPollUpdatedEventArgs<RepoMetadataSnapshot>(repository, snapshot));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            var error = GitHubPollError.FromException(ex);
+
+            if (error.IsFatalForRepo)
+            {
+                lock (_sync)
+                {
+                    state.FatalError = error.Code;
+                }
+            }
+
             PollFailed?.Invoke(this, new RepoPollFailedEventArgs(repository, RepoPollKind.Metadata, ex));
         }
     }
@@ -639,6 +654,8 @@ internal sealed class RepoPoller : IDisposable
         public RepoHeatmapSnapshot? Heatmap { get; set; }
 
         public IReadOnlyList<ActivityFeedItem>? ActivityFeed { get; set; }
+
+        public GitHubPollErrorCode? FatalError { get; set; }
 
         public string? GetETag(EndpointKind kind) =>
             _etags.TryGetValue(kind, out var etag) ? etag : null;
