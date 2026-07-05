@@ -1,6 +1,6 @@
 namespace GitHubWallpaper.Settings.Ui;
 
-/// <summary>Прокручиваемая область с градиентным фоном без артефактов по краям.</summary>
+/// <summary>Прокручиваемая область с градиентным фоном.</summary>
 internal sealed class ThemedScrollPanel : Panel
 {
     public ThemedScrollPanel()
@@ -14,10 +14,10 @@ internal sealed class ThemedScrollPanel : Panel
         SettingsTheme.PaintFormBackground(e.Graphics, ClientRectangle);
 }
 
-/// <summary>Контент секции без собственного фона — виден слой карточки родителя.</summary>
-internal sealed class GlassContentPanel : Panel
+/// <summary>Контент внутри карточки без собственного фона.</summary>
+internal sealed class CardContentPanel : Panel
 {
-    public GlassContentPanel()
+    public CardContentPanel()
     {
         BackColor = Color.Transparent;
         SettingsTheme.EnableDoubleBuffer(this);
@@ -28,67 +28,94 @@ internal sealed class GlassContentPanel : Panel
     }
 }
 
-/// <summary>Карточка-секция с бейджем заголовка (как на обоях).</summary>
+/// <summary>Карточка-секция с заголовком и контентом.</summary>
 internal sealed class GlassSection : Panel
 {
-    private readonly string _title;
-    private readonly int _titleBadgeWidth;
-
-    public GlassSection(string title, int width)
+    public GlassSection(string title, int width, bool showTitle = true)
     {
-        _title = title;
-        _titleBadgeWidth = SettingsTheme.MeasureTitleBadgeWidth(title);
-
         SettingsTheme.ApplySurfaceBackground(this);
         Width = width;
         Margin = new Padding(0, 0, 0, SettingsTheme.SectionGap);
 
-        var contentTop = SettingsTheme.SectionPadding
-            + SettingsTheme.TitleBadgeHeight
-            + SettingsTheme.SectionTitleGap;
-
-        ContentPanel = new GlassContentPanel
+        var contentTop = SettingsTheme.SectionPadding;
+        if (showTitle)
         {
-            Location = new Point(
-                SettingsTheme.SectionPadding + SettingsTheme.ContentPadding,
-                contentTop),
-            Width = width - (SettingsTheme.SectionPadding + SettingsTheme.ContentPadding) * 2,
-        };
+            TitleLabel = new Label
+            {
+                AutoSize = true,
+                Font = SettingsTheme.SectionFont,
+                ForeColor = SettingsTheme.TextPrimary,
+                Location = new Point(SettingsTheme.SectionPadding, SettingsTheme.SectionPadding),
+                Text = title,
+            };
+            Controls.Add(TitleLabel);
+            contentTop += SettingsTheme.TitleHeight + SettingsTheme.ContentGap;
+        }
 
+        ContentPanel = new CardContentPanel
+        {
+            Location = new Point(SettingsTheme.SectionPadding, contentTop),
+            Width = width - SettingsTheme.SectionPadding * 2,
+        };
         Controls.Add(ContentPanel);
     }
+
+    public Label? TitleLabel { get; }
 
     public Panel ContentPanel { get; }
 
     public static int ContentWidth(int sectionWidth) =>
-        sectionWidth - (SettingsTheme.SectionPadding + SettingsTheme.ContentPadding) * 2;
+        sectionWidth - SettingsTheme.SectionPadding * 2;
 
-    /// <summary>Задаёт высоту контента и полную высоту секции с учётом заголовка и отступов.</summary>
     public void SetContentHeight(int height)
     {
         ContentPanel.Height = height;
         Height = ContentPanel.Bottom + SettingsTheme.SectionPadding;
     }
 
+    public void SetTitleVisible(bool visible)
+    {
+        if (TitleLabel is null)
+        {
+            return;
+        }
+
+        TitleLabel.Visible = visible;
+        var contentTop = SettingsTheme.SectionPadding
+            + (visible ? SettingsTheme.TitleHeight + SettingsTheme.ContentGap : 0);
+        ContentPanel.Location = new Point(SettingsTheme.SectionPadding, contentTop);
+        ContentPanel.Width = Width - SettingsTheme.SectionPadding * 2;
+    }
+
     protected override void OnPaintBackground(PaintEventArgs e)
     {
         e.Graphics.Clear(SettingsTheme.BackgroundTop);
-
         var bounds = ClientRectangle;
         bounds.Width -= 1;
         bounds.Height -= 1;
         SettingsTheme.PaintCard(e.Graphics, bounds, SettingsTheme.CornerRadius);
-
-        var badgeBounds = new Rectangle(
-            SettingsTheme.SectionPadding,
-            SettingsTheme.SectionPadding,
-            _titleBadgeWidth,
-            SettingsTheme.TitleBadgeHeight);
-        SettingsTheme.PaintTitleBadge(e.Graphics, badgeBounds, _title);
     }
 }
 
-/// <summary>Базовая кнопка с полностью кастомной отрисовкой.</summary>
+/// <summary>Внутренняя панель с чуть более тёмным фоном (зона сетки).</summary>
+internal sealed class InnerPanel : Panel
+{
+    public InnerPanel()
+    {
+        SettingsTheme.ApplySurfaceBackground(this);
+        Padding = new Padding(12);
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        var bounds = ClientRectangle;
+        bounds.Width -= 1;
+        bounds.Height -= 1;
+        SettingsTheme.PaintInnerPanel(e.Graphics, bounds, SettingsTheme.ControlCornerRadius);
+    }
+}
+
+/// <summary>Базовая кнопка с кастомной отрисовкой.</summary>
 internal abstract class ThemedButtonBase : Button
 {
     protected ThemedButtonBase()
@@ -104,12 +131,12 @@ internal abstract class ThemedButtonBase : Button
         FlatAppearance.BorderSize = 0;
         UseVisualStyleBackColor = false;
         Cursor = Cursors.Hand;
-        Height = 34;
+        Height = SettingsTheme.ControlHeight;
         SettingsTheme.EnableDoubleBuffer(this);
     }
 }
 
-/// <summary>Кнопка с оранжевым свечением.</summary>
+/// <summary>Оранжевая кнопка действия.</summary>
 internal sealed class GlowButton : ThemedButtonBase
 {
     private bool _hover;
@@ -138,8 +165,8 @@ internal sealed class GlowButton : ThemedButtonBase
         }
 
         using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
-        using var glow = new SolidBrush(Color.FromArgb(_hover ? 64 : 44, SettingsTheme.Accent));
-        var glowBounds = Rectangle.Inflate(bounds, 3, 3);
+        using var glow = new SolidBrush(Color.FromArgb(_hover ? 56 : 36, SettingsTheme.Accent));
+        var glowBounds = Rectangle.Inflate(bounds, 2, 2);
         using var glowPath = SettingsTheme.CreateRoundedRectangle(glowBounds, SettingsTheme.ControlCornerRadius + 1);
         pevent.Graphics.FillPath(glow, glowPath);
         using var brush = new SolidBrush(fill);
@@ -150,7 +177,7 @@ internal sealed class GlowButton : ThemedButtonBase
     }
 }
 
-/// <summary>Полупрозрачная вторичная кнопка.</summary>
+/// <summary>Вторичная кнопка с рамкой.</summary>
 internal sealed class GhostButton : ThemedButtonBase
 {
     private bool _hover;
@@ -172,9 +199,7 @@ internal sealed class GhostButton : ThemedButtonBase
         bounds.Width -= 1;
         bounds.Height -= 1;
 
-        var fill = _hover
-            ? Color.FromArgb(40, 48, 54, 61)
-            : Color.FromArgb(24, 48, 54, 61);
+        var fill = _hover ? Color.FromArgb(36, 52, 58, 72) : Color.FromArgb(20, 52, 58, 72);
         using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
         using var brush = new SolidBrush(fill);
         pevent.Graphics.FillPath(brush, path);
@@ -186,7 +211,211 @@ internal sealed class GhostButton : ThemedButtonBase
     }
 }
 
-/// <summary>Текстовое поле без собственной рамки — обводку рисует <see cref="TextField"/>.</summary>
+/// <summary>Кнопка с цветной обводкой (например «Выйти»).</summary>
+internal sealed class OutlineButton : ThemedButtonBase
+{
+    private readonly Color _accent;
+    private bool _hover;
+
+    public OutlineButton(Color accent)
+    {
+        _accent = accent;
+        BackColor = Color.Transparent;
+        ForeColor = SettingsTheme.TextPrimary;
+        Font = SettingsTheme.BodyFont;
+        MouseEnter += (_, _) => { _hover = true; Invalidate(); };
+        MouseLeave += (_, _) => { _hover = false; Invalidate(); };
+    }
+
+    protected override void OnPaint(PaintEventArgs pevent)
+    {
+        pevent.Graphics.SetClip(ClientRectangle);
+        pevent.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var bounds = ClientRectangle;
+        bounds.Width -= 1;
+        bounds.Height -= 1;
+
+        if (_hover)
+        {
+            using var glow = new SolidBrush(Color.FromArgb(40, _accent));
+            var glowBounds = Rectangle.Inflate(bounds, 2, 2);
+            using var glowPath = SettingsTheme.CreateRoundedRectangle(glowBounds, SettingsTheme.ControlCornerRadius + 1);
+            pevent.Graphics.FillPath(glow, glowPath);
+        }
+
+        using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
+        using var fill = new SolidBrush(Color.FromArgb(_hover ? 32 : 16, _accent));
+        pevent.Graphics.FillPath(fill, path);
+        using var border = new Pen(_accent, 1.5f);
+        pevent.Graphics.DrawPath(border, path);
+
+        var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
+        TextRenderer.DrawText(pevent.Graphics, Text, Font, bounds, ForeColor, flags);
+    }
+}
+
+/// <summary>Горизонтальный переключатель из pill-кнопок.</summary>
+internal sealed class SegmentedChoice : Panel
+{
+    private readonly List<SegmentButton> _segments = [];
+    private bool _suppressEvents;
+    private int _selectedIndex;
+
+    public SegmentedChoice()
+    {
+        SettingsTheme.ApplyTransparentBackground(this);
+        Height = SettingsTheme.ControlHeight + 4;
+    }
+
+    public event EventHandler? SelectionChanged;
+
+    public int SelectedIndex
+    {
+        get => _selectedIndex;
+        set
+        {
+            if (value < 0 || value >= _segments.Count || value == _selectedIndex)
+            {
+                return;
+            }
+
+            _selectedIndex = value;
+            UpdateSegmentVisuals();
+            if (!_suppressEvents)
+            {
+                SelectionChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    public void SetSegments(IReadOnlyList<string> labels)
+    {
+        Controls.Clear();
+        _segments.Clear();
+
+        for (var index = 0; index < labels.Count; index++)
+        {
+            var segmentIndex = index;
+            var button = new SegmentButton(labels[index])
+            {
+                Dock = DockStyle.Left,
+            };
+            button.Click += (_, _) => SelectedIndex = segmentIndex;
+            _segments.Add(button);
+            Controls.Add(button);
+        }
+
+        ResizeSegments();
+        if (_segments.Count > 0)
+        {
+            _selectedIndex = Math.Clamp(_selectedIndex, 0, _segments.Count - 1);
+            UpdateSegmentVisuals();
+        }
+    }
+
+    public void SetSelectedIndexSilent(int index)
+    {
+        _suppressEvents = true;
+        SelectedIndex = index;
+        _suppressEvents = false;
+    }
+
+    protected override void OnSizeChanged(EventArgs e)
+    {
+        base.OnSizeChanged(e);
+        ResizeSegments();
+    }
+
+    private void ResizeSegments()
+    {
+        if (_segments.Count == 0 || Width <= 0)
+        {
+            return;
+        }
+
+        var segmentWidth = Math.Max(1, (Width - (_segments.Count - 1) * 6) / _segments.Count);
+        foreach (var segment in _segments)
+        {
+            segment.Width = segmentWidth;
+            segment.Margin = new Padding(0, 0, 6, 0);
+        }
+    }
+
+    private void UpdateSegmentVisuals()
+    {
+        for (var index = 0; index < _segments.Count; index++)
+        {
+            _segments[index].IsSelected = index == _selectedIndex;
+        }
+    }
+
+    private sealed class SegmentButton : ThemedButtonBase
+    {
+        private bool _selected;
+        private bool _hover;
+
+        public SegmentButton(string text)
+        {
+            Text = text;
+            Font = SettingsTheme.SmallFont;
+            Height = SettingsTheme.ControlHeight;
+            MouseEnter += (_, _) => { _hover = true; Invalidate(); };
+            MouseLeave += (_, _) => { _hover = false; Invalidate(); };
+        }
+
+        public bool IsSelected
+        {
+            get => _selected;
+            set
+            {
+                _selected = value;
+                Invalidate();
+            }
+        }
+
+        protected override void OnPaint(PaintEventArgs pevent)
+        {
+            pevent.Graphics.SetClip(ClientRectangle);
+            pevent.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var bounds = ClientRectangle;
+            bounds.Width -= 1;
+            bounds.Height -= 1;
+
+            Color fill;
+            Color border;
+            Color textColor;
+            if (_selected)
+            {
+                fill = SettingsTheme.SegmentActive;
+                border = SettingsTheme.AccentBlue;
+                textColor = SettingsTheme.TextPrimary;
+            }
+            else if (_hover)
+            {
+                fill = Color.FromArgb(40, SettingsTheme.SegmentFill);
+                border = SettingsTheme.CardBorder;
+                textColor = SettingsTheme.TextPrimary;
+            }
+            else
+            {
+                fill = SettingsTheme.SegmentFill;
+                border = SettingsTheme.CardBorder;
+                textColor = SettingsTheme.TextMuted;
+            }
+
+            using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
+            using var brush = new SolidBrush(fill);
+            pevent.Graphics.FillPath(brush, path);
+            using var pen = new Pen(border, _selected ? 1.5f : 1f);
+            pevent.Graphics.DrawPath(pen, path);
+
+            var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
+            TextRenderer.DrawText(pevent.Graphics, Text, Font, bounds, textColor, flags);
+        }
+    }
+}
+
+/// <summary>Текстовое поле — обводку рисует <see cref="TextField"/>.</summary>
 internal sealed class ThemedTextBox : TextBox
 {
     public ThemedTextBox()
@@ -196,10 +425,10 @@ internal sealed class ThemedTextBox : TextBox
     }
 }
 
-/// <summary>Обёртка для текстового поля со скруглённой рамкой.</summary>
+/// <summary>Обёртка текстового поля со скруглённой рамкой.</summary>
 internal sealed class TextField : Panel
 {
-    public TextField(TextBox inner, int height = 34)
+    public TextField(TextBox inner, int height = SettingsTheme.ControlHeight)
     {
         SettingsTheme.ApplySurfaceBackground(this);
         Height = height;
@@ -215,7 +444,6 @@ internal sealed class TextField : Panel
         bounds.Width -= 1;
         bounds.Height -= 1;
         e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
         using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
         using var fill = new SolidBrush(SettingsTheme.InputFill);
         e.Graphics.FillPath(fill, path);
@@ -224,10 +452,10 @@ internal sealed class TextField : Panel
     }
 }
 
-/// <summary>Обёртка для выпадающего списка со скруглённой рамкой.</summary>
+/// <summary>Обёртка выпадающего списка.</summary>
 internal sealed class ComboField : Panel
 {
-    public ComboField(ComboBox inner, int height = 34)
+    public ComboField(ComboBox inner, int height = SettingsTheme.ControlHeight)
     {
         SettingsTheme.ApplySurfaceBackground(this);
         Height = height;
@@ -244,7 +472,6 @@ internal sealed class ComboField : Panel
         bounds.Width -= 1;
         bounds.Height -= 1;
         e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
         using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
         using var fill = new SolidBrush(SettingsTheme.InputFill);
         e.Graphics.FillPath(fill, path);

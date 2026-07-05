@@ -34,13 +34,11 @@ internal sealed class SettingsForm : Form
     private Button _authLogoutButton = null!;
     private Label _repoHintLabel = null!;
     private int _authSignInContentHeight;
-    private const int AuthSignedInContentHeight = 50;
+    private const int AuthSignedInContentHeight = 44;
     private GridLayoutEditor _gridLayoutEditor = null!;
     private TextBox _repoInputTextBox = null!;
     private Button _removeRepoButton = null!;
-    private RadioButton _economyRadio = null!;
-    private RadioButton _normalRadio = null!;
-    private RadioButton _frequentRadio = null!;
+    private SegmentedChoice _pollPresetChoice = null!;
     private CheckBox _autoStartCheckBox = null!;
     private CheckBox _pauseFullscreenCheckBox = null!;
     private CheckBox _pauseBatteryCheckBox = null!;
@@ -199,25 +197,37 @@ internal sealed class SettingsForm : Form
         };
         SettingsTheme.ApplyTransparentBackground(_authSignedInPanel);
 
+        var signedInRow = new TableLayoutPanel
+        {
+            ColumnCount = 2,
+            Dock = DockStyle.Fill,
+            RowCount = 1,
+        };
+        signedInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        signedInRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108f));
+        SettingsTheme.ApplyTransparentBackground(signedInRow);
+
         _authUserLabel = new Label
         {
             AutoSize = true,
+            Anchor = AnchorStyles.Left,
             Font = SettingsTheme.SectionFont,
             ForeColor = SettingsTheme.TextPrimary,
-            Location = new Point(0, 10),
+            Margin = new Padding(0, 8, 0, 0),
             Text = "Авторизован",
         };
 
-        _authLogoutButton = new GhostButton
+        _authLogoutButton = new OutlineButton(SettingsTheme.AccentPurple)
         {
-            Location = new Point(innerWidth - 108, 6),
-            Size = new Size(108, 34),
+            Dock = DockStyle.Fill,
+            Margin = new Padding(8, 0, 0, 0),
             Text = "Выйти",
         };
         _authLogoutButton.Click += OnLogoutClick;
 
-        _authSignedInPanel.Controls.Add(_authUserLabel);
-        _authSignedInPanel.Controls.Add(_authLogoutButton);
+        signedInRow.Controls.Add(_authUserLabel, 0, 0);
+        signedInRow.Controls.Add(_authLogoutButton, 1, 0);
+        _authSignedInPanel.Controls.Add(signedInRow);
 
         var y = 0;
 
@@ -371,6 +381,12 @@ internal sealed class SettingsForm : Form
         _authSignInPanel.Visible = !signedIn;
         _authSignedInPanel.Visible = signedIn;
         _repoHintLabel.Visible = !signedIn;
+        if (_authSection.TitleLabel is not null)
+        {
+            _authSection.SetTitleVisible(!signedIn);
+            _authSection.TitleLabel.Text = "Авторизация GitHub";
+        }
+
         _authSection.SetContentHeight(signedIn ? AuthSignedInContentHeight : _authSignInContentHeight);
         FitFormToContent(_mainContent);
     }
@@ -433,43 +449,54 @@ internal sealed class SettingsForm : Form
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 1,
-            RowCount = 4,
+            Dock = DockStyle.Top,
+            RowCount = 3,
             Width = innerWidth,
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         SettingsTheme.ApplyTransparentBackground(layout);
 
-        var reposHint = CreateMutedLabel("Перетащите репозитории между ячейками");
-        reposHint.AutoSize = true;
-        reposHint.Margin = new Padding(0, 0, 0, 6);
-        layout.Controls.Add(reposHint, 0, 0);
+        var gridHost = new InnerPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
+            Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap),
+            Width = innerWidth,
+        };
+        SettingsTheme.EnableDoubleBuffer(gridHost);
+
+        var gridHint = CreateMutedLabel("Перетащите репозитории между ячейками");
+        gridHint.AutoSize = true;
+        gridHint.Dock = DockStyle.Top;
+        gridHint.Margin = new Padding(0, 0, 0, 8);
+        gridHost.Controls.Add(gridHint);
 
         _gridLayoutEditor = new GridLayoutEditor
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 0, 0, 10),
-            Width = innerWidth,
+            Dock = DockStyle.Top,
+            Width = innerWidth - 24,
         };
         _gridLayoutEditor.LayoutChanged += OnGridLayoutChanged;
-        layout.Controls.Add(_gridLayoutEditor, 0, 1);
+        gridHost.Controls.Add(_gridLayoutEditor);
+        layout.Controls.Add(gridHost, 0, 0);
 
         var inputRow = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, 0, 8),
+            Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap),
             RowCount = 1,
             Width = innerWidth,
         };
         inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 124f));
+        inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128f));
         SettingsTheme.ApplyTransparentBackground(inputRow);
 
         _repoInputTextBox = new ThemedTextBox
@@ -487,24 +514,23 @@ internal sealed class SettingsForm : Form
         {
             Dock = DockStyle.Fill,
             Margin = Padding.Empty,
-            MinimumSize = new Size(124, 34),
             Text = "Добавить",
         };
         addRepoButton.Click += OnAddRepoClick;
 
         inputRow.Controls.Add(repoInputField, 0, 0);
         inputRow.Controls.Add(addRepoButton, 1, 0);
-        layout.Controls.Add(inputRow, 0, 2);
+        layout.Controls.Add(inputRow, 0, 1);
 
         _removeRepoButton = new GhostButton
         {
             AutoSize = false,
-            Margin = new Padding(0, 6, 0, 0),
-            Size = new Size(124, 34),
+            Margin = Padding.Empty,
+            Size = new Size(128, SettingsTheme.ControlHeight),
             Text = "Удалить",
         };
         _removeRepoButton.Click += OnRemoveRepoClick;
-        layout.Controls.Add(_removeRepoButton, 0, 3);
+        layout.Controls.Add(_removeRepoButton, 0, 2);
 
         panel.Controls.Add(layout);
         layout.PerformLayout();
@@ -518,8 +544,21 @@ internal sealed class SettingsForm : Form
         var panel = section.ContentPanel;
         var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
-        var monitorLabel = CreateFieldLabel("Монитор:");
-        monitorLabel.Location = new Point(0, 10);
+        var layout = new TableLayoutPanel
+        {
+            ColumnCount = 1,
+            Dock = DockStyle.Top,
+            RowCount = 2,
+            Width = innerWidth,
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        SettingsTheme.ApplyTransparentBackground(layout);
+
+        var monitorLabel = CreateMutedLabel("Монитор");
+        monitorLabel.AutoSize = true;
+        monitorLabel.Margin = new Padding(0, 0, 0, 6);
+        layout.Controls.Add(monitorLabel, 0, 0);
 
         _monitorComboBox = new ComboBox
         {
@@ -530,12 +569,13 @@ internal sealed class SettingsForm : Form
 
         var monitorField = new ComboField(_monitorComboBox)
         {
-            Location = new Point(76, 6),
-            Width = innerWidth - 76,
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
         };
+        layout.Controls.Add(monitorField, 0, 1);
 
-        section.SetContentHeight(44);
-        panel.Controls.AddRange([monitorLabel, monitorField]);
+        section.SetContentHeight(72);
+        panel.Controls.Add(layout);
         parent.Controls.Add(section);
     }
 
@@ -545,92 +585,77 @@ internal sealed class SettingsForm : Form
         var panel = section.ContentPanel;
         var innerWidth = GlassSection.ContentWidth(sectionWidth);
 
-        var pollLabel = CreateMutedLabel("Интервал опроса GitHub API:");
-        pollLabel.Location = new Point(0, 4);
+        var layout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            Dock = DockStyle.Top,
+            RowCount = 3,
+            Width = innerWidth,
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        SettingsTheme.ApplyTransparentBackground(layout);
+
+        var pollLabel = CreateMutedLabel("Интервал опроса GitHub API");
         pollLabel.AutoSize = true;
+        pollLabel.Margin = new Padding(0, 0, 0, 8);
+        layout.Controls.Add(pollLabel, 0, 0);
 
-        const int radioTop = 32;
-        const int radioGap = 28;
+        _pollPresetChoice = new SegmentedChoice
+        {
+            Dock = DockStyle.Top,
+            Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap + 4),
+            Width = innerWidth,
+        };
+        _pollPresetChoice.SetSegments([
+            "Экономный 15/10",
+            "Нормальный 5/2",
+            "Частый 2/1",
+        ]);
+        _pollPresetChoice.SelectionChanged += OnBehaviorChanged;
+        layout.Controls.Add(_pollPresetChoice, 0, 1);
 
-        _economyRadio = new RadioButton
+        var optionsPanel = new FlowLayoutPanel
         {
             AutoSize = true,
-            Location = new Point(0, radioTop),
-            Text = "Экономный (15 / 10 мин)",
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Width = innerWidth,
         };
-        SettingsTheme.ApplyToRadio(_economyRadio);
-        _economyRadio.CheckedChanged += OnBehaviorChanged;
+        SettingsTheme.ApplyTransparentBackground(optionsPanel);
 
-        _normalRadio = new RadioButton
-        {
-            AutoSize = true,
-            Location = new Point(0, radioTop + radioGap),
-            Text = "Нормальный (5 / 2 мин)",
-        };
-        SettingsTheme.ApplyToRadio(_normalRadio);
-        _normalRadio.CheckedChanged += OnBehaviorChanged;
-
-        _frequentRadio = new RadioButton
-        {
-            AutoSize = true,
-            Location = new Point(0, radioTop + radioGap * 2),
-            Text = "Частый (2 / 1 мин)",
-        };
-        SettingsTheme.ApplyToRadio(_frequentRadio);
-        _frequentRadio.CheckedChanged += OnBehaviorChanged;
-
-        const int checkboxTop = radioTop + radioGap * 3 + 12;
-        const int checkboxGap = 30;
-
-        _autoStartCheckBox = new CheckBox
-        {
-            AutoSize = true,
-            Location = new Point(0, checkboxTop),
-            Text = "Запускать при старте Windows",
-        };
+        _autoStartCheckBox = new CheckBox { AutoSize = true, Text = "Запускать при старте Windows" };
         SettingsTheme.ApplyToCheckBox(_autoStartCheckBox);
         _autoStartCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        _pauseFullscreenCheckBox = new CheckBox
-        {
-            AutoSize = true,
-            Location = new Point(0, checkboxTop + checkboxGap),
-            Text = "Пауза при полноэкранных приложениях",
-        };
+        _pauseFullscreenCheckBox = new CheckBox { AutoSize = true, Text = "Пауза при полноэкранных приложениях" };
         SettingsTheme.ApplyToCheckBox(_pauseFullscreenCheckBox);
         _pauseFullscreenCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        _pauseBatteryCheckBox = new CheckBox
-        {
-            AutoSize = true,
-            Location = new Point(0, checkboxTop + checkboxGap * 2),
-            Text = "Пауза при работе от батареи",
-        };
+        _pauseBatteryCheckBox = new CheckBox { AutoSize = true, Text = "Пауза при работе от батареи" };
         SettingsTheme.ApplyToCheckBox(_pauseBatteryCheckBox);
         _pauseBatteryCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        _autoCheckUpdatesCheckBox = new CheckBox
-        {
-            AutoSize = false,
-            Location = new Point(0, checkboxTop + checkboxGap * 3),
-            Size = new Size(innerWidth, 22),
-            Text = "Автопроверка обновлений (раз в сутки)",
-        };
+        _autoCheckUpdatesCheckBox = new CheckBox { AutoSize = true, Text = "Автопроверка обновлений (раз в сутки)" };
         SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        section.SetContentHeight(checkboxTop + checkboxGap * 3 + 34);
-        panel.Controls.AddRange([
-            pollLabel,
-            _economyRadio,
-            _normalRadio,
-            _frequentRadio,
+        optionsPanel.Controls.AddRange([
             _autoStartCheckBox,
             _pauseFullscreenCheckBox,
             _pauseBatteryCheckBox,
             _autoCheckUpdatesCheckBox,
         ]);
+        layout.Controls.Add(optionsPanel, 0, 2);
 
+        panel.Controls.Add(layout);
+        layout.PerformLayout();
+        section.SetContentHeight(layout.PreferredSize.Height);
         parent.Controls.Add(section);
     }
 
@@ -756,13 +781,13 @@ internal sealed class SettingsForm : Form
         switch (settings.PollIntervalPreset)
         {
             case PollIntervalPreset.Economy:
-                _economyRadio.Checked = true;
+                _pollPresetChoice.SetSelectedIndexSilent(0);
                 break;
             case PollIntervalPreset.Frequent:
-                _frequentRadio.Checked = true;
+                _pollPresetChoice.SetSelectedIndexSilent(2);
                 break;
             default:
-                _normalRadio.Checked = true;
+                _pollPresetChoice.SetSelectedIndexSilent(1);
                 break;
         }
 
@@ -863,20 +888,13 @@ internal sealed class SettingsForm : Form
         }
     }
 
-    private PollIntervalPreset GetSelectedPollPreset()
-    {
-        if (_economyRadio.Checked)
+    private PollIntervalPreset GetSelectedPollPreset() =>
+        _pollPresetChoice.SelectedIndex switch
         {
-            return PollIntervalPreset.Economy;
-        }
-
-        if (_frequentRadio.Checked)
-        {
-            return PollIntervalPreset.Frequent;
-        }
-
-        return PollIntervalPreset.Normal;
-    }
+            0 => PollIntervalPreset.Economy,
+            2 => PollIntervalPreset.Frequent,
+            _ => PollIntervalPreset.Normal,
+        };
 
     private void OnRepoInputKeyDown(object? sender, KeyEventArgs e)
     {
