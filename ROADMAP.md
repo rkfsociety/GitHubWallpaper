@@ -51,7 +51,7 @@
 - [x] `RepoUrlParser` — разбор `owner/repo` и `https://github.com/owner/repo`
 - [x] `GitHubApiClient` — HTTP-клиент с заголовком `Authorization`
 - [x] Хранение PAT в Windows Credential Manager (не в JSON)
-- [ ] `RateLimitGuard` — отслеживание `X-RateLimit-*`, backoff при 403
+- [x] `RateLimitGuard` — отслеживание `X-RateLimit-*`, backoff при 403
 - [ ] `RepoPoller` — опрос мета-данных и коммитов
 - [ ] `Bridge` — push JSON в WebView2 через `PostWebMessageAsJson`
 - [ ] Виджет `repo-card` — stars, forks, последние 5 коммитов

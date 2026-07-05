@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Reflection;
 
@@ -15,11 +16,16 @@ internal sealed class GitHubApiClient : IDisposable
 
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
+    private readonly RateLimitGuard _rateLimitGuard;
     private string? _token;
 
-    public GitHubApiClient(string? token = null, HttpClient? httpClient = null)
+    public GitHubApiClient(
+        string? token = null,
+        HttpClient? httpClient = null,
+        RateLimitGuard? rateLimitGuard = null)
     {
         _token = NormalizeToken(token);
+        _rateLimitGuard = rateLimitGuard ?? new RateLimitGuard();
 
         if (httpClient is null)
         {
@@ -38,6 +44,9 @@ internal sealed class GitHubApiClient : IDisposable
     /// <summary>Токен задан и будет отправляться в заголовке Authorization.</summary>
     public bool HasToken => _token is not null;
 
+    /// <summary>Отслеживание лимитов GitHub API и backoff между запросами.</summary>
+    public RateLimitGuard RateLimit => _rateLimitGuard;
+
     /// <summary>Обновляет PAT; пустая строка снимает авторизацию.</summary>
     public void SetToken(string? token) => _token = NormalizeToken(token);
 
@@ -49,6 +58,8 @@ internal sealed class GitHubApiClient : IDisposable
         string path,
         CancellationToken cancellationToken = default)
     {
+        await _rateLimitGuard.WaitIfNeededAsync(cancellationToken).ConfigureAwait(false);
+
         using var request = CreateRequest(HttpMethod.Get, path);
         using var response = await _httpClient
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -59,8 +70,16 @@ internal sealed class GitHubApiClient : IDisposable
 
         if (!response.IsSuccessStatusCode)
         {
+            _rateLimitGuard.HandleErrorResponse(
+                response.StatusCode,
+                rateLimit,
+                body,
+                TryParseRetryAfter(response));
+
             throw new GitHubApiException(response.StatusCode, path, body, rateLimit);
         }
+
+        _rateLimitGuard.Observe(rateLimit);
 
         return new GitHubApiResult(
             response.StatusCode,
@@ -138,5 +157,22 @@ internal sealed class GitHubApiClient : IDisposable
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         var versionText = version is null ? "0.0" : version.ToString(3);
         return $"GitHubWallpaper/{versionText}";
+    }
+
+    private static TimeSpan? TryParseRetryAfter(HttpResponseMessage response)
+    {
+        var retryAfter = response.Headers.RetryAfter;
+        if (retryAfter?.Delta is { } delta)
+        {
+            return delta;
+        }
+
+        if (retryAfter?.Date is { } date)
+        {
+            var delay = date - DateTimeOffset.UtcNow;
+            return delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
+        }
+
+        return null;
     }
 }
