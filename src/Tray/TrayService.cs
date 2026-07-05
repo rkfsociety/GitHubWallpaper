@@ -7,7 +7,7 @@ using GitHubWallpaper.Update;
 namespace GitHubWallpaper.Tray;
 
 /// <summary>
-/// Иконка в системном трее: настройки, пауза/возобновление обоев, выход.
+/// Иконка в системном трее: настройки, пауза/возобновление обоев, перезапуск, выход.
 /// </summary>
 internal sealed class TrayService : IDisposable
 {
@@ -59,6 +59,7 @@ internal sealed class TrayService : IDisposable
         menu.Items.Add(new ToolStripMenuItem("Создать ярлык", null, OnCreateShortcutClick));
         menu.Items.Add(new ToolStripMenuItem("Открыть папку приложения", null, OnOpenAppFolderClick));
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new ToolStripMenuItem("Перезапуск", null, OnRestartClick));
         menu.Items.Add(new ToolStripMenuItem("Выход", null, OnExitClick));
 
         _notifyIcon = new NotifyIcon
@@ -143,6 +144,23 @@ internal sealed class TrayService : IDisposable
 
     private void OnExitClick(object? sender, EventArgs e) =>
         ExitRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnRestartClick(object? sender, EventArgs e)
+    {
+        try
+        {
+            AppInstaller.ScheduleRestart();
+            ExitRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось перезапустить приложение:\n{ex.Message}",
+                "GitHub Wallpaper",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
+    }
 
     private void OnCreateShortcutClick(object? sender, EventArgs e)
     {

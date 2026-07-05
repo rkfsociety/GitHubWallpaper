@@ -93,6 +93,50 @@ internal static class AppInstaller
         }
     }
 
+    /// <summary>
+    /// Запускает новую копию приложения после короткой задержки.
+    /// Текущий процесс должен завершиться, чтобы не блокировать single-instance mutex.
+    /// </summary>
+    public static void ScheduleRestart()
+    {
+        var exePath = ResolveRestartExecutablePath();
+        var workingDirectory = IsRunningFromInstallLocation()
+            ? AppPaths.AppData
+            : Path.GetDirectoryName(exePath) ?? AppPaths.AppData;
+
+        var workDirectory = Path.Combine(Path.GetTempPath(), "GitHubWallpaper");
+        Directory.CreateDirectory(workDirectory);
+        var scriptPath = Path.Combine(workDirectory, "restart.cmd");
+
+        var script = $"""
+            @echo off
+            setlocal
+            ping 127.0.0.1 -n 3 >nul
+            start "" /D "{EscapeCmdPath(workingDirectory)}" "{EscapeCmdPath(exePath)}"
+            del "%~f0"
+            """;
+
+        File.WriteAllText(scriptPath, script);
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = scriptPath,
+            UseShellExecute = true,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+        });
+    }
+
+    private static string ResolveRestartExecutablePath()
+    {
+        if (IsRunningFromInstallLocation() && File.Exists(AppPaths.InstalledExecutablePath))
+        {
+            return AppPaths.InstalledExecutablePath;
+        }
+
+        return GetExecutablePath();
+    }
+
     private static string? FindBundledWallpaperRoot()
     {
         foreach (var candidate in EnumerateWallpaperSourceCandidates())
@@ -307,4 +351,6 @@ internal static class AppInstaller
 
     private static string NormalizePath(string path) =>
         Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+    private static string EscapeCmdPath(string path) => path.Replace("\"", "\"\"");
 }
