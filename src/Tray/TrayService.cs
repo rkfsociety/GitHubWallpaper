@@ -1,4 +1,5 @@
 using GitHubWallpaper.Desktop;
+using GitHubWallpaper.GitHub;
 using GitHubWallpaper.Settings;
 
 namespace GitHubWallpaper.Tray;
@@ -6,18 +7,21 @@ namespace GitHubWallpaper.Tray;
 /// <summary>
 /// Иконка в системном трее: настройки, пауза/возобновление обоев, выход.
 /// </summary>
-public sealed class TrayService : IDisposable
+internal sealed class TrayService : IDisposable
 {
     private readonly WallpaperController _wallpaperController;
+    private readonly GitHubSession _githubSession;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _pauseMenuItem;
     private SettingsForm? _settingsForm;
     private bool _disposed;
 
-    public TrayService(WallpaperController wallpaperController)
+    public TrayService(WallpaperController wallpaperController, GitHubSession githubSession)
     {
         ArgumentNullException.ThrowIfNull(wallpaperController);
+        ArgumentNullException.ThrowIfNull(githubSession);
         _wallpaperController = wallpaperController;
+        _githubSession = githubSession;
 
         _pauseMenuItem = new ToolStripMenuItem("Пауза", null, OnPauseClick);
 
@@ -78,7 +82,7 @@ public sealed class TrayService : IDisposable
             return;
         }
 
-        _settingsForm = new SettingsForm();
+        _settingsForm = new SettingsForm(_githubSession);
         _settingsForm.FormClosed += (_, _) =>
         {
             _settingsForm?.Dispose();

@@ -1,4 +1,5 @@
 using GitHubWallpaper.Desktop;
+using GitHubWallpaper.GitHub;
 using GitHubWallpaper.Tray;
 
 namespace GitHubWallpaper;
@@ -11,7 +12,8 @@ internal static class Program
         ApplicationConfiguration.Initialize();
 
         var wallpaperController = new WallpaperController();
-        var trayService = new TrayService(wallpaperController);
+        var githubSession = new GitHubSession();
+        var trayService = new TrayService(wallpaperController, githubSession);
 
         try
         {
@@ -21,6 +23,7 @@ internal static class Program
         {
             trayService.Dispose();
             wallpaperController.Dispose();
+            githubSession.Dispose();
             MessageBox.Show(
                 $"Не удалось запустить обои:\n{ex.Message}",
                 "GitHub Wallpaper",
@@ -29,6 +32,6 @@ internal static class Program
             return;
         }
 
-        Application.Run(new TrayApplicationContext(wallpaperController, trayService));
+        Application.Run(new TrayApplicationContext(wallpaperController, githubSession, trayService));
     }
 }
