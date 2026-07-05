@@ -37,6 +37,13 @@ internal static class SettingsTheme
             .SetValue(control, true, null);
     }
 
+    /// <summary>Фон контейнера без «прозрачности» WinForms — убирает артефакты по краям.</summary>
+    public static void ApplySurfaceBackground(Control control)
+    {
+        control.BackColor = BackgroundTop;
+        EnableDoubleBuffer(control);
+    }
+
     public static GraphicsPath CreateRoundedRectangle(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
@@ -72,12 +79,13 @@ internal static class SettingsTheme
         using var glow = new SolidBrush(Color.FromArgb(18, 88, 112, 255));
         graphics.FillEllipse(glow, bounds.Width / 2 - 180, -80, 360, 220);
         using var glow2 = new SolidBrush(Color.FromArgb(14, 255, 140, 0));
-        graphics.FillEllipse(glow2, -60, bounds.Height - 180, 280, 200);
+        graphics.FillEllipse(glow2, 0, bounds.Height - 180, 220, 200);
     }
 
     public static void PaintGlassPanel(Graphics graphics, Rectangle bounds, int radius)
     {
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
         using var path = CreateRoundedRectangle(bounds, radius);
         using var fill = new SolidBrush(GlassFill);
         graphics.FillPath(fill, path);

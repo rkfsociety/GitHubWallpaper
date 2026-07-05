@@ -22,17 +22,17 @@ internal sealed class GridLayoutEditor : UserControl
 
     public GridLayoutEditor()
     {
-        BackColor = Color.Transparent;
-        SettingsTheme.EnableDoubleBuffer(this);
+        SettingsTheme.ApplySurfaceBackground(this);
 
         var sizePanel = new FlowLayoutPanel
         {
             AutoSize = true,
-            BackColor = Color.Transparent,
+            BackColor = SettingsTheme.BackgroundTop,
             Dock = DockStyle.Top,
             WrapContents = false,
             Padding = new Padding(0, 0, 0, 8),
         };
+        SettingsTheme.EnableDoubleBuffer(sizePanel);
 
         var columnsLabel = new Label
         {
@@ -64,11 +64,12 @@ internal sealed class GridLayoutEditor : UserControl
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = Color.Transparent,
+            BackColor = SettingsTheme.BackgroundTop,
             ColumnCount = 3,
             RowCount = 2,
             Dock = DockStyle.Top,
         };
+        SettingsTheme.EnableDoubleBuffer(_table);
 
         Controls.Add(sizePanel);
         Controls.Add(_table);
@@ -354,9 +355,8 @@ internal sealed class GridLayoutEditor : UserControl
         {
             SlotIndex = slotIndex;
             AllowDrop = true;
-            BackColor = Color.Transparent;
+            SettingsTheme.ApplySurfaceBackground(this);
             Padding = new Padding(8, 10, 8, 10);
-            SettingsTheme.EnableDoubleBuffer(this);
 
             _label = new PassThroughLabel
             {
@@ -395,12 +395,14 @@ internal sealed class GridLayoutEditor : UserControl
             Invalidate();
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        protected override void OnPaintBackground(PaintEventArgs e)
         {
             var bounds = ClientRectangle;
             bounds.Width -= 1;
             bounds.Height -= 1;
+            e.Graphics.SetClip(ClientRectangle);
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
 
             using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
             using var fill = new SolidBrush(SettingsTheme.SlotFill);
@@ -414,14 +416,11 @@ internal sealed class GridLayoutEditor : UserControl
             if (_selected)
             {
                 using var glow = new SolidBrush(Color.FromArgb(36, SettingsTheme.Accent));
-                var glowBounds = Rectangle.Inflate(bounds, 2, 2);
-                using var glowPath = SettingsTheme.CreateRoundedRectangle(glowBounds, SettingsTheme.ControlCornerRadius + 1);
+                using var glowPath = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
                 e.Graphics.FillPath(glow, glowPath);
                 e.Graphics.FillPath(fill, path);
                 e.Graphics.DrawPath(border, path);
             }
-
-            base.OnPaint(e);
         }
     }
 

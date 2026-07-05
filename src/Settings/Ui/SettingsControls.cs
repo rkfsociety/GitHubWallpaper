@@ -1,12 +1,25 @@
 namespace GitHubWallpaper.Settings.Ui;
 
+/// <summary>Прокручиваемая область с градиентным фоном без артефактов по краям.</summary>
+internal sealed class ThemedScrollPanel : Panel
+{
+    public ThemedScrollPanel()
+    {
+        SettingsTheme.ApplySurfaceBackground(this);
+        AutoScroll = true;
+        Dock = DockStyle.Fill;
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e) =>
+        SettingsTheme.PaintFormBackground(e.Graphics, ClientRectangle);
+}
+
 /// <summary>Секция с «стеклянным» фоном и заголовком.</summary>
 internal sealed class GlassSection : Panel
 {
     public GlassSection(string title, int width)
     {
-        SettingsTheme.EnableDoubleBuffer(this);
-        BackColor = Color.Transparent;
+        SettingsTheme.ApplySurfaceBackground(this);
         Width = width;
         Margin = new Padding(0, 0, 0, SettingsTheme.SectionGap);
         Padding = new Padding(
@@ -26,10 +39,11 @@ internal sealed class GlassSection : Panel
 
         ContentPanel = new Panel
         {
-            BackColor = Color.Transparent,
+            BackColor = SettingsTheme.BackgroundTop,
             Location = new Point(SettingsTheme.SectionPadding, SettingsTheme.SectionPadding + 28),
             Width = width - SettingsTheme.SectionPadding * 2,
         };
+        SettingsTheme.EnableDoubleBuffer(ContentPanel);
 
         Controls.Add(ContentPanel);
         Controls.Add(titleLabel);
@@ -44,13 +58,14 @@ internal sealed class GlassSection : Panel
         Height = Padding.Top + ContentPanel.Top + height + Padding.Bottom;
     }
 
-    protected override void OnPaint(PaintEventArgs e)
+    protected override void OnPaintBackground(PaintEventArgs e)
     {
+        e.Graphics.Clear(SettingsTheme.BackgroundTop);
+
         var bounds = ClientRectangle;
         bounds.Width -= 1;
         bounds.Height -= 1;
         SettingsTheme.PaintGlassPanel(e.Graphics, bounds, SettingsTheme.CornerRadius);
-        base.OnPaint(e);
     }
 }
 
@@ -91,6 +106,7 @@ internal sealed class GlowButton : ThemedButtonBase
 
     protected override void OnPaint(PaintEventArgs pevent)
     {
+        pevent.Graphics.SetClip(ClientRectangle);
         pevent.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var bounds = ClientRectangle;
         bounds.Width -= 1;
@@ -132,6 +148,7 @@ internal sealed class GhostButton : ThemedButtonBase
 
     protected override void OnPaint(PaintEventArgs pevent)
     {
+        pevent.Graphics.SetClip(ClientRectangle);
         pevent.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var bounds = ClientRectangle;
         bounds.Width -= 1;
@@ -166,8 +183,7 @@ internal sealed class TextField : Panel
 {
     public TextField(TextBox inner, int height = 32)
     {
-        SettingsTheme.EnableDoubleBuffer(this);
-        BackColor = Color.Transparent;
+        SettingsTheme.ApplySurfaceBackground(this);
         Height = height;
         Padding = new Padding(12, 0, 12, 0);
         inner.Dock = DockStyle.Fill;
@@ -175,17 +191,17 @@ internal sealed class TextField : Panel
         Controls.Add(inner);
     }
 
-    protected override void OnPaint(PaintEventArgs e)
+    protected override void OnPaintBackground(PaintEventArgs e)
     {
         var bounds = ClientRectangle;
         bounds.Width -= 1;
         bounds.Height -= 1;
         e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
         using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
         using var fill = new SolidBrush(SettingsTheme.InputFill);
         e.Graphics.FillPath(fill, path);
         using var border = new Pen(SettingsTheme.InputBorder, 1f);
         e.Graphics.DrawPath(border, path);
-        base.OnPaint(e);
     }
 }

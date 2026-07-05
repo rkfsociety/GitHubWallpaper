@@ -79,23 +79,19 @@ internal sealed class SettingsForm : Form
         Font = SettingsTheme.BodyFont;
         SettingsTheme.EnableDoubleBuffer(this);
 
-        var scroll = new Panel
-        {
-            AutoScroll = true,
-            Dock = DockStyle.Fill,
-            BackColor = Color.Transparent,
-        };
+        var scroll = new ThemedScrollPanel();
 
         var content = new FlowLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = Color.Transparent,
+            BackColor = SettingsTheme.BackgroundTop,
             Dock = DockStyle.Top,
             FlowDirection = FlowDirection.TopDown,
             Padding = new Padding(20, 16, 20, 16),
             WrapContents = false,
         };
+        SettingsTheme.EnableDoubleBuffer(content);
         _mainContent = content;
         scroll.Controls.Add(content);
         scroll.Resize += (_, _) => SyncContentWidth(scroll, content);
@@ -106,23 +102,25 @@ internal sealed class SettingsForm : Form
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = Color.Transparent,
+            BackColor = SettingsTheme.BackgroundTop,
             FlowDirection = FlowDirection.LeftToRight,
             Margin = Padding.Empty,
             WrapContents = false,
             Width = FormContentWidth,
         };
+        SettingsTheme.EnableDoubleBuffer(bottomRow);
 
         var rightColumn = new FlowLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = Color.Transparent,
+            BackColor = SettingsTheme.BackgroundTop,
             FlowDirection = FlowDirection.TopDown,
             Margin = new Padding(ColumnGap, 0, 0, 0),
             WrapContents = false,
             Width = SideColumnWidth,
         };
+        SettingsTheme.EnableDoubleBuffer(rightColumn);
 
         BuildReposSection(bottomRow, GridColumnWidth);
         BuildDisplaySection(rightColumn, SideColumnWidth);
@@ -185,19 +183,21 @@ internal sealed class SettingsForm : Form
 
         _authSignInPanel = new Panel
         {
-            BackColor = Color.Transparent,
+            BackColor = SettingsTheme.BackgroundTop,
             Location = Point.Empty,
             Width = innerWidth,
         };
+        SettingsTheme.EnableDoubleBuffer(_authSignInPanel);
 
         _authSignedInPanel = new Panel
         {
-            BackColor = Color.Transparent,
+            BackColor = SettingsTheme.BackgroundTop,
             Location = Point.Empty,
             Visible = false,
             Width = innerWidth,
             Height = AuthSignedInContentHeight,
         };
+        SettingsTheme.EnableDoubleBuffer(_authSignedInPanel);
 
         _authUserLabel = new Label
         {
