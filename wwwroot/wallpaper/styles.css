@@ -139,6 +139,24 @@ body.is-paused .hero__hint-dot {
   box-shadow: 0 0 8px rgba(210, 153, 34, 0.5);
 }
 
+.auth-banner {
+  position: relative;
+  z-index: 2;
+  width: min(72rem, 100%);
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(210, 153, 34, 0.45);
+  border-radius: 0.65rem;
+  background: rgba(68, 52, 10, 0.55);
+  color: #f0c14b;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.auth-banner[hidden] {
+  display: none;
+}
+
 .repo-grid {
   position: relative;
   z-index: 1;

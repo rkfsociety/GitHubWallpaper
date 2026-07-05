@@ -46,6 +46,7 @@ internal sealed class TrayService : IDisposable
         _wallpaperController.Applied += OnWallpaperPauseStateChanged;
 
         UpdatePauseMenuItem();
+        ShowTokenWarningIfNeeded();
     }
 
     /// <summary>Запрошен выход из приложения.</summary>
@@ -121,5 +122,17 @@ internal sealed class TrayService : IDisposable
 
         _pauseMenuItem.Text = _wallpaperController.IsPaused ? "Продолжить" : "Пауза";
         _pauseMenuItem.Enabled = _wallpaperController.IsApplied;
+    }
+
+    private void ShowTokenWarningIfNeeded()
+    {
+        if (_githubSession.HasToken)
+            return;
+
+        _notifyIcon.ShowBalloonTip(
+            5000,
+            "GitHub Wallpaper",
+            "GitHub token не задан — лимит API 60 запросов/час. Откройте Настройки, чтобы добавить PAT.",
+            ToolTipIcon.Warning);
     }
 }

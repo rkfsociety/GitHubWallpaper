@@ -1,6 +1,7 @@
 (function () {
   const overlay = document.getElementById("pause-overlay");
   const repoGrid = document.getElementById("repo-grid");
+  const authBanner = document.getElementById("auth-banner");
 
   const state = {
     repos: Object.create(null),
@@ -98,6 +99,39 @@
   function setPaused(paused) {
     document.body.classList.toggle("is-paused", paused);
     overlay.hidden = !paused;
+  }
+
+  function setAuthStatus(payload) {
+    if (!authBanner || !payload) {
+      return;
+    }
+
+    if (payload.hasToken) {
+      authBanner.hidden = true;
+      authBanner.textContent = "";
+      return;
+    }
+
+    authBanner.hidden = false;
+    authBanner.textContent =
+      payload.message ||
+      "GitHub token не задан — лимит 60 запросов/час. Добавьте PAT в Настройках.";
+  }
+
+  function initRepos(repositories) {
+    if (!Array.isArray(repositories)) {
+      return;
+    }
+
+    for (const item of repositories) {
+      if (!item?.owner || !item?.repo) {
+        continue;
+      }
+
+      ensureRepo(item.owner, item.repo);
+    }
+
+    refreshAllRepoCards();
   }
 
   function dispatchBridgeEvent(name, detail) {
@@ -215,6 +249,14 @@
         return;
       case "resume":
         setPaused(false);
+        return;
+      case "auth:status":
+        setAuthStatus(data.payload);
+        dispatchBridgeEvent("wallpaper:auth-status", data);
+        return;
+      case "repos:init":
+        initRepos(data.payload);
+        dispatchBridgeEvent("wallpaper:repos-init", data);
         return;
       case "repo:metadata": {
         const entry = ensureRepo(data.owner, data.repo);

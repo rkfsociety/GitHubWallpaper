@@ -22,7 +22,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _githubSession = githubSession;
         _repoPoller = repoPoller;
         _trayService = trayService;
-        _bridge = new Bridge(wallpaperController, repoPoller);
+        _bridge = new Bridge(wallpaperController, githubSession, repoPoller);
         _trayService.ExitRequested += OnExitRequested;
         _wallpaperController.Paused += OnWallpaperPaused;
         _wallpaperController.Resumed += OnWallpaperResumed;

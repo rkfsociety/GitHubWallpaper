@@ -9,21 +9,29 @@ namespace GitHubWallpaper.Desktop;
 /// </summary>
 internal sealed class Bridge : IDisposable
 {
+    private const int UnauthenticatedRateLimit = 60;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
     private readonly WallpaperController _wallpaperController;
+    private readonly GitHubSession _githubSession;
     private readonly RepoPoller _repoPoller;
     private bool _started;
     private bool _disposed;
 
-    public Bridge(WallpaperController wallpaperController, RepoPoller repoPoller)
+    public Bridge(
+        WallpaperController wallpaperController,
+        GitHubSession githubSession,
+        RepoPoller repoPoller)
     {
         ArgumentNullException.ThrowIfNull(wallpaperController);
+        ArgumentNullException.ThrowIfNull(githubSession);
         ArgumentNullException.ThrowIfNull(repoPoller);
         _wallpaperController = wallpaperController;
+        _githubSession = githubSession;
         _repoPoller = repoPoller;
     }
 
@@ -39,9 +47,10 @@ internal sealed class Bridge : IDisposable
         _repoPoller.CommitsUpdated += OnCommitsUpdated;
         _repoPoller.PollFailed += OnPollFailed;
         _wallpaperController.Applied += OnWallpaperApplied;
+        _githubSession.TokenChanged += OnTokenChanged;
 
         _started = true;
-        PushCachedState();
+        PushInitialState();
     }
 
     public void Dispose()
@@ -55,12 +64,15 @@ internal sealed class Bridge : IDisposable
             _repoPoller.CommitsUpdated -= OnCommitsUpdated;
             _repoPoller.PollFailed -= OnPollFailed;
             _wallpaperController.Applied -= OnWallpaperApplied;
+            _githubSession.TokenChanged -= OnTokenChanged;
         }
 
         _disposed = true;
     }
 
-    private void OnWallpaperApplied(object? sender, EventArgs e) => PushCachedState();
+    private void OnWallpaperApplied(object? sender, EventArgs e) => PushInitialState();
+
+    private void OnTokenChanged(object? sender, EventArgs e) => PushAuthStatus();
 
     private void OnMetadataUpdated(object? sender, RepoPollUpdatedEventArgs<RepoMetadataSnapshot> e) =>
         Post(CreateMetadataMessage(e.Repository, e.Data));
@@ -70,6 +82,50 @@ internal sealed class Bridge : IDisposable
 
     private void OnPollFailed(object? sender, RepoPollFailedEventArgs e) =>
         Post(CreatePollFailedMessage(e.Repository, e.Kind, e.Exception));
+
+    private void PushInitialState()
+    {
+        PushAuthStatus();
+        PushRepoList();
+        PushCachedState();
+    }
+
+    private void PushAuthStatus()
+    {
+        var rateLimit = _githubSession.Client.RateLimit.Current;
+        var hasToken = _githubSession.HasToken;
+        var limit = rateLimit.Limit ?? (hasToken ? 5000 : UnauthenticatedRateLimit);
+        var remaining = rateLimit.Remaining;
+
+        Post(new
+        {
+            type = "auth:status",
+            payload = new
+            {
+                hasToken,
+                rateLimit = limit,
+                rateLimitRemaining = remaining,
+                message = hasToken
+                    ? null
+                    : "GitHub token не задан — лимит 60 запросов/час. Добавьте PAT в Настройках.",
+            },
+        });
+    }
+
+    private void PushRepoList()
+    {
+        Post(new
+        {
+            type = "repos:init",
+            payload = _repoPoller.Repositories
+                .Select(repository => new
+                {
+                    owner = repository.Owner,
+                    repo = repository.Repo,
+                })
+                .ToArray(),
+        });
+    }
 
     private void PushCachedState()
     {
