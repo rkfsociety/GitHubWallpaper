@@ -4,6 +4,8 @@ internal static class AppPaths
 {
     public const string ExecutableFileName = "GitHubWallpaper.exe";
 
+    public const string IconFileName = "app.ico";
+
     public static string WallpaperRoot =>
         Path.Combine(AppContext.BaseDirectory, "wwwroot", "wallpaper");
 
@@ -20,4 +22,8 @@ internal static class AppPaths
     /// <summary>Путь к exe в AppData после первого запуска.</summary>
     public static string InstalledExecutablePath =>
         Path.Combine(InstallDirectory, ExecutableFileName);
+
+    /// <summary>Путь к иконке в AppData (для ярлыков).</summary>
+    public static string InstalledIconPath =>
+        Path.Combine(InstallDirectory, IconFileName);
 }

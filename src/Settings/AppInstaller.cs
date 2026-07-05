@@ -50,7 +50,24 @@ internal static class AppInstaller
                 AppPaths.InstalledExecutablePath);
         }
 
+        EnsureInstalledIcon();
         CreateShortcuts(AppPaths.InstalledExecutablePath);
+    }
+
+    private static void EnsureInstalledIcon()
+    {
+        if (File.Exists(AppPaths.InstalledIconPath))
+        {
+            return;
+        }
+
+        var sourceIcon = Path.Combine(AppContext.BaseDirectory, AppPaths.IconFileName);
+        if (!File.Exists(sourceIcon))
+        {
+            return;
+        }
+
+        CopyFileWithRetry(sourceIcon, AppPaths.InstalledIconPath);
     }
 
     public static bool IsRunningFromInstallLocation()
@@ -83,22 +100,46 @@ internal static class AppInstaller
             CopyDirectory(sourceWwwroot, Path.Combine(AppPaths.AppData, "wwwroot"));
         }
 
+        CopyIconIfPresent(AppContext.BaseDirectory, AppPaths.AppData);
+
         CreateShortcuts(AppPaths.InstalledExecutablePath);
+    }
+
+    private static void CopyIconIfPresent(string sourceDirectory, string destinationDirectory)
+    {
+        var sourceIcon = Path.Combine(sourceDirectory, AppPaths.IconFileName);
+        if (!File.Exists(sourceIcon))
+        {
+            return;
+        }
+
+        CopyFileWithRetry(sourceIcon, AppPaths.InstalledIconPath);
     }
 
     private static void CreateShortcuts(string targetExe)
     {
+        var iconPath = File.Exists(AppPaths.InstalledIconPath)
+            ? AppPaths.InstalledIconPath
+            : Path.Combine(Path.GetDirectoryName(targetExe) ?? AppPaths.AppData, AppPaths.IconFileName);
+
+        if (!File.Exists(iconPath))
+        {
+            iconPath = null;
+        }
+
         var startMenuPrograms = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
         ShellShortcut.Create(
             Path.Combine(startMenuPrograms, ShortcutName),
             targetExe,
-            "Динамические обои с активностью GitHub");
+            "Динамические обои с активностью GitHub",
+            iconPath);
 
         var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
         ShellShortcut.Create(
             Path.Combine(desktop, ShortcutName),
             targetExe,
-            "Динамические обои с активностью GitHub");
+            "Динамические обои с активностью GitHub",
+            iconPath);
     }
 
     private static void RelaunchInstalled(string? arguments)

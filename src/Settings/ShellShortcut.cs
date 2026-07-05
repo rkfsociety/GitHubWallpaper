@@ -3,7 +3,11 @@ namespace GitHubWallpaper.Settings;
 /// <summary>Создание ярлыков Windows (.lnk) через WScript.Shell.</summary>
 internal static class ShellShortcut
 {
-    public static void Create(string shortcutPath, string targetPath, string? description = null)
+    public static void Create(
+        string shortcutPath,
+        string targetPath,
+        string? description = null,
+        string? iconPath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shortcutPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
@@ -22,7 +26,17 @@ internal static class ShellShortcut
         shortcut.TargetPath = targetPath;
         shortcut.WorkingDirectory = Path.GetDirectoryName(targetPath) ?? string.Empty;
         shortcut.Description = description ?? "GitHub Wallpaper";
-        shortcut.IconLocation = $"{targetPath},0";
+        shortcut.IconLocation = ResolveIconLocation(targetPath, iconPath);
         shortcut.Save();
+    }
+
+    private static string ResolveIconLocation(string targetPath, string? iconPath)
+    {
+        if (!string.IsNullOrWhiteSpace(iconPath) && File.Exists(iconPath))
+        {
+            return iconPath;
+        }
+
+        return $"{targetPath},0";
     }
 }
