@@ -60,16 +60,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Determine version
         id: version
         shell: pwsh
         run: |
           $version = "1.0.${{ github.run_number }}"
-          $tag = "v$version"
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          Write-Host "Release $tag"
+          Write-Host "Build version $version"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -92,16 +92,45 @@ jobs:
             throw "Expected product version to start with '$expected', got '$productVersion'."
           }
 
-      - name: Create tag and GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
-          files: publish/GitHubWallpaper.exe
-          generate_release_notes: true
-          body: |
-            ## GitHubWallpaper ${{ steps.version.outputs.tag }}
+      - name: Publish or update latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "latest"
+          $version = "${{ steps.version.outputs.version }}"
+          $shortSha = "${{ github.sha }}".Substring(0, 7)
+          $notes = @"
+          ## GitHubWallpaper
 
-            Portable single-file exe для Windows 10/11 (self-contained, .NET не требуется).
+          Сборка **$version** (`$shortSha`).
 
-            Требуется [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+          Portable single-file exe для Windows 10/11 (self-contained, .NET не требуется).
+
+          Требуется [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+          "@.Trim()
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa $tag -m "Build $version"
+          git push origin $tag --force
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag publish/GitHubWallpaper.exe `
+              --title "GitHubWallpaper" `
+              --notes $notes `
+              --latest
+          } else {
+            gh release upload $tag publish/GitHubWallpaper.exe --clobber
+            gh release edit $tag --title "GitHubWallpaper" --notes $notes --latest
+          }
+
+          # Удалить старые релизы с версионными тегами v1.0.*
+          $oldTags = gh release list --limit 100 --json tagName -q ".[].tagName" |
+            Where-Object { $_ -match '^v1\.0\.\d+$' }
+          foreach ($oldTag in $oldTags) {
+            Write-Host "Removing old release $oldTag"
+            gh release delete $oldTag --yes
+            git push origin ":refs/tags/$oldTag" 2>$null
+          }

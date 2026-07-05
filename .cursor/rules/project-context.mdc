@@ -23,7 +23,7 @@ C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в
 | 4 Полная активность | ✅ |
 | 5 Полировка и релиз | ✅ |
 
-**Сейчас:** push в `main` → CI автотег `v1.0.<build>` + GitHub Release с portable exe.
+**Сейчас:** push в `main` → CI обновляет единственный Release `latest` с portable exe.
 
 ## Архитектура
 
