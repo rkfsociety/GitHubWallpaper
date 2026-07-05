@@ -33,6 +33,8 @@ internal static class SettingsTheme
     public const int ContentGap = 12;
     public const int ControlHeight = 36;
     public const int TitleHeight = 22;
+    public const int InputPaddingX = 14;
+    public const int InputPaddingY = 6;
 
     public static Font TitleFont { get; } = new("Segoe UI Semibold", 11F, FontStyle.Bold);
     public static Font SectionFont { get; } = new("Segoe UI Semibold", 10F, FontStyle.Bold);

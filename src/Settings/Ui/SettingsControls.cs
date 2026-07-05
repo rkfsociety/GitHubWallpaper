@@ -271,10 +271,25 @@ internal sealed class TextField : Panel
         BackColor = SettingsTheme.CardFill;
         SettingsTheme.EnableDoubleBuffer(this);
         Height = height;
-        Padding = new Padding(12, 0, 12, 0);
-        inner.Dock = DockStyle.Fill;
+        Padding = new Padding(
+            SettingsTheme.InputPaddingX,
+            SettingsTheme.InputPaddingY,
+            SettingsTheme.InputPaddingX,
+            SettingsTheme.InputPaddingY);
+        inner.BorderStyle = BorderStyle.None;
         inner.Margin = Padding.Empty;
         Controls.Add(inner);
+    }
+
+    protected override void OnLayout(LayoutEventArgs levent)
+    {
+        base.OnLayout(levent);
+
+        var area = DisplayRectangle;
+        foreach (Control control in Controls)
+        {
+            control.Bounds = area;
+        }
     }
 
     protected override void OnPaintBackground(PaintEventArgs e)
@@ -322,18 +337,28 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
 
 internal sealed class NumericField : Panel
 {
-    public NumericField(NumericUpDown inner, int width = 52, int height = SettingsTheme.ControlHeight)
+    public NumericField(NumericUpDown inner, int width = 56, int height = SettingsTheme.ControlHeight)
     {
         BackColor = SettingsTheme.CardFill;
         SettingsTheme.EnableDoubleBuffer(this);
         Width = width;
         Height = height;
-        Padding = new Padding(6, 0, 2, 0);
-        inner.Dock = DockStyle.Fill;
-        inner.Margin = Padding.Empty;
+        Padding = new Padding(8, SettingsTheme.InputPaddingY, 4, SettingsTheme.InputPaddingY);
         inner.BorderStyle = BorderStyle.None;
         inner.TextAlign = HorizontalAlignment.Center;
+        inner.Margin = Padding.Empty;
         Controls.Add(inner);
+    }
+
+    protected override void OnLayout(LayoutEventArgs levent)
+    {
+        base.OnLayout(levent);
+
+        var area = DisplayRectangle;
+        foreach (Control control in Controls)
+        {
+            control.Bounds = area;
+        }
     }
 
     protected override void OnPaintBackground(PaintEventArgs e)
@@ -357,11 +382,25 @@ internal sealed class ComboField : Panel
         BackColor = SettingsTheme.CardFill;
         SettingsTheme.EnableDoubleBuffer(this);
         Height = height;
-        Padding = new Padding(10, 0, 8, 0);
-        inner.Dock = DockStyle.Fill;
-        inner.Margin = Padding.Empty;
+        Padding = new Padding(
+            SettingsTheme.InputPaddingX,
+            SettingsTheme.InputPaddingY,
+            10,
+            SettingsTheme.InputPaddingY);
         inner.FlatStyle = FlatStyle.Flat;
+        inner.Margin = Padding.Empty;
         Controls.Add(inner);
+    }
+
+    protected override void OnLayout(LayoutEventArgs levent)
+    {
+        base.OnLayout(levent);
+
+        var area = DisplayRectangle;
+        foreach (Control control in Controls)
+        {
+            control.Bounds = area;
+        }
     }
 
     protected override void OnPaintBackground(PaintEventArgs e)
