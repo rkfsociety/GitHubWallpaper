@@ -1,3 +1,5 @@
+using GitHubWallpaper.Settings;
+
 namespace GitHubWallpaper.GitHub;
 
 /// <summary>
@@ -5,8 +7,6 @@ namespace GitHubWallpaper.GitHub;
 /// </summary>
 internal sealed class RepoPoller : IDisposable
 {
-    public static readonly TimeSpan MetadataPollInterval = TimeSpan.FromMinutes(5);
-    public static readonly TimeSpan CommitsPollInterval = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan LoopTick = TimeSpan.FromSeconds(30);
 
     /// <summary>Репозиторий по умолчанию до появления настроек (этап 3).</summary>
@@ -17,6 +17,8 @@ internal sealed class RepoPoller : IDisposable
     private readonly Dictionary<string, RepoPollState> _states = new(StringComparer.OrdinalIgnoreCase);
 
     private IReadOnlyList<RepoReference> _repositories = [DefaultRepository];
+    private TimeSpan _metadataPollInterval = PollIntervals.ForPreset(PollIntervalPreset.Normal).Metadata;
+    private TimeSpan _commitsPollInterval = PollIntervals.ForPreset(PollIntervalPreset.Normal).Commits;
     private CancellationTokenSource? _cts;
     private Task? _loopTask;
     private bool _paused;
@@ -61,6 +63,18 @@ internal sealed class RepoPoller : IDisposable
             {
                 return _repositories;
             }
+        }
+    }
+
+    /// <summary>Задаёт интервалы опроса по пресету из настроек.</summary>
+    public void ConfigurePollIntervals(PollIntervalPreset preset)
+    {
+        var (metadata, commits) = PollIntervals.ForPreset(preset);
+
+        lock (_sync)
+        {
+            _metadataPollInterval = metadata;
+            _commitsPollInterval = commits;
         }
     }
 
@@ -195,12 +209,21 @@ internal sealed class RepoPoller : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
 
             var state = GetOrCreateState(repository);
+            TimeSpan metadataInterval;
+            TimeSpan commitsInterval;
+
+            lock (_sync)
+            {
+                metadataInterval = _metadataPollInterval;
+                commitsInterval = _commitsPollInterval;
+            }
+
             var metadataDue = includeNeverPolled
                 || state.LastMetadataPoll is null
-                || now - state.LastMetadataPoll.Value >= MetadataPollInterval;
+                || now - state.LastMetadataPoll.Value >= metadataInterval;
             var commitsDue = includeNeverPolled
                 || state.LastCommitsPoll is null
-                || now - state.LastCommitsPoll.Value >= CommitsPollInterval;
+                || now - state.LastCommitsPoll.Value >= commitsInterval;
 
             if (metadataDue)
             {

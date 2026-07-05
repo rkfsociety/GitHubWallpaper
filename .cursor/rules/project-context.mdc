@@ -19,10 +19,10 @@ C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в
 |------|--------|
 | 1 Каркас движка | ✅ |
 | 2 GitHub + один репо | ✅ |
-| 3 Мульти-репо и настройки | 🔄 в работе |
+| 3 Мульти-репо и настройки | ✅ |
 | 4–5 | 🔲 |
 
-**Сейчас:** обои работают; список репо — `SettingsForm` → `SettingsStore` (`settings.json`); PAT — Credential Manager. Осталось на этапе 3: интервалы, автозапуск, пауза fullscreen/батарея.
+**Сейчас:** обои работают; список репо, интервалы, автозапуск и автопауза — `SettingsForm` → `SettingsStore` (`settings.json`); PAT — Credential Manager.
 
 ## Архитектура
 

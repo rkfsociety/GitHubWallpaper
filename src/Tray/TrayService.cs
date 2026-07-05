@@ -10,9 +10,11 @@ namespace GitHubWallpaper.Tray;
 internal sealed class TrayService : IDisposable
 {
     private readonly WallpaperController _wallpaperController;
+    private readonly WallpaperPauseCoordinator _pauseCoordinator;
     private readonly GitHubSession _githubSession;
     private readonly SettingsStore _settingsStore;
     private readonly RepoPoller _repoPoller;
+    private readonly AutoPauseMonitor _autoPauseMonitor;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _pauseMenuItem;
     private SettingsForm? _settingsForm;
@@ -20,18 +22,24 @@ internal sealed class TrayService : IDisposable
 
     public TrayService(
         WallpaperController wallpaperController,
+        WallpaperPauseCoordinator pauseCoordinator,
         GitHubSession githubSession,
         SettingsStore settingsStore,
-        RepoPoller repoPoller)
+        RepoPoller repoPoller,
+        AutoPauseMonitor autoPauseMonitor)
     {
         ArgumentNullException.ThrowIfNull(wallpaperController);
+        ArgumentNullException.ThrowIfNull(pauseCoordinator);
         ArgumentNullException.ThrowIfNull(githubSession);
         ArgumentNullException.ThrowIfNull(settingsStore);
         ArgumentNullException.ThrowIfNull(repoPoller);
+        ArgumentNullException.ThrowIfNull(autoPauseMonitor);
         _wallpaperController = wallpaperController;
+        _pauseCoordinator = pauseCoordinator;
         _githubSession = githubSession;
         _settingsStore = settingsStore;
         _repoPoller = repoPoller;
+        _autoPauseMonitor = autoPauseMonitor;
 
         _pauseMenuItem = new ToolStripMenuItem("Пауза", null, OnPauseClick);
 
@@ -93,7 +101,11 @@ internal sealed class TrayService : IDisposable
             return;
         }
 
-        _settingsForm = new SettingsForm(_githubSession, _settingsStore, _repoPoller);
+        _settingsForm = new SettingsForm(
+            _githubSession,
+            _settingsStore,
+            _repoPoller,
+            _autoPauseMonitor);
         _settingsForm.FormClosed += (_, _) =>
         {
             _settingsForm?.Dispose();
@@ -108,10 +120,7 @@ internal sealed class TrayService : IDisposable
 
         try
         {
-            if (_wallpaperController.IsPaused)
-                await _wallpaperController.ResumeAsync().ConfigureAwait(true);
-            else
-                await _wallpaperController.PauseAsync().ConfigureAwait(true);
+            await _pauseCoordinator.ToggleUserPauseAsync().ConfigureAwait(true);
         }
         finally
         {

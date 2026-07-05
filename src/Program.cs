@@ -13,10 +13,18 @@ internal static class Program
         ApplicationConfiguration.Initialize();
 
         var wallpaperController = new WallpaperController();
+        var pauseCoordinator = new WallpaperPauseCoordinator(wallpaperController);
+        var autoPauseMonitor = new AutoPauseMonitor(pauseCoordinator);
         var githubSession = new GitHubSession();
         var settingsStore = new SettingsStore();
         var repoPoller = new RepoPoller(githubSession.Client);
-        var trayService = new TrayService(wallpaperController, githubSession, settingsStore, repoPoller);
+        var trayService = new TrayService(
+            wallpaperController,
+            pauseCoordinator,
+            githubSession,
+            settingsStore,
+            repoPoller,
+            autoPauseMonitor);
 
         try
         {
@@ -24,6 +32,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
+            autoPauseMonitor.Dispose();
             trayService.Dispose();
             repoPoller.Dispose();
             wallpaperController.Dispose();
@@ -41,6 +50,7 @@ internal static class Program
             githubSession,
             repoPoller,
             trayService,
-            settingsStore));
+            settingsStore,
+            autoPauseMonitor));
     }
 }

@@ -26,10 +26,6 @@ alwaysApply: true
 
 Не использовать PowerShell pipeline / `sed` для записи русского текста в `ROADMAP.md` и `README.md` — риск поломки UTF-8. Править через редактор (StrReplace / Write) с сохранением кириллицы.
 
-## Следующие приоритеты (этап 3)
+## Следующие приоритеты (этап 4)
 
-- ~~`SettingsStore` → `%APPDATA%\GitHubWallpaper\settings.json`~~
-- ~~Список репозиториев в `SettingsForm` (добавить / удалить / порядок)~~
-- ~~Подключить список к `RepoPoller.Start(repositories)`~~
-- Пресеты интервалов опроса: экономный / нормальный / частый
-- Автозапуск, пауза на fullscreen / батарее
+- PR, issues, CI, heatmap, лента событий

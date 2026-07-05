@@ -1,15 +1,17 @@
+using GitHubWallpaper.Desktop;
 using GitHubWallpaper.GitHub;
 
 namespace GitHubWallpaper.Settings;
 
 /// <summary>
-/// Окно настроек: PAT и список отслеживаемых репозиториев.
+/// Окно настроек: PAT, список репозиториев и поведение приложения.
 /// </summary>
 internal sealed class SettingsForm : Form
 {
     private readonly GitHubSession _githubSession;
     private readonly SettingsStore _settingsStore;
     private readonly RepoPoller _repoPoller;
+    private readonly AutoPauseMonitor _autoPauseMonitor;
     private readonly TextBox _tokenTextBox;
     private readonly Label _tokenStatusLabel;
     private readonly ListBox _repoListBox;
@@ -17,19 +19,29 @@ internal sealed class SettingsForm : Form
     private readonly Button _removeRepoButton;
     private readonly Button _moveUpButton;
     private readonly Button _moveDownButton;
+    private readonly RadioButton _economyRadio;
+    private readonly RadioButton _normalRadio;
+    private readonly RadioButton _frequentRadio;
+    private readonly CheckBox _autoStartCheckBox;
+    private readonly CheckBox _pauseFullscreenCheckBox;
+    private readonly CheckBox _pauseBatteryCheckBox;
     private readonly List<RepoReference> _repositories;
+    private bool _suppressBehaviorEvents;
 
     public SettingsForm(
         GitHubSession githubSession,
         SettingsStore settingsStore,
-        RepoPoller repoPoller)
+        RepoPoller repoPoller,
+        AutoPauseMonitor autoPauseMonitor)
     {
         ArgumentNullException.ThrowIfNull(githubSession);
         ArgumentNullException.ThrowIfNull(settingsStore);
         ArgumentNullException.ThrowIfNull(repoPoller);
+        ArgumentNullException.ThrowIfNull(autoPauseMonitor);
         _githubSession = githubSession;
         _settingsStore = settingsStore;
         _repoPoller = repoPoller;
+        _autoPauseMonitor = autoPauseMonitor;
         _repositories = repoPoller.Repositories.ToList();
 
         Text = "GitHub Wallpaper — Настройки";
@@ -37,7 +49,7 @@ internal sealed class SettingsForm : Form
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(520, 460);
+        ClientSize = new Size(520, 580);
         ShowInTaskbar = true;
 
         var tokenLabel = new Label
@@ -96,14 +108,14 @@ internal sealed class SettingsForm : Form
         _repoListBox = new ListBox
         {
             Location = new Point(16, 180),
-            Size = new Size(488, 140),
+            Size = new Size(488, 110),
             IntegralHeight = false,
         };
         _repoListBox.SelectedIndexChanged += (_, _) => UpdateRepoButtons();
 
         _repoInputTextBox = new TextBox
         {
-            Location = new Point(16, 328),
+            Location = new Point(16, 298),
             Size = new Size(360, 23),
             PlaceholderText = "owner/repo или https://github.com/owner/repo",
         };
@@ -111,7 +123,7 @@ internal sealed class SettingsForm : Form
 
         var addRepoButton = new Button
         {
-            Location = new Point(384, 326),
+            Location = new Point(384, 296),
             Size = new Size(120, 28),
             Text = "Добавить",
         };
@@ -119,7 +131,7 @@ internal sealed class SettingsForm : Form
 
         _removeRepoButton = new Button
         {
-            Location = new Point(16, 364),
+            Location = new Point(16, 334),
             Size = new Size(100, 28),
             Text = "Удалить",
         };
@@ -127,7 +139,7 @@ internal sealed class SettingsForm : Form
 
         _moveUpButton = new Button
         {
-            Location = new Point(124, 364),
+            Location = new Point(124, 334),
             Size = new Size(100, 28),
             Text = "Вверх",
         };
@@ -135,20 +147,91 @@ internal sealed class SettingsForm : Form
 
         _moveDownButton = new Button
         {
-            Location = new Point(232, 364),
+            Location = new Point(232, 334),
             Size = new Size(100, 28),
             Text = "Вниз",
         };
         _moveDownButton.Click += OnMoveDownClick;
 
+        var behaviorGroup = new GroupBox
+        {
+            Location = new Point(16, 376),
+            Size = new Size(488, 150),
+            Text = "Поведение",
+        };
+
+        var pollLabel = new Label
+        {
+            AutoSize = true,
+            Location = new Point(12, 28),
+            Text = "Интервал опроса GitHub API:",
+        };
+
+        _economyRadio = new RadioButton
+        {
+            AutoSize = true,
+            Location = new Point(12, 52),
+            Text = "Экономный (15 / 10 мин)",
+        };
+        _economyRadio.CheckedChanged += OnBehaviorChanged;
+
+        _normalRadio = new RadioButton
+        {
+            AutoSize = true,
+            Location = new Point(168, 52),
+            Text = "Нормальный (5 / 2 мин)",
+        };
+        _normalRadio.CheckedChanged += OnBehaviorChanged;
+
+        _frequentRadio = new RadioButton
+        {
+            AutoSize = true,
+            Location = new Point(324, 52),
+            Text = "Частый (2 / 1 мин)",
+        };
+        _frequentRadio.CheckedChanged += OnBehaviorChanged;
+
+        _autoStartCheckBox = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(12, 84),
+            Text = "Запускать при старте Windows",
+        };
+        _autoStartCheckBox.CheckedChanged += OnBehaviorChanged;
+
+        _pauseFullscreenCheckBox = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(12, 110),
+            Text = "Пауза при полноэкранных приложениях",
+        };
+        _pauseFullscreenCheckBox.CheckedChanged += OnBehaviorChanged;
+
+        _pauseBatteryCheckBox = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(12, 126),
+            Text = "Пауза при работе от батареи",
+        };
+        _pauseBatteryCheckBox.CheckedChanged += OnBehaviorChanged;
+
+        behaviorGroup.Controls.AddRange([
+            pollLabel,
+            _economyRadio,
+            _normalRadio,
+            _frequentRadio,
+            _autoStartCheckBox,
+            _pauseFullscreenCheckBox,
+            _pauseBatteryCheckBox,
+        ]);
+
         var repoHintLabel = new Label
         {
             AutoSize = false,
-            Location = new Point(16, 404),
-            Size = new Size(488, 44),
+            Location = new Point(16, 536),
+            Size = new Size(488, 32),
             ForeColor = SystemColors.GrayText,
-            Text = "Изменения списка применяются сразу и сохраняются в settings.json.\n"
-                   + "Токен хранится в Windows Credential Manager, не в файлах настроек.",
+            Text = "Токен хранится в Credential Manager. Остальные настройки — в settings.json.",
         };
 
         Controls.AddRange([
@@ -165,11 +248,89 @@ internal sealed class SettingsForm : Form
             _removeRepoButton,
             _moveUpButton,
             _moveDownButton,
+            behaviorGroup,
             repoHintLabel,
         ]);
 
+        LoadBehaviorSettings();
         RefreshRepoListBox();
         UpdateTokenStatus();
+    }
+
+    private void LoadBehaviorSettings()
+    {
+        var settings = _settingsStore.Load();
+
+        _suppressBehaviorEvents = true;
+
+        switch (settings.PollIntervalPreset)
+        {
+            case PollIntervalPreset.Economy:
+                _economyRadio.Checked = true;
+                break;
+            case PollIntervalPreset.Frequent:
+                _frequentRadio.Checked = true;
+                break;
+            default:
+                _normalRadio.Checked = true;
+                break;
+        }
+
+        _autoStartCheckBox.Checked = settings.AutoStart;
+        _pauseFullscreenCheckBox.Checked = settings.PauseOnFullscreen;
+        _pauseBatteryCheckBox.Checked = settings.PauseOnBattery;
+
+        _suppressBehaviorEvents = false;
+    }
+
+    private void OnBehaviorChanged(object? sender, EventArgs e)
+    {
+        if (_suppressBehaviorEvents)
+        {
+            return;
+        }
+
+        SaveBehaviorSettings();
+    }
+
+    private void SaveBehaviorSettings()
+    {
+        try
+        {
+            var settings = _settingsStore.Load();
+            settings.PollIntervalPreset = GetSelectedPollPreset();
+            settings.AutoStart = _autoStartCheckBox.Checked;
+            settings.PauseOnFullscreen = _pauseFullscreenCheckBox.Checked;
+            settings.PauseOnBattery = _pauseBatteryCheckBox.Checked;
+
+            _settingsStore.Save(settings);
+            _repoPoller.ConfigurePollIntervals(settings.PollIntervalPreset);
+            AutostartManager.SetEnabled(settings.AutoStart);
+            _autoPauseMonitor.Configure(settings);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось сохранить настройки поведения:\n{ex.Message}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
+    private PollIntervalPreset GetSelectedPollPreset()
+    {
+        if (_economyRadio.Checked)
+        {
+            return PollIntervalPreset.Economy;
+        }
+
+        if (_frequentRadio.Checked)
+        {
+            return PollIntervalPreset.Frequent;
+        }
+
+        return PollIntervalPreset.Normal;
     }
 
     private void RefreshRepoListBox()
