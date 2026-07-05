@@ -27,7 +27,7 @@ internal sealed class GlassSection : Panel
         ContentPanel = new Panel
         {
             BackColor = Color.Transparent,
-            Location = new Point(0, SettingsTheme.SectionPadding + 28),
+            Location = new Point(SettingsTheme.SectionPadding, SettingsTheme.SectionPadding + 28),
             Width = width - SettingsTheme.SectionPadding * 2,
         };
 

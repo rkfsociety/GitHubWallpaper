@@ -366,6 +366,8 @@ internal sealed class SettingsForm : Form
         var section = new GlassSection("Поведение", ContentWidth);
         var panel = section.ContentPanel;
 
+        var innerWidth = ContentWidth - SettingsTheme.SectionPadding * 2;
+
         var pollLabel = CreateMutedLabel("Интервал опроса GitHub API:");
         pollLabel.Location = new Point(0, 0);
         pollLabel.AutoSize = true;
@@ -373,7 +375,7 @@ internal sealed class SettingsForm : Form
         _economyRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(0, 24),
+            Location = new Point(0, 28),
             Text = "Экономный (15 / 10 мин)",
         };
         SettingsTheme.ApplyToRadio(_economyRadio);
@@ -382,7 +384,7 @@ internal sealed class SettingsForm : Form
         _normalRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(168, 24),
+            Location = new Point(innerWidth / 3, 28),
             Text = "Нормальный (5 / 2 мин)",
         };
         SettingsTheme.ApplyToRadio(_normalRadio);
@@ -391,16 +393,19 @@ internal sealed class SettingsForm : Form
         _frequentRadio = new RadioButton
         {
             AutoSize = true,
-            Location = new Point(336, 24),
+            Location = new Point(innerWidth * 2 / 3, 28),
             Text = "Частый (2 / 1 мин)",
         };
         SettingsTheme.ApplyToRadio(_frequentRadio);
         _frequentRadio.CheckedChanged += OnBehaviorChanged;
 
+        const int checkboxTop = 64;
+        const int checkboxGap = 30;
+
         _autoStartCheckBox = new CheckBox
         {
             AutoSize = true,
-            Location = new Point(0, 56),
+            Location = new Point(0, checkboxTop),
             Text = "Запускать при старте Windows",
         };
         SettingsTheme.ApplyToCheckBox(_autoStartCheckBox);
@@ -409,7 +414,7 @@ internal sealed class SettingsForm : Form
         _pauseFullscreenCheckBox = new CheckBox
         {
             AutoSize = true,
-            Location = new Point(0, 82),
+            Location = new Point(0, checkboxTop + checkboxGap),
             Text = "Пауза при полноэкранных приложениях",
         };
         SettingsTheme.ApplyToCheckBox(_pauseFullscreenCheckBox);
@@ -418,7 +423,7 @@ internal sealed class SettingsForm : Form
         _pauseBatteryCheckBox = new CheckBox
         {
             AutoSize = true,
-            Location = new Point(0, 108),
+            Location = new Point(0, checkboxTop + checkboxGap * 2),
             Text = "Пауза при работе от батареи",
         };
         SettingsTheme.ApplyToCheckBox(_pauseBatteryCheckBox);
@@ -427,13 +432,13 @@ internal sealed class SettingsForm : Form
         _autoCheckUpdatesCheckBox = new CheckBox
         {
             AutoSize = true,
-            Location = new Point(0, 134),
+            Location = new Point(0, checkboxTop + checkboxGap * 3),
             Text = "Проверять обновления автоматически (раз в сутки)",
         };
         SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        section.SetContentHeight(164);
+        section.SetContentHeight(checkboxTop + checkboxGap * 3 + 28);
         panel.Controls.AddRange([
             pollLabel,
             _economyRadio,
