@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
 
 namespace GitHubWallpaper.Desktop;
@@ -37,6 +36,28 @@ public sealed class WallpaperController : IDisposable
 
     /// <summary>Обои откреплены от рабочего стола.</summary>
     public event EventHandler? Removed;
+
+    /// <summary>
+    /// Отправляет JSON-сообщение в страницу обоев через <c>PostWebMessageAsJson</c>.
+    /// Вызов с фонового потока безопасен — маршалится на UI-поток поверхности.
+    /// </summary>
+    public void PostMessageAsJson(object message)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(message);
+
+        if (_surface?.WebView.CoreWebView2 is null)
+            return;
+
+        var json = Bridge.Serialize(message);
+
+        void Send() => _surface.WebView.CoreWebView2?.PostWebMessageAsJson(json);
+
+        if (_surface.InvokeRequired)
+            _surface.BeginInvoke(Send);
+        else
+            Send();
+    }
 
     /// <summary>
     /// Инициализирует WebView2, настраивает virtual host и прикрепляет обои к WorkerW.
@@ -142,14 +163,8 @@ public sealed class WallpaperController : IDisposable
         _virtualHostMapped = true;
     }
 
-    private void PostWallpaperCommand(string command)
-    {
-        if (_surface?.WebView.CoreWebView2 is null)
-            return;
-
-        var payload = JsonSerializer.Serialize(new { type = command });
-        _surface.WebView.CoreWebView2.PostWebMessageAsJson(payload);
-    }
+    private void PostWallpaperCommand(string command) =>
+        PostMessageAsJson(new { type = command });
 
     private void ResumeCoreIfPaused()
     {

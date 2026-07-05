@@ -53,7 +53,7 @@
 - [x] Хранение PAT в Windows Credential Manager (не в JSON)
 - [x] `RateLimitGuard` — отслеживание `X-RateLimit-*`, backoff при 403
 - [x] `RepoPoller` — опрос мета-данных и коммитов
-- [ ] `Bridge` — push JSON в WebView2 через `PostWebMessageAsJson`
+- [x] `Bridge` — push JSON в WebView2 через `PostWebMessageAsJson`
 - [ ] Виджет `repo-card` — stars, forks, последние 5 коммитов
 
 ### GitHub API (этап 2)
