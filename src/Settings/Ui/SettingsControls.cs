@@ -312,24 +312,25 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
     {
         SettingsTheme.ApplyToNumeric(this);
         InterceptArrowKeys = true;
+        BackColor = Color.Transparent;
     }
 
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        HideUpDownButtons();
+        HideNativeSpinner();
     }
 
     protected override void OnControlAdded(ControlEventArgs e)
     {
         base.OnControlAdded(e);
-        HideUpDownButtons();
+        HideNativeSpinner();
     }
 
     protected override void OnLayout(LayoutEventArgs e)
     {
         base.OnLayout(e);
-        HideUpDownButtons();
+        HideNativeSpinner();
 
         foreach (Control control in Controls)
         {
@@ -340,8 +341,13 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
 
             textBox.BorderStyle = BorderStyle.None;
             textBox.TextAlign = HorizontalAlignment.Center;
+            textBox.BackColor = Color.Transparent;
             textBox.SetBounds(0, 0, Width, Height);
         }
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs pevent)
+    {
     }
 
     protected override void OnMouseWheel(MouseEventArgs e)
@@ -361,7 +367,7 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
         base.OnMouseWheel(e);
     }
 
-    private void HideUpDownButtons()
+    private void HideNativeSpinner()
     {
         foreach (Control control in Controls)
         {
@@ -372,35 +378,135 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
 
             control.Visible = false;
             control.Enabled = false;
-            control.Size = Size.Empty;
+            control.SetBounds(-100, -100, 0, 0);
         }
+    }
+}
+
+internal sealed class NumericSpinButton : Control
+{
+    private readonly bool _increment;
+    private bool _hover;
+
+    public NumericSpinButton(bool increment)
+    {
+        _increment = increment;
+        BackColor = Color.Transparent;
+        Cursor = Cursors.Hand;
+        TabStop = false;
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
+        SettingsTheme.EnableDoubleBuffer(this);
+    }
+
+    public NumericUpDown? Target { get; init; }
+
+    protected override void OnClick(EventArgs e)
+    {
+        base.OnClick(e);
+        if (Target is null)
+        {
+            return;
+        }
+
+        if (_increment)
+        {
+            if (Target.Value + Target.Increment <= Target.Maximum)
+            {
+                Target.Value += Target.Increment;
+            }
+        }
+        else if (Target.Value - Target.Increment >= Target.Minimum)
+        {
+            Target.Value -= Target.Increment;
+        }
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _hover = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = false;
+        Invalidate();
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var bounds = ClientRectangle;
+        if (_hover)
+        {
+            using var hover = new SolidBrush(Color.FromArgb(32, SettingsTheme.TextPrimary));
+            e.Graphics.FillRectangle(hover, bounds);
+        }
+
+        var cx = bounds.Width / 2;
+        var cy = bounds.Height / 2;
+        const int size = 4;
+        Point[] points = _increment
+            ?
+            [
+                new(cx, cy - size),
+                new(cx - size, cy + size - 1),
+                new(cx + size, cy + size - 1),
+            ]
+            :
+            [
+                new(cx, cy + size),
+                new(cx - size, cy - size + 1),
+                new(cx + size, cy - size + 1),
+            ];
+
+        using var brush = new SolidBrush(SettingsTheme.TextMuted);
+        e.Graphics.FillPolygon(brush, points);
     }
 }
 
 internal sealed class NumericField : Panel
 {
-    public NumericField(NumericUpDown inner, int width = 52, int height = SettingsTheme.ControlHeight)
+    private const int ArrowWidth = 18;
+
+    private readonly NumericUpDown _inner;
+    private readonly NumericSpinButton _upButton;
+    private readonly NumericSpinButton _downButton;
+
+    public NumericField(NumericUpDown inner, int width = 76, int height = SettingsTheme.ControlHeight)
     {
+        _inner = inner;
         BackColor = SettingsTheme.CardFill;
         SettingsTheme.EnableDoubleBuffer(this);
         Width = width;
         Height = height;
         Padding = Padding.Empty;
+
         inner.BorderStyle = BorderStyle.None;
         inner.TextAlign = HorizontalAlignment.Center;
         inner.Margin = Padding.Empty;
+
+        _upButton = new NumericSpinButton(increment: true) { Target = inner };
+        _downButton = new NumericSpinButton(increment: false) { Target = inner };
+
         Controls.Add(inner);
+        Controls.Add(_upButton);
+        Controls.Add(_downButton);
     }
 
     protected override void OnLayout(LayoutEventArgs levent)
     {
         base.OnLayout(levent);
 
-        var area = DisplayRectangle;
-        foreach (Control control in Controls)
-        {
-            control.Bounds = area;
-        }
+        var w = ClientSize.Width;
+        var h = ClientSize.Height;
+        var innerWidth = Math.Max(1, w - ArrowWidth);
+        var half = h / 2;
+        _inner.SetBounds(0, 0, innerWidth, h);
+        _upButton.SetBounds(innerWidth, 0, ArrowWidth, half);
+        _downButton.SetBounds(innerWidth, half, ArrowWidth, h - half);
     }
 
     protected override void OnPaintBackground(PaintEventArgs e)
@@ -414,6 +520,13 @@ internal sealed class NumericField : Panel
         e.Graphics.FillPath(fill, path);
         using var border = new Pen(SettingsTheme.InputBorder, 1f);
         e.Graphics.DrawPath(border, path);
+
+        var separatorX = ClientSize.Width - ArrowWidth;
+        if (separatorX > 4)
+        {
+            using var sep = new Pen(SettingsTheme.InputBorder);
+            e.Graphics.DrawLine(sep, separatorX, 6, separatorX, ClientSize.Height - 6);
+        }
     }
 }
 

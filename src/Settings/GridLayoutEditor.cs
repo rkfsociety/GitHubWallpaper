@@ -34,6 +34,7 @@ internal sealed class GridLayoutEditor : UserControl
             ColumnCount = 4,
             Dock = DockStyle.Top,
             Margin = new Padding(0, 0, 0, 10),
+            Padding = new Padding(0, 4, 0, 0),
             RowCount = 1,
         };
         SettingsTheme.ApplyCardContentBackground(sizePanel);
@@ -48,14 +49,18 @@ internal sealed class GridLayoutEditor : UserControl
 
         _columnsUpDown = CreateGridSizeUpDown(3);
         _columnsUpDown.ValueChanged += OnGridSizeChanged;
-        sizePanel.Controls.Add(new NumericField(_columnsUpDown) { Margin = new Padding(0, 0, 16, 0) }, 1, 0);
+        sizePanel.Controls.Add(new NumericField(_columnsUpDown)
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 16, 0),
+        }, 1, 0);
 
         var rowsLabel = CreateGridSizeLabel("Строки:");
         sizePanel.Controls.Add(rowsLabel, 2, 0);
 
         _rowsUpDown = CreateGridSizeUpDown(2);
         _rowsUpDown.ValueChanged += OnGridSizeChanged;
-        sizePanel.Controls.Add(new NumericField(_rowsUpDown), 3, 0);
+        sizePanel.Controls.Add(new NumericField(_rowsUpDown) { Dock = DockStyle.Fill }, 3, 0);
 
         _table = new TableLayoutPanel
         {
@@ -205,7 +210,7 @@ internal sealed class GridLayoutEditor : UserControl
     {
         var label = new Label
         {
-            AutoSize = true,
+            AutoSize = false,
             Dock = DockStyle.Fill,
             Margin = new Padding(0, 0, 8, 0),
             Text = text,
