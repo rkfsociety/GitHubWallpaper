@@ -428,54 +428,88 @@ internal sealed class SettingsForm : Form
         var panel = section.ContentPanel;
         var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
 
+        var layout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.BackgroundTop,
+            ColumnCount = 1,
+            RowCount = 4,
+            Width = innerWidth,
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        SettingsTheme.EnableDoubleBuffer(layout);
+
         var reposHint = CreateMutedLabel("Перетащите репозитории между ячейками");
-        reposHint.Location = new Point(0, 0);
         reposHint.AutoSize = true;
+        reposHint.Margin = new Padding(0, 0, 0, 6);
+        layout.Controls.Add(reposHint, 0, 0);
 
         _gridLayoutEditor = new GridLayoutEditor
         {
-            Location = new Point(0, 22),
-            Size = new Size(innerWidth, 168),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = new Padding(0, 0, 0, 10),
+            Width = innerWidth,
         };
         _gridLayoutEditor.LayoutChanged += OnGridLayoutChanged;
+        layout.Controls.Add(_gridLayoutEditor, 0, 1);
+
+        var inputRow = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.BackgroundTop,
+            ColumnCount = 2,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 8),
+            RowCount = 1,
+            Width = innerWidth,
+        };
+        inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        inputRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 124f));
+        SettingsTheme.EnableDoubleBuffer(inputRow);
 
         _repoInputTextBox = new ThemedTextBox
         {
             PlaceholderText = "owner/repo или https://github.com/owner/repo",
-            Width = innerWidth - 132,
         };
         _repoInputTextBox.KeyDown += OnRepoInputKeyDown;
         var repoInputField = new TextField(_repoInputTextBox)
         {
-            Location = new Point(0, 198),
-            Width = innerWidth - 132,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 8, 0),
         };
 
         var addRepoButton = new GlowButton
         {
-            Location = new Point(innerWidth - 124, 198),
-            Size = new Size(124, 34),
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
+            MinimumSize = new Size(124, 34),
             Text = "Добавить",
         };
         addRepoButton.Click += OnAddRepoClick;
 
+        inputRow.Controls.Add(repoInputField, 0, 0);
+        inputRow.Controls.Add(addRepoButton, 1, 0);
+        layout.Controls.Add(inputRow, 0, 2);
+
         _removeRepoButton = new GhostButton
         {
-            Location = new Point(0, 240),
+            AutoSize = false,
+            Margin = Padding.Empty,
             Size = new Size(124, 34),
             Text = "Удалить",
         };
         _removeRepoButton.Click += OnRemoveRepoClick;
+        layout.Controls.Add(_removeRepoButton, 0, 3);
 
-        section.SetContentHeight(280);
-        panel.Controls.AddRange([
-            reposHint,
-            _gridLayoutEditor,
-            repoInputField,
-            addRepoButton,
-            _removeRepoButton,
-        ]);
-
+        panel.Controls.Add(layout);
+        section.SetContentHeight(layout.PreferredSize.Height);
         parent.Controls.Add(section);
     }
 
@@ -506,6 +540,7 @@ internal sealed class SettingsForm : Form
     {
         var section = new GlassSection("Поведение", sectionWidth);
         var panel = section.ContentPanel;
+        var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
 
         var pollLabel = CreateMutedLabel("Интервал опроса GitHub API:");
         pollLabel.Location = new Point(0, 0);
@@ -573,14 +608,15 @@ internal sealed class SettingsForm : Form
 
         _autoCheckUpdatesCheckBox = new CheckBox
         {
-            AutoSize = true,
+            AutoSize = false,
             Location = new Point(0, checkboxTop + checkboxGap * 3),
-            Text = "Проверять обновления автоматически (раз в сутки)",
+            Size = new Size(innerWidth, 22),
+            Text = "Автопроверка обновлений (раз в сутки)",
         };
         SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
 
-        section.SetContentHeight(checkboxTop + checkboxGap * 3 + 28);
+        section.SetContentHeight(checkboxTop + checkboxGap * 3 + 30);
         panel.Controls.AddRange([
             pollLabel,
             _economyRadio,
