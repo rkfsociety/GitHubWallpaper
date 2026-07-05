@@ -9,6 +9,8 @@ internal sealed class GridLayoutEditor : UserControl
 {
     private const int MinGridSize = 1;
     private const int MaxGridSize = 6;
+    public const int DefaultSlotRowHeight = 48;
+    public const int MinSlotRowHeight = 24;
 
     private readonly NumericUpDown _columnsUpDown;
     private readonly NumericUpDown _rowsUpDown;
@@ -19,6 +21,7 @@ internal sealed class GridLayoutEditor : UserControl
     private bool _suppressEvents;
     private int _lastGridColumns = 3;
     private int _lastGridRows = 2;
+    private int _slotRowHeight = DefaultSlotRowHeight;
 
     public GridLayoutEditor()
     {
@@ -98,7 +101,21 @@ internal sealed class GridLayoutEditor : UserControl
 
     public int GridRows => (int)_rowsUpDown.Value;
 
+    public int SlotRowHeight => _slotRowHeight;
+
     public int? SelectedSlotIndex { get; private set; }
+
+    public void SetSlotRowHeight(int height)
+    {
+        var clamped = Math.Clamp(height, MinSlotRowHeight, DefaultSlotRowHeight);
+        if (_slotRowHeight == clamped)
+        {
+            return;
+        }
+
+        _slotRowHeight = clamped;
+        ApplyRowHeights();
+    }
 
     public void LoadLayout(int columns, int rows, IReadOnlyList<string> slots)
     {
@@ -288,7 +305,7 @@ internal sealed class GridLayoutEditor : UserControl
 
         for (var row = 0; row < GridRows; row++)
         {
-            _table.RowStyles.Add(new RowStyle(SizeType.Absolute, 48f));
+            _table.RowStyles.Add(new RowStyle(SizeType.Absolute, _slotRowHeight));
         }
 
         for (var index = 0; index < SlotCapacity; index++)
@@ -309,6 +326,21 @@ internal sealed class GridLayoutEditor : UserControl
 
         _table.ResumeLayout();
         _slots = NormalizeSlots(_slots.Select(slot => slot ?? string.Empty).ToList(), SlotCapacity);
+    }
+
+    private void ApplyRowHeights()
+    {
+        if (_table.RowCount == 0)
+        {
+            return;
+        }
+
+        for (var row = 0; row < GridRows; row++)
+        {
+            _table.RowStyles[row] = new RowStyle(SizeType.Absolute, _slotRowHeight);
+        }
+
+        PerformLayout();
     }
 
     private void RefreshSlotPanels()

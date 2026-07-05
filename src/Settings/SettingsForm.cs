@@ -26,7 +26,7 @@ internal sealed class SettingsForm : Form
     private LinkLabel _createTokenLinkLabel = null!;
     private TextBox _oauthClientIdTextBox = null!;
     private TextBox _oauthClientSecretTextBox = null!;
-    private ThemedScrollPanel _contentPanel = null!;
+    private ThemedContentPanel _contentPanel = null!;
     private TableLayoutPanel _pageLayout = null!;
     private SettingsCard _authCard = null!;
     private SettingsCard _reposCard = null!;
@@ -80,7 +80,7 @@ internal sealed class SettingsForm : Form
         Font = SettingsTheme.BodyFont;
         SettingsTheme.EnableDoubleBuffer(this);
 
-        _contentPanel = new ThemedScrollPanel();
+        _contentPanel = new ThemedContentPanel();
         _pageLayout = new TableLayoutPanel
         {
             AutoSize = true,
@@ -130,15 +130,58 @@ internal sealed class SettingsForm : Form
 
     private void FitClientToContent()
     {
-        _pageLayout.PerformLayout();
-        var contentBottom = _pageLayout.Location.Y + _pageLayout.PreferredSize.Height;
-        var requiredHeight = contentBottom + FormPadding;
         var clientWidth = ContentWidth + FormPadding * 2;
-        var maxHeight = Math.Max(480, Screen.FromControl(this).WorkingArea.Height - 48);
-        var needsScroll = requiredHeight > maxHeight;
+        var maxHeight = GetMaxClientHeight();
 
-        _contentPanel.AutoScroll = needsScroll;
-        ClientSize = new Size(clientWidth, Math.Min(requiredHeight, maxHeight));
+        ApplyPagePadding(FormPadding);
+        _gridLayoutEditor.SetSlotRowHeight(GridLayoutEditor.DefaultSlotRowHeight);
+        var height = RemeasureContentHeight();
+
+        if (height > maxHeight)
+        {
+            for (var slot = GridLayoutEditor.DefaultSlotRowHeight - 1;
+                 slot >= GridLayoutEditor.MinSlotRowHeight;
+                 slot--)
+            {
+                _gridLayoutEditor.SetSlotRowHeight(slot);
+                height = RemeasureContentHeight();
+                if (height <= maxHeight)
+                {
+                    break;
+                }
+            }
+        }
+
+        if (height > maxHeight)
+        {
+            ApplyPagePadding(12);
+            height = RemeasureContentHeight();
+        }
+
+        ClientSize = new Size(clientWidth, Math.Min(height, maxHeight));
+    }
+
+    private void ApplyPagePadding(int padding)
+    {
+        _pageLayout.Location = new Point(padding, padding);
+    }
+
+    private int RemeasureContentHeight()
+    {
+        UpdateAuthCardHeight();
+        RefreshReposCardHeight();
+        _pageLayout.PerformLayout();
+        var padding = _pageLayout.Location.Y;
+        return padding + _pageLayout.Height + padding;
+    }
+
+    private int GetMaxClientHeight()
+    {
+        var screen = IsHandleCreated
+            ? Screen.FromControl(this)
+            : Screen.FromPoint(Location != Point.Empty ? Location : Cursor.Position);
+        var chrome = SystemInformation.FrameBorderSize.Height * 2 + SystemInformation.CaptionHeight;
+        return Math.Max(420, screen.WorkingArea.Height - chrome - 24);
     }
 
     private void RefreshReposCardHeight()
@@ -432,7 +475,6 @@ internal sealed class SettingsForm : Form
         _repoHintLabel.Visible = !signedIn;
         _authCard.SetTitleVisible(!signedIn);
         UpdateAuthCardHeight();
-        FitClientToContent();
     }
 
     private void SetAuthUserLogin(string? login)
@@ -470,7 +512,7 @@ internal sealed class SettingsForm : Form
             _githubSession.ClearToken();
             _tokenTextBox.Clear();
             UpdateTokenStatus();
-            UpdateAuthView();
+            RefreshAllCardHeights();
         }
         catch (Exception ex)
         {
@@ -720,8 +762,7 @@ internal sealed class SettingsForm : Form
         }
 
         ApplyGridLayout();
-        RefreshReposCardHeight();
-        FitClientToContent();
+        RefreshAllCardHeights();
     }
 
     private void LoadOAuthClientId()
@@ -1126,7 +1167,7 @@ internal sealed class SettingsForm : Form
                 : "браузер";
 
             UpdateTokenStatus();
-            UpdateAuthView();
+            RefreshAllCardHeights();
             SetAuthUserLogin(login);
             MessageBox.Show(
                 string.IsNullOrWhiteSpace(login)
@@ -1218,7 +1259,7 @@ internal sealed class SettingsForm : Form
             _githubSession.SaveToken(token);
             _tokenTextBox.Clear();
             UpdateTokenStatus();
-            UpdateAuthView();
+            RefreshAllCardHeights();
             RefreshAuthUserAsync();
             MessageBox.Show(
                 "Токен сохранён в Windows Credential Manager.",
@@ -1264,7 +1305,7 @@ internal sealed class SettingsForm : Form
             UseWaitCursor = true;
             var user = await _githubSession.Client.GetAuthenticatedUserAsync().ConfigureAwait(true);
             UpdateTokenStatus();
-            UpdateAuthView();
+            RefreshAllCardHeights();
             SetAuthUserLogin(TryReadGitHubLogin(user.Body));
             MessageBox.Show(
                 "Токен действителен.",
@@ -1303,7 +1344,7 @@ internal sealed class SettingsForm : Form
             _githubSession.ClearToken();
             _tokenTextBox.Clear();
             UpdateTokenStatus();
-            UpdateAuthView();
+            RefreshAllCardHeights();
             MessageBox.Show(
                 "Токен удалён из Credential Manager.",
                 Text,
