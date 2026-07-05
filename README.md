@@ -1,185 +1,51 @@
 # GitHubWallpaper
 
-Динамические обои для Windows с живой активностью ваших GitHub-репозиториев.
+Динамические обои для Windows: живые карточки GitHub-репозиториев **позади иконок рабочего стола**.
 
-> **Статус:** v1.0 — готов к ежедневному использованию. [Скачать exe](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · см. [дорожную карту](ROADMAP.md).
-
-## Что это
-
-Standalone Windows-приложение, которое рендерит интерактивные обои **позади иконок рабочего стола** и показывает актуальную информацию по выбранным репозиториям:
-
-- последние коммиты и авторы
-- открытые pull request'ы и issues
-- звёзды, форки, watchers
-- релизы и статус CI/CD
-- heatmap активности (commit activity)
-- объединённая лента событий
-- выбор монитора (в т.ч. второй экран)
-- OAuth-вход и автообновление из GitHub Release
+> **v1.0** — [скачать exe](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · [дорожная карта](ROADMAP.md)
 
 ![Карточки репозиториев на рабочем столе](docs/screenshots/wallpaper.svg)
 
+## Возможности
+
+Коммиты, PR, issues, релизы, CI, heatmap и лента событий · несколько репозиториев · выбор монитора · OAuth или PAT · автообновление из Release.
+
 ## Установка
 
-### Требования
+**Требования:** Windows 10/11, [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (обычно уже есть).
 
-- Windows 10 или Windows 11 (протестировано на **Windows 11 24H2**)
-- [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) — на большинстве систем уже установлен; при первом запуске приложение предложит скачать bootstrapper, если runtime отсутствует
+1. Скачайте `GitHubWallpaper.exe` из [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest).
+2. Запустите — при первом старте приложение скопируется в `%APPDATA%\GitHubWallpaper\` и создаст ярлыки.
+3. Иконка в трее → **Настройки** → войдите через GitHub или вставьте PAT → добавьте репозитории.
 
-### Portable exe (рекомендуется)
+Сборка self-contained, .NET на машине не нужен. Из исходников: `dotnet run --project src` · portable: `dotnet publish src -p:PublishProfile=win-x64`.
 
-1. Скачайте `GitHubWallpaper.exe` из [последнего релиза](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) — при каждом push в `main` CI пересобирает и публикует Release `latest`.
-2. Запустите двойным щелчком из любой папки (например, «Загрузки»).
-3. При **первом запуске** приложение само скопируется в `%APPDATA%\GitHubWallpaper\`, перезапустится оттуда и создаст ярлыки на **рабочем столе** и в меню **«Пуск»**. Файл в загрузках можно удалить — рабочая копия останется в AppData.
-4. Приложение свернётся в трей; обои появятся за иконками рабочего стола.
-5. ПКМ по иконке в трее → **Проверить обновления…** (автопроверка раз в сутки).
+## Авторизация
 
-Сборка **self-contained**: .NET на машине устанавливать не нужно.
+**OAuth (рекомендуется):** в настройках — **Войти через GitHub**. Для своего OAuth App: callback `http://127.0.0.1:8791/callback`, включить Device Flow.
 
-### Сборка из исходников
-
-```bash
-git clone https://github.com/rkfsociety/GitHubWallpaper.git
-cd GitHubWallpaper
-dotnet run --project src
-```
-
-Portable exe:
-
-```bash
-dotnet publish src -p:PublishProfile=win-x64
-# результат: publish/GitHubWallpaper.exe
-```
-
-Версия в exe: `1.0.<номер сборки CI>` при push в `main`. В GitHub один Release с тегом `latest`. Локально без `-p:Version` — `1.0.0-dev`.
-
-## Быстрый старт
-
-1. ПКМ по иконке в трее → **Настройки**.
-2. Нажмите **Войти через GitHub** — откроется [github.com](https://github.com/login/oauth/authorize) в браузере, подтвердите доступ.
-3. Либо вставьте [Personal Access Token](#создание-github-pat) вручную → **Проверить** → **Сохранить**.
-4. Добавьте репозитории (`owner/repo` или URL) — по умолчанию уже есть `microsoft/vscode`.
-5. При нескольких мониторах выберите экран в разделе **«Экран»**.
-6. Данные подгрузятся за 2–3 минуты.
-7. **Пауза** / **Продолжить** в трее — приостановить рендер (в т.ч. автоматически при fullscreen / батарее).
+**PAT:** хранится в Windows Credential Manager. [Fine-grained](https://github.com/settings/tokens?type=beta) или [classic](https://github.com/settings/tokens) с read-доступом к репозиториям; для приватных — scope `repo`. Без токена — 60 запросов/час, только публичные репо.
 
 ![Окно настроек](docs/screenshots/settings.svg)
 
-## Авторизация GitHub
+## Частые вопросы
 
-### Вход через браузер (рекомендуется)
+| Проблема | Решение |
+|----------|---------|
+| Чёрный экран | Установите WebView2 Runtime |
+| Не тот монитор | Настройки → **Экран** |
+| 404 / нет приватного репо | PAT со scope `repo` |
+| Данные не обновляются | Проверьте сеть и лимит API; пресет **Экономный** |
 
-1. **Настройки** → **Создать OAuth App** (или [github.com/settings/applications/new](https://github.com/settings/applications/new)).
-2. Заполните:
-   - **Application name:** GitHub Wallpaper
-   - **Homepage URL:** `https://github.com/rkfsociety/GitHubWallpaper`
-   - **Authorization callback URL:** `http://127.0.0.1:8791/callback`
-   - Включите **Enable Device Flow**
-3. Скопируйте **Client ID** (строка вида `Ov23li…`, не номер из URL страницы) в настройки.
-4. Для входа через браузер — **Client Secret** (кнопка Generate a new client secret). Для **Device Flow** secret не нужен.
-5. Нажмите **Войти через GitHub** — откроется github.com, подтвердите доступ.
+Настройки: `%APPDATA%\GitHubWallpaper\settings.json`. Удаление: трей → **Выход**, затем папка AppData и запись `GitHubWallpaper` в Credential Manager.
 
-При проблемах с callback используйте ссылку **Вход по коду устройства** (`github.com/login/device`).
+## Разработка
 
-### Создание GitHub PAT
-
-Токен хранится в **Windows Credential Manager**, не в файлах на диске.
-
-### Fine-grained token (рекомендуется)
-
-1. Откройте [github.com/settings/tokens?type=beta](https://github.com/settings/personal-access-tokens).
-2. **Generate new token** → выберите нужные репозитории (или все).
-3. Permissions: **Metadata** (read), **Contents** (read), **Issues** (read), **Pull requests** (read), **Actions** (read) — для полной картины активности.
-4. Скопируйте токен и вставьте в настройках приложения.
-
-### Classic token
-
-1. Откройте [github.com/settings/tokens](https://github.com/settings/tokens).
-2. **Generate new token (classic)**.
-3. Scopes:
-   - `public_repo` — только публичные репозитории;
-   - `repo` — включая **приватные** репозитории.
-4. Вставьте токен в настройках → **Проверить** → **Сохранить**.
-
-### Без токена
-
-Лимит **60 запросов/час**, только публичные репозитории. При старте — предупреждение в трее и баннер на обоях.
-
-## FAQ
-
-**Обои не появляются / чёрный экран**  
-Убедитесь, что установлен WebView2 Runtime. При запуске без runtime приложение покажет диалог со ссылкой на [Evergreen Bootstrapper](https://go.microsoft.com/fwlink/p/?LinkId=2124703).
-
-**Обои на не том мониторе**  
-Настройки → **Экран** → выберите нужный дисплей. После смены монитора обои пересоздаются на выбранном экране.
-
-**Репозиторий не найден (404)**  
-Проверьте правильность `owner/repo`. Для приватных репозиториев GitHub возвращает 404 без токена — добавьте PAT со scope `repo`.
-
-**Нет доступа к приватному репо**  
-Создайте classic PAT со scope `repo` или fine-grained token с доступом к этому репозиторию.
-
-**Данные не обновляются**  
-Проверьте интернет и лимит API (баннер / настройки). При исчерпании лимита опрос автоматически приостанавливается до сброса.
-
-**Высокая нагрузка на API**  
-В настройках выберите пресет **Экономный** или уменьшите число репозиториев. Приложение использует ETag-кэш — неизменённые ответы не загружаются повторно.
-
-**Где хранятся настройки?**  
-`%APPDATA%\GitHubWallpaper\settings.json` — список репозиториев и параметры. PAT — только в Credential Manager.
-
-**Как удалить?**  
-Закройте через трей → **Выход**, удалите exe. Опционально: очистите `%APPDATA%\GitHubWallpaper\` и PAT в Credential Manager (запись `GitHubWallpaper`).
-
-## Проверка перед релизом
-
-| # | Сценарий | Ожидание |
-|---|----------|----------|
-| 1 | Запуск exe | Обои за иконками рабочего стола |
-| 2 | `microsoft/vscode` | Stars, commits, PR за 2–3 мин |
-| 3 | Push в свой тестовый репо | Событие в ленте |
-| 4 | Пауза из трея | Обои замирают, polling снижается |
-| 5 | Без токена | Предупреждение + ограниченный режим |
-| 6 | Второй монитор | Обои на выбранном экране, без смещения на основной |
-
-## Стек
-
-| Компонент | Технология |
-|-----------|------------|
-| Движок обоев | WebView2 + WorkerW |
-| Хост-приложение | C# / .NET 8 |
-| UI обоев | HTML / CSS / JavaScript |
-| Данные | GitHub REST API |
-
-## Дорожная карта
-
-| Этап | Описание | Статус |
-|------|----------|--------|
-| 1 | Каркас движка (WebView2 + WorkerW + трей) | ✅ |
-| 2 | GitHub API + карточка одного репо | ✅ |
-| 3 | Мульти-репо, настройки, автозапуск | ✅ |
-| 4 | PR, issues, CI, heatmap, лента событий | ✅ |
-| 5 | Полировка, CI/CD, релиз v1.0 | ✅ |
-
-После v1.0 также реализованы: OAuth-вход, автообновление, установка в AppData, выбор монитора.
-
-Подробности: [ROADMAP.md](ROADMAP.md)
-
-## Структура проекта
+C# / .NET 8 · WebView2 · WorkerW · HTML/CSS/JS · GitHub REST API
 
 ```
-GitHubWallpaper/
-├── src/
-│   ├── Desktop/          # WorkerW, WebView2, Bridge
-│   ├── GitHub/           # API-клиент, poller, парсер URL
-│   ├── Settings/         # окно настроек, Credential Manager
-│   ├── Tray/             # иконка в трее
-│   └── Properties/       # профиль публикации win-x64
-├── wwwroot/wallpaper/    # HTML/CSS/JS — UI обоев
-├── .github/workflows/    # ci.yml — сборка (PR) и Release latest (push main)
-├── docs/screenshots/     # иллюстрации для README
-├── ROADMAP.md
-└── README.md
+src/          — хост (Desktop, GitHub, Settings, Tray)
+wwwroot/      — UI обоев
 ```
 
 ## Лицензия
