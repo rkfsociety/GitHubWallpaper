@@ -26,6 +26,15 @@ internal sealed class SettingsForm : Form
     private LinkLabel _createTokenLinkLabel = null!;
     private TextBox _oauthClientIdTextBox = null!;
     private TextBox _oauthClientSecretTextBox = null!;
+    private FlowLayoutPanel _mainContent = null!;
+    private GlassSection _authSection = null!;
+    private Panel _authSignInPanel = null!;
+    private Panel _authSignedInPanel = null!;
+    private Label _authUserLabel = null!;
+    private Button _authLogoutButton = null!;
+    private Label _repoHintLabel = null!;
+    private int _authSignInContentHeight;
+    private const int AuthSignedInContentHeight = 42;
     private GridLayoutEditor _gridLayoutEditor = null!;
     private TextBox _repoInputTextBox = null!;
     private Button _removeRepoButton = null!;
@@ -87,6 +96,7 @@ internal sealed class SettingsForm : Form
             Padding = new Padding(20, 16, 20, 16),
             WrapContents = false,
         };
+        _mainContent = content;
         scroll.Controls.Add(content);
         scroll.Resize += (_, _) => SyncContentWidth(scroll, content);
 
@@ -124,6 +134,7 @@ internal sealed class SettingsForm : Form
             "Токен и Client Secret — в Credential Manager. Device Flow не требует Secret.");
         repoHintLabel.Width = FormContentWidth;
         repoHintLabel.Height = 36;
+        _repoHintLabel = repoHintLabel;
         content.Controls.Add(repoHintLabel);
 
         Controls.Add(scroll);
@@ -134,6 +145,8 @@ internal sealed class SettingsForm : Form
         LoadOAuthClientSecret();
         LoadGridLayout();
         UpdateTokenStatus();
+        UpdateAuthView();
+        RefreshAuthUserAsync();
 
         Load += (_, _) =>
         {
@@ -166,9 +179,46 @@ internal sealed class SettingsForm : Form
 
     private void BuildAuthSection(FlowLayoutPanel parent, int sectionWidth)
     {
-        var section = new GlassSection("Авторизация GitHub", sectionWidth);
-        var panel = section.ContentPanel;
+        _authSection = new GlassSection("Авторизация GitHub", sectionWidth);
+        var panel = _authSection.ContentPanel;
         var innerWidth = sectionWidth - SettingsTheme.SectionPadding * 2;
+
+        _authSignInPanel = new Panel
+        {
+            BackColor = Color.Transparent,
+            Location = Point.Empty,
+            Width = innerWidth,
+        };
+
+        _authSignedInPanel = new Panel
+        {
+            BackColor = Color.Transparent,
+            Location = Point.Empty,
+            Visible = false,
+            Width = innerWidth,
+            Height = AuthSignedInContentHeight,
+        };
+
+        _authUserLabel = new Label
+        {
+            AutoSize = true,
+            Font = SettingsTheme.SectionFont,
+            ForeColor = SettingsTheme.TextPrimary,
+            Location = new Point(0, 8),
+            Text = "Авторизован",
+        };
+
+        _authLogoutButton = new GhostButton
+        {
+            Location = new Point(innerWidth - 108, 0),
+            Size = new Size(108, 34),
+            Text = "Выйти",
+        };
+        _authLogoutButton.Click += OnLogoutClick;
+
+        _authSignedInPanel.Controls.Add(_authUserLabel);
+        _authSignedInPanel.Controls.Add(_authLogoutButton);
+
         var y = 0;
 
         _signInWithGitHubButton = new GlowButton
@@ -288,9 +338,10 @@ internal sealed class SettingsForm : Form
         clearButton.Click += OnClearClick;
 
         y += 46;
-        section.SetContentHeight(y);
+        _authSignInContentHeight = y;
+        _authSignInPanel.Height = y;
 
-        panel.Controls.AddRange([
+        _authSignInPanel.Controls.AddRange([
             _signInWithGitHubButton,
             _deviceSignInLinkLabel,
             _createTokenLinkLabel,
@@ -307,7 +358,68 @@ internal sealed class SettingsForm : Form
             clearButton,
         ]);
 
-        parent.Controls.Add(section);
+        panel.Controls.Add(_authSignInPanel);
+        panel.Controls.Add(_authSignedInPanel);
+        _authSection.SetContentHeight(_authSignInContentHeight);
+
+        parent.Controls.Add(_authSection);
+    }
+
+    private void UpdateAuthView()
+    {
+        var signedIn = _githubSession.HasStoredToken;
+        _authSignInPanel.Visible = !signedIn;
+        _authSignedInPanel.Visible = signedIn;
+        _repoHintLabel.Visible = !signedIn;
+        _authSection.SetContentHeight(signedIn ? AuthSignedInContentHeight : _authSignInContentHeight);
+        FitFormToContent(_mainContent);
+    }
+
+    private void SetAuthUserLogin(string? login)
+    {
+        _authUserLabel.Text = string.IsNullOrWhiteSpace(login)
+            ? "Авторизован"
+            : $"@{login.Trim()}";
+    }
+
+    private async void RefreshAuthUserAsync()
+    {
+        if (!_githubSession.HasStoredToken)
+        {
+            return;
+        }
+
+        SetAuthUserLogin(null);
+        _authUserLabel.Text = "Загрузка…";
+
+        try
+        {
+            var user = await _githubSession.Client.GetAuthenticatedUserAsync().ConfigureAwait(true);
+            SetAuthUserLogin(TryReadGitHubLogin(user.Body));
+        }
+        catch
+        {
+            SetAuthUserLogin(null);
+        }
+    }
+
+    private void OnLogoutClick(object? sender, EventArgs e)
+    {
+        try
+        {
+            _githubSession.ClearToken();
+            _tokenTextBox.Clear();
+            UpdateTokenStatus();
+            UpdateAuthView();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось выйти:\n{ex.Message}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 
     private void BuildReposSection(FlowLayoutPanel parent, int sectionWidth)
@@ -925,6 +1037,8 @@ internal sealed class SettingsForm : Form
                 : "браузер";
 
             UpdateTokenStatus();
+            UpdateAuthView();
+            SetAuthUserLogin(login);
             MessageBox.Show(
                 string.IsNullOrWhiteSpace(login)
                     ? $"Авторизация через {methodText} успешна."
@@ -1015,6 +1129,8 @@ internal sealed class SettingsForm : Form
             _githubSession.SaveToken(token);
             _tokenTextBox.Clear();
             UpdateTokenStatus();
+            UpdateAuthView();
+            RefreshAuthUserAsync();
             MessageBox.Show(
                 "Токен сохранён в Windows Credential Manager.",
                 Text,
@@ -1057,8 +1173,10 @@ internal sealed class SettingsForm : Form
         try
         {
             UseWaitCursor = true;
-            await _githubSession.Client.GetAuthenticatedUserAsync().ConfigureAwait(true);
+            var user = await _githubSession.Client.GetAuthenticatedUserAsync().ConfigureAwait(true);
             UpdateTokenStatus();
+            UpdateAuthView();
+            SetAuthUserLogin(TryReadGitHubLogin(user.Body));
             MessageBox.Show(
                 "Токен действителен.",
                 Text,
@@ -1096,6 +1214,7 @@ internal sealed class SettingsForm : Form
             _githubSession.ClearToken();
             _tokenTextBox.Clear();
             UpdateTokenStatus();
+            UpdateAuthView();
             MessageBox.Show(
                 "Токен удалён из Credential Manager.",
                 Text,
