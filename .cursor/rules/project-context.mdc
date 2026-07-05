@@ -1,0 +1,68 @@
+---
+description: GitHubWallpaper — стек, архитектура, текущий этап
+alwaysApply: true
+---
+
+# GitHubWallpaper — контекст
+
+Динамические обои Windows: HTML за иконками рабочего стола + данные GitHub REST API.
+
+**Репозиторий:** [rkfsociety/GitHubWallpaper](https://github.com/rkfsociety/GitHubWallpaper) · **Платформа:** Windows 10/11 · **Ответы:** только на русском
+
+## Стек
+
+C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в `wwwroot/wallpaper/`
+
+## Текущий этап (ROADMAP)
+
+| Этап | Статус |
+|------|--------|
+| 1 Каркас движка | ✅ |
+| 2 GitHub + один репо | ✅ |
+| 3 Мульти-репо и настройки | 🔄 в работе |
+| 4–5 | 🔲 |
+
+**Сейчас:** обои работают; по умолчанию опрашивается `microsoft/vscode` (`RepoPoller.DefaultRepository`). PAT — в `SettingsForm` → Credential Manager. Список репо и `settings.json` — **ещё нет** (этап 3).
+
+## Архитектура
+
+```
+TrayService / SettingsForm
+        → WallpaperController → DesktopHost (WorkerW) → WebView2 (app.local)
+        → RepoPoller → GitHubApiClient → Bridge (JSON → WebView2)
+PAT: GitHubPatCredentialStore (Credential Manager, не в JSON)
+```
+
+## Ключевые пути
+
+| Что | Где |
+|-----|-----|
+| Точка входа | `src/Program.cs`, `TrayApplicationContext.cs` |
+| Обои | `src/Desktop/` — `WallpaperController`, `Bridge`, `DesktopHost` |
+| GitHub | `src/GitHub/` — `GitHubApiClient`, `RepoPoller`, `RepoUrlParser` |
+| Настройки | `src/Settings/` — `SettingsForm`, `GitHubPatCredentialStore` |
+| UI обоев | `wwwroot/wallpaper/` — `index.html`, `app.js`, `styles.css` |
+| AppData (будущее) | `%APPDATA%\GitHubWallpaper\` (`AppPaths.AppData`) |
+| Публикация | `src/Properties/PublishProfiles/win-x64.pubxml` → `publish/` |
+
+## Bridge: типы сообщений (C# → JS)
+
+`pause` · `resume` · `auth:status` · `repos:init` · `repo:metadata` · `repo:commits` · `repo:poll-failed`
+
+Virtual host: `app.local` (`WallpaperController.VirtualHostName`).
+
+## Соглашения кода
+
+- PAT **никогда** в `settings.json` — только Credential Manager
+- `internal sealed` для сервисов; XML-doc на публичных API
+- Минимальный diff; не трогать несвязанный код
+- Недостающие SDK/инструменты — в `F:\github\PROG`
+
+## Сборка
+
+```bash
+dotnet run --project src
+dotnet publish src -p:PublishProfile=win-x64
+```
+
+Требуется WebView2 Runtime на машине пользователя.
