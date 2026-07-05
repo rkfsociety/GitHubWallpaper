@@ -109,9 +109,9 @@ internal sealed class RepoPoller : IDisposable
             _repositories = list;
         }
 
-        RepositoriesChanged?.Invoke(this, EventArgs.Empty);
-
         StopCore();
+
+        RepositoriesChanged?.Invoke(this, EventArgs.Empty);
 
         _cts = new CancellationTokenSource();
         _loopTask = RunLoopAsync(_cts.Token);

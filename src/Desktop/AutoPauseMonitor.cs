@@ -85,8 +85,8 @@ internal sealed class AutoPauseMonitor : IDisposable
 
     private async Task ResetAutoPauseAsync()
     {
-        await _pauseCoordinator.SetFullscreenPausedAsync(false).ConfigureAwait(false);
-        await _pauseCoordinator.SetBatteryPausedAsync(false).ConfigureAwait(false);
+        await _pauseCoordinator.SetFullscreenPausedAsync(false).ConfigureAwait(true);
+        await _pauseCoordinator.SetBatteryPausedAsync(false).ConfigureAwait(true);
     }
 
     private static bool IsForegroundFullscreen()

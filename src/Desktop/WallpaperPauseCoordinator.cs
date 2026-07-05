@@ -36,7 +36,7 @@ internal sealed class WallpaperPauseCoordinator
             _userPaused = true;
         }
 
-        await ApplyEffectivePauseAsync(cancellationToken).ConfigureAwait(false);
+        await ApplyEffectivePauseAsync(cancellationToken).ConfigureAwait(true);
     }
 
     /// <summary>Обновляет автопаузу из-за полноэкранного окна.</summary>
@@ -54,7 +54,7 @@ internal sealed class WallpaperPauseCoordinator
             _suppressAutoPause = false;
         }
 
-        await ApplyEffectivePauseAsync(cancellationToken).ConfigureAwait(false);
+        await ApplyEffectivePauseAsync(cancellationToken).ConfigureAwait(true);
     }
 
     /// <summary>Обновляет автопаузу при работе от батареи.</summary>
@@ -72,7 +72,7 @@ internal sealed class WallpaperPauseCoordinator
             _suppressAutoPause = false;
         }
 
-        await ApplyEffectivePauseAsync(cancellationToken).ConfigureAwait(false);
+        await ApplyEffectivePauseAsync(cancellationToken).ConfigureAwait(true);
     }
 
     private async Task ApplyEffectivePauseAsync(CancellationToken cancellationToken)
@@ -82,11 +82,11 @@ internal sealed class WallpaperPauseCoordinator
 
         if (shouldPause && !_wallpaperController.IsPaused)
         {
-            await _wallpaperController.PauseAsync(cancellationToken).ConfigureAwait(false);
+            await _wallpaperController.PauseAsync(cancellationToken).ConfigureAwait(true);
         }
         else if (!shouldPause && _wallpaperController.IsPaused)
         {
-            await _wallpaperController.ResumeAsync(cancellationToken).ConfigureAwait(false);
+            await _wallpaperController.ResumeAsync(cancellationToken).ConfigureAwait(true);
         }
     }
 }

@@ -230,35 +230,36 @@ internal sealed class Bridge : IDisposable
 
     private void EnsureWebMessageHandler()
     {
-        if (_webMessageHooked)
+        _wallpaperController.InvokeOnSurfaceThread(() =>
         {
-            return;
-        }
+            if (_webMessageHooked)
+                return;
 
-        var core = _wallpaperController.Surface?.WebView.CoreWebView2;
-        if (core is null)
-        {
-            return;
-        }
+            var core = _wallpaperController.Surface?.WebView.CoreWebView2;
+            if (core is null)
+                return;
 
-        core.WebMessageReceived += OnWebMessageReceived;
-        _webMessageHooked = true;
+            core.WebMessageReceived += OnWebMessageReceived;
+            _webMessageHooked = true;
+        });
     }
 
     private void RemoveWebMessageHandler()
     {
         if (!_webMessageHooked)
-        {
             return;
-        }
 
-        var core = _wallpaperController.Surface?.WebView.CoreWebView2;
-        if (core is not null)
+        _wallpaperController.InvokeOnSurfaceThread(() =>
         {
-            core.WebMessageReceived -= OnWebMessageReceived;
-        }
+            if (!_webMessageHooked)
+                return;
 
-        _webMessageHooked = false;
+            var core = _wallpaperController.Surface?.WebView.CoreWebView2;
+            if (core is not null)
+                core.WebMessageReceived -= OnWebMessageReceived;
+
+            _webMessageHooked = false;
+        });
     }
 
     private static void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)

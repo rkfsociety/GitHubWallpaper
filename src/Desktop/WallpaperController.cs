@@ -112,20 +112,26 @@ public sealed class WallpaperController : IDisposable
     }
 
     /// <summary>Приостанавливает рендер WebView2 и уведомляет страницу обоев.</summary>
-    public async Task PauseAsync(CancellationToken cancellationToken = default)
+    public Task PauseAsync(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (_surface is null || !_surface.IsCoreInitialized || _paused)
-            return;
+            return Task.CompletedTask;
 
-        cancellationToken.ThrowIfCancellationRequested();
+        return RunOnSurfaceAsync(async () =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
 
-        await _surface.WebView.CoreWebView2.TrySuspendAsync().ConfigureAwait(true);
-        PostWallpaperCommand("pause");
+            if (_surface?.WebView.CoreWebView2 is null)
+                return;
 
-        _paused = true;
-        Paused?.Invoke(this, EventArgs.Empty);
+            await _surface.WebView.CoreWebView2.TrySuspendAsync().ConfigureAwait(true);
+            PostWallpaperCommand("pause");
+
+            _paused = true;
+            Paused?.Invoke(this, EventArgs.Empty);
+        });
     }
 
     /// <summary>Возобновляет рендер WebView2 и уведомляет страницу обоев.</summary>
@@ -137,12 +143,18 @@ public sealed class WallpaperController : IDisposable
         if (_surface is null || !_surface.IsCoreInitialized || !_paused)
             return Task.CompletedTask;
 
-        _surface.WebView.CoreWebView2.Resume();
-        PostWallpaperCommand("resume");
+        return RunOnSurfaceAsync(() =>
+        {
+            if (_surface?.WebView.CoreWebView2 is null)
+                return Task.CompletedTask;
 
-        _paused = false;
-        Resumed?.Invoke(this, EventArgs.Empty);
-        return Task.CompletedTask;
+            _surface.WebView.CoreWebView2.Resume();
+            PostWallpaperCommand("resume");
+
+            _paused = false;
+            Resumed?.Invoke(this, EventArgs.Empty);
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>Открепляет обои от рабочего стола, не уничтожая поверхность.</summary>
@@ -193,11 +205,69 @@ public sealed class WallpaperController : IDisposable
 
     private void ResumeCoreIfPaused()
     {
-        if (!_paused || _surface?.WebView.CoreWebView2 is null)
+        if (!_paused || _surface is null)
             return;
 
-        _surface.WebView.CoreWebView2.Resume();
-        _paused = false;
+        RunOnSurface(() =>
+        {
+            if (!_paused || _surface?.WebView.CoreWebView2 is null)
+                return;
+
+            _surface.WebView.CoreWebView2.Resume();
+            _paused = false;
+        });
+    }
+
+    /// <summary>Выполняет действие на UI-потоке поверхности обоев (синхронно).</summary>
+    internal void InvokeOnSurfaceThread(Action action)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var surface = _surface;
+        if (surface is null)
+            return;
+
+        if (surface.InvokeRequired)
+            surface.Invoke(action);
+        else
+            action();
+    }
+
+    private void RunOnSurface(Action action)
+    {
+        var surface = _surface;
+        if (surface is null)
+            return;
+
+        if (surface.InvokeRequired)
+            surface.Invoke(action);
+        else
+            action();
+    }
+
+    private Task RunOnSurfaceAsync(Func<Task> action)
+    {
+        var surface = _surface;
+        if (surface is null)
+            return Task.CompletedTask;
+
+        if (!surface.InvokeRequired)
+            return action();
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        surface.BeginInvoke(async () =>
+        {
+            try
+            {
+                await action().ConfigureAwait(true);
+                tcs.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+        });
+        return tcs.Task;
     }
 
     private void ApplyDisplayBounds()
