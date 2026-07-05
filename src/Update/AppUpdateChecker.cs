@@ -17,6 +17,14 @@ internal sealed class AppUpdateChecker : IDisposable
         @"\*\*(?<version>\d+\.\d+\.\d+(?:[-\w.]*)?)\*\*",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    private static readonly Regex VersionJsonPropertyRegex = new(
+        @"""version""\s*:\s*""(?<version>[^""]+)""",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    private static readonly Regex ReleaseNameVersionRegex = new(
+        @"GitHubWallpaper\s+(?<version>\d+\.\d+\.\d+(?:[-\w.]*)?)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
 
@@ -176,24 +184,18 @@ internal sealed class AppUpdateChecker : IDisposable
 
                 if (response.IsSuccessStatusCode)
                 {
-                    await using var stream = await response.Content
-                        .ReadAsStreamAsync(cancellationToken)
+                    var jsonText = await response.Content
+                        .ReadAsStringAsync(cancellationToken)
                         .ConfigureAwait(false);
 
-                    var metadata = await JsonSerializer
-                        .DeserializeAsync<ReleaseVersionMetadata>(stream, JsonOptions, cancellationToken)
-                        .ConfigureAwait(false);
-
-                    if (!string.IsNullOrWhiteSpace(metadata?.Version))
+                    var version = TryParseVersionFromJson(jsonText);
+                    if (!string.IsNullOrWhiteSpace(version))
                     {
-                        return metadata.Version.Trim();
+                        return version;
                     }
                 }
             }
             catch (IOException)
-            {
-            }
-            catch (JsonException)
             {
             }
         }
@@ -208,7 +210,40 @@ internal sealed class AppUpdateChecker : IDisposable
             }
         }
 
+        if (releaseRoot.TryGetProperty("name", out var nameElement))
+        {
+            var name = nameElement.GetString();
+            var match = string.IsNullOrWhiteSpace(name) ? null : ReleaseNameVersionRegex.Match(name);
+            if (match is { Success: true })
+            {
+                return match.Groups["version"].Value;
+            }
+        }
+
         return null;
+    }
+
+    private static string? TryParseVersionFromJson(string? jsonText)
+    {
+        if (string.IsNullOrWhiteSpace(jsonText))
+        {
+            return null;
+        }
+
+        try
+        {
+            var metadata = JsonSerializer.Deserialize<ReleaseVersionMetadata>(jsonText, JsonOptions);
+            if (!string.IsNullOrWhiteSpace(metadata?.Version))
+            {
+                return metadata.Version.Trim();
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        var match = VersionJsonPropertyRegex.Match(jsonText);
+        return match.Success ? match.Groups["version"].Value.Trim() : null;
     }
 
     private static HttpClient CreateHttpClient()
