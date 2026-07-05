@@ -778,7 +778,10 @@
     repoGrid.style.setProperty("--grid-columns", String(layout.columns));
     repoGrid.style.setProperty("--grid-rows", String(layout.rows));
     repoGrid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
-    repoGrid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(0, auto))`;
+    const stretchRows = layout.rows > 1 || Object.keys(state.repos).length > 1;
+    repoGrid.style.gridTemplateRows = stretchRows
+      ? `repeat(${layout.rows}, minmax(0, 1fr))`
+      : `repeat(${layout.rows}, minmax(0, auto))`;
 
     if (changed) {
       refreshAllRepoCards();
