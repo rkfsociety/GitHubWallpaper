@@ -30,7 +30,7 @@ body {
   --heatmap-2: #006d32;
   --heatmap-3: #26a641;
   --heatmap-4: #39d353;
-  --content-zoom: 1;
+  --content-scale: 1;
   --content-bottom-gap: 2rem;
   --content-side-gap: 2rem;
   --content-top-gap: 1.5rem;
@@ -57,16 +57,22 @@ body {
     linear-gradient(160deg, #0d1117 0%, #161b22 45%, #0d1117 100%);
 }
 
-.wallpaper__content {
+.wallpaper__scaler {
   position: relative;
   z-index: 1;
+  width: min(var(--grid-max-width), 100%);
+  flex-shrink: 0;
+}
+
+.wallpaper__content {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
-  width: min(var(--grid-max-width), 100%);
-  zoom: var(--content-zoom);
-  flex-shrink: 0;
+  width: calc(100% / var(--content-scale, 1));
+  transform: scale(var(--content-scale, 1));
+  transform-origin: top center;
 }
 
 .wallpaper__content:has(.repo-grid > div) {
@@ -669,7 +675,7 @@ body[data-layout="tight"] .feed__title {
   }
 
   .repo-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(var(--grid-columns, 1), minmax(0, 1fr));
   }
 
   .repo-card__commit {

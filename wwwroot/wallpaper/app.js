@@ -3,9 +3,10 @@
   const repoGrid = document.getElementById("repo-grid");
   const authBanner = document.getElementById("auth-banner");
   const wallpaperContent = document.getElementById("wallpaper-content");
+  const wallpaperScaler = document.getElementById("wallpaper-scaler");
 
-  const MANY_REPOS_THRESHOLD = 4;
-  const MIN_CONTENT_ZOOM = 0.45;
+  const MANY_REPOS_THRESHOLD = 2;
+  const MIN_CONTENT_SCALE = 0.4;
 
   const state = {
     repos: Object.create(null),
@@ -29,6 +30,7 @@
   let lastViewport = null;
   let fitContentFrame = 0;
   let contentResizeObserver = null;
+  let isFittingContent = false;
 
   const icons = {
     star:
@@ -381,46 +383,62 @@
 
     const paddingPx = 48;
     const gapPx = 16;
-    const hideHero = repoCount >= MANY_REPOS_THRESHOLD;
     const availWidth = Math.max(320, viewport.width - viewport.safeLeft - viewport.safeRight - paddingPx);
-    const availHeight = Math.max(320, viewport.height - viewport.safeTop - viewport.safeBottom - paddingPx);
-    const densities = ["default", "compact", "dense", "tight"];
 
-    for (const density of densities) {
-      const preset = layoutPresets[density];
-      const minCardPx = preset.minCardRem * 16;
-      const heroPx = hideHero ? 0 : preset.heroPx;
-      const maxColsByWidth = Math.max(
-        1,
-        Math.min(repoCount, Math.floor((availWidth + gapPx) / (minCardPx + gapPx))),
-      );
-
-      let columns = maxColsByWidth;
-      for (let cols = maxColsByWidth; cols <= repoCount; cols += 1) {
-        const rows = Math.ceil(repoCount / cols);
-        const gridHeight = rows * preset.estCardPx + Math.max(0, rows - 1) * gapPx;
-        const totalHeight = heroPx + gridHeight;
-
-        if (totalHeight <= availHeight) {
-          columns = cols;
-        }
-      }
-
-      const rows = Math.ceil(repoCount / columns);
-      const gridHeight = rows * preset.estCardPx + Math.max(0, rows - 1) * gapPx;
-      const totalHeight = heroPx + gridHeight;
-
-      if (totalHeight <= availHeight || density === "tight") {
-        return { density, columns, commitLimit: preset.commitLimit };
-      }
+    let density = "default";
+    if (repoCount >= 6) {
+      density = "tight";
+    } else if (repoCount >= 4) {
+      density = "dense";
+    } else if (repoCount >= 2) {
+      density = "compact";
     }
 
-    const preset = layoutPresets.tight;
+    const preset = layoutPresets[density];
+    const minCardPx = preset.minCardRem * 16;
     const columns = Math.max(
       1,
-      Math.min(repoCount, Math.floor((availWidth + gapPx) / (preset.minCardRem * 16 + gapPx))),
+      Math.min(repoCount, Math.floor((availWidth + gapPx) / (minCardPx + gapPx))),
     );
-    return { density: "tight", columns, commitLimit: preset.commitLimit };
+
+    return { density, columns, commitLimit: preset.commitLimit };
+  }
+
+  function getViewportSize() {
+    if (lastViewport) {
+      return lastViewport;
+    }
+
+    return {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      safeTop: 0,
+      safeRight: 0,
+      safeBottom: 0,
+      safeLeft: 0,
+    };
+  }
+
+  function getAvailableContentSize() {
+    const wallpaper = wallpaperScaler?.parentElement;
+    if (!wallpaper) {
+      return {
+        width: Math.max(1, window.innerWidth),
+        height: Math.max(1, window.innerHeight),
+      };
+    }
+
+    const wallpaperStyle = getComputedStyle(wallpaper);
+    return {
+      width: Math.max(
+        1,
+        window.innerWidth - readPx(wallpaperStyle.paddingLeft) - readPx(wallpaperStyle.paddingRight),
+      ),
+      height: Math.max(
+        1,
+        window.innerHeight - readPx(wallpaperStyle.paddingTop) - readPx(wallpaperStyle.paddingBottom),
+      ),
+    };
   }
 
   function readPx(value) {
@@ -434,55 +452,52 @@
     }
 
     fitContentFrame = requestAnimationFrame(() => {
-      fitContentFrame = 0;
-      fitContentToViewport();
+      requestAnimationFrame(() => {
+        fitContentFrame = 0;
+        fitContentToViewport();
+      });
     });
   }
 
   function fitContentToViewport() {
-    if (!wallpaperContent || !lastViewport) {
+    if (!wallpaperContent || !wallpaperScaler || isFittingContent) {
       return;
     }
 
-    document.documentElement.style.setProperty("--content-zoom", "1");
+    isFittingContent = true;
 
-    const wallpaper = wallpaperContent.parentElement;
-    if (!wallpaper) {
-      return;
-    }
+    document.documentElement.style.setProperty("--content-scale", "1");
+    wallpaperScaler.style.height = "auto";
 
-    const wallpaperStyle = getComputedStyle(wallpaper);
-    const availWidth = Math.max(
-      1,
-      lastViewport.width - readPx(wallpaperStyle.paddingLeft) - readPx(wallpaperStyle.paddingRight),
-    );
-    const availHeight = Math.max(
-      1,
-      lastViewport.height - readPx(wallpaperStyle.paddingTop) - readPx(wallpaperStyle.paddingBottom),
-    );
-
-    const naturalWidth = wallpaperContent.scrollWidth;
-    const naturalHeight = wallpaperContent.scrollHeight;
+    const { width: availWidth, height: availHeight } = getAvailableContentSize();
+    const naturalWidth = wallpaperContent.offsetWidth;
+    const naturalHeight = wallpaperContent.offsetHeight;
 
     if (naturalWidth <= 0 || naturalHeight <= 0) {
+      isFittingContent = false;
       return;
     }
 
-    const zoom = Math.min(1, availWidth / naturalWidth, availHeight / naturalHeight);
-    const rounded = Math.max(MIN_CONTENT_ZOOM, Math.round(zoom * 1000) / 1000);
+    const scale = Math.min(1, availWidth / naturalWidth, availHeight / naturalHeight);
+    const rounded = Math.max(MIN_CONTENT_SCALE, Math.round(scale * 1000) / 1000);
 
-    document.documentElement.style.setProperty("--content-zoom", String(rounded));
+    document.documentElement.style.setProperty("--content-scale", String(rounded));
+    wallpaperScaler.style.height = `${Math.ceil(naturalHeight * rounded)}px`;
+
+    isFittingContent = false;
   }
 
   function ensureContentResizeObserver() {
-    if (!wallpaperContent || contentResizeObserver || typeof ResizeObserver === "undefined") {
+    if (!repoGrid || contentResizeObserver || typeof ResizeObserver === "undefined") {
       return;
     }
 
     contentResizeObserver = new ResizeObserver(() => {
-      scheduleFitContent();
+      if (!isFittingContent) {
+        scheduleFitContent();
+      }
     });
-    contentResizeObserver.observe(wallpaperContent);
+    contentResizeObserver.observe(repoGrid);
   }
 
   function applyLayout(layout) {
@@ -513,12 +528,9 @@
       lastViewport = viewport;
     }
 
-    if (!lastViewport) {
-      return;
-    }
-
     const root = document.documentElement;
-    const { width, height, safeTop, safeRight, safeBottom, safeLeft } = lastViewport;
+    const size = getViewportSize();
+    const { width, height, safeTop, safeRight, safeBottom, safeLeft } = size;
 
     root.style.setProperty("--safe-top", `${safeTop}px`);
     root.style.setProperty("--safe-right", `${safeRight}px`);
@@ -528,7 +540,7 @@
     root.style.setProperty("--viewport-height", `${height}px`);
 
     const repoCount = Object.keys(state.repos).length;
-    applyLayout(computeLayout(lastViewport, repoCount));
+    applyLayout(computeLayout(size, repoCount));
   }
 
   function handleBridgeMessage(data) {
@@ -653,5 +665,6 @@
 
   refreshAllRepoCards();
   ensureContentResizeObserver();
+  window.addEventListener("resize", scheduleFitContent);
   scheduleFitContent();
 })();
