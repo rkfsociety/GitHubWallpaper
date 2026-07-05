@@ -3,6 +3,7 @@
   const repoGrid = document.getElementById("repo-grid");
   const authBanner = document.getElementById("auth-banner");
   const wallpaperContent = document.getElementById("wallpaper-content");
+  const wallpaperScaler = document.getElementById("wallpaper-scaler");
   const wallpaperRoot = document.querySelector(".wallpaper");
 
   const MANY_REPOS_THRESHOLD = 2;
@@ -669,7 +670,7 @@
   }
 
   function measureWallpaperSize() {
-    const target = wallpaperRoot || wallpaperContent || document.body;
+    const target = wallpaperContent || wallpaperScaler || wallpaperRoot || document.body;
     return {
       width: Math.max(target.scrollWidth, target.clientWidth),
       height: Math.max(target.scrollHeight, target.clientHeight),
@@ -714,6 +715,9 @@
 
     isFittingContent = true;
     document.body.style.zoom = "1";
+    if (wallpaperScaler) {
+      wallpaperScaler.style.zoom = "1";
+    }
     forceReflow();
     equalizeRepoCardHeights();
     forceReflow();
@@ -730,7 +734,9 @@
 
     const zoom = Math.min(1, availWidth / naturalWidth, availHeight / naturalHeight);
     const rounded = Math.max(MIN_CONTENT_ZOOM, Math.round(zoom * 1000) / 1000);
-    document.body.style.zoom = String(rounded);
+    if (wallpaperScaler) {
+      wallpaperScaler.style.zoom = String(rounded);
+    }
 
     isFittingContent = false;
   }
@@ -772,12 +778,7 @@
     repoGrid.style.setProperty("--grid-columns", String(layout.columns));
     repoGrid.style.setProperty("--grid-rows", String(layout.rows));
     repoGrid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
-
-    const stretchRows =
-      Object.keys(state.repos).length >= MANY_REPOS_THRESHOLD || layout.columns * layout.rows >= 4;
-    repoGrid.style.gridTemplateRows = stretchRows
-      ? `repeat(${layout.rows}, minmax(0, 1fr))`
-      : `repeat(${layout.rows}, minmax(0, auto))`;
+    repoGrid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(0, auto))`;
 
     if (changed) {
       refreshAllRepoCards();

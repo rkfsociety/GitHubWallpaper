@@ -30,8 +30,8 @@ body {
   --heatmap-2: #006d32;
   --heatmap-3: #26a641;
   --heatmap-4: #39d353;
-  --content-bottom-gap: 3.5rem;
-  --card-padding-bottom: 2rem;
+  --content-bottom-gap: 4.5rem;
+  --card-padding-bottom: 2.25rem;
   --content-side-gap: 2rem;
   --content-top-gap: 1.5rem;
 }
@@ -78,17 +78,17 @@ body {
 }
 
 .wallpaper__content:has(.repo-grid > div:nth-child(2)) {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   align-self: stretch;
 }
 
 .wallpaper:has(.repo-grid > div:nth-child(2)) {
-  justify-content: stretch;
+  justify-content: flex-start;
 }
 
 .wallpaper:has(.repo-grid > div:nth-child(2)) .wallpaper__scaler {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -96,10 +96,10 @@ body {
 }
 
 .wallpaper:has(.repo-grid > div:nth-child(2)) .repo-grid {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
-  grid-template-rows: repeat(var(--grid-rows, 1), minmax(0, 1fr));
-  align-content: stretch;
+  grid-template-rows: repeat(var(--grid-rows, 1), minmax(0, auto));
+  align-content: start;
 }
 
 .wallpaper__content:has(.repo-grid > div:nth-child(2)) .hero {
@@ -423,14 +423,14 @@ body.is-paused .wallpaper__glow {
   box-shadow: 0 12px 32px rgba(1, 4, 9, 0.35);
   width: 100%;
   min-width: 0;
-  min-height: 100%;
-  height: 100%;
+  min-height: 0;
+  height: auto;
   overflow: hidden;
 }
 
 .repo-card__fit {
   display: flex;
-  flex: 1 1 0;
+  flex: 0 1 auto;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
@@ -511,6 +511,7 @@ body.is-paused .wallpaper__glow {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  padding-bottom: 0.35rem;
 }
 
 .repo-card__commits-title {
@@ -795,7 +796,7 @@ body[data-layout="compact"] .wallpaper__content {
 }
 
 body[data-layout="compact"] {
-  --card-padding-bottom: 1.65rem;
+  --card-padding-bottom: 1.85rem;
 }
 
 body[data-layout="compact"] .repo-card {
@@ -811,8 +812,8 @@ body[data-layout="dense"] {
 
 body[data-layout="dense"] {
   --content-top-gap: 1rem;
-  --content-bottom-gap: 2.75rem;
-  --card-padding-bottom: 1.45rem;
+  --content-bottom-gap: 3.75rem;
+  --card-padding-bottom: 1.75rem;
 }
 
 body[data-layout="dense"] .wallpaper__content {
@@ -865,9 +866,9 @@ body[data-layout="tight"] {
 
 body[data-layout="tight"] {
   --content-top-gap: 0.75rem;
-  --content-bottom-gap: 2.25rem;
+  --content-bottom-gap: 3.5rem;
   --content-side-gap: 1rem;
-  --card-padding-bottom: 1.25rem;
+  --card-padding-bottom: 2rem;
 }
 
 body[data-layout="tight"] .wallpaper__content {
@@ -921,8 +922,8 @@ body[data-layout="tight"] .feed__title {
 @media (max-width: 40rem) {
   :root {
     --content-top-gap: 1.25rem;
-    --content-bottom-gap: 2.75rem;
-    --card-padding-bottom: 1.75rem;
+    --content-bottom-gap: 3.5rem;
+    --card-padding-bottom: 2rem;
     --content-side-gap: 1.25rem;
   }
 
