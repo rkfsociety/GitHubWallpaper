@@ -48,7 +48,6 @@ internal sealed class SettingsForm : Form
     private CheckBox _pauseBatteryCheckBox = null!;
     private CheckBox _autoCheckUpdatesCheckBox = null!;
     private ComboBox _monitorComboBox = null!;
-    private SettingsCard _cardDisplayCard = null!;
     private CheckBox _showDescriptionCheckBox = null!;
     private CheckBox _showStatsCheckBox = null!;
     private CheckBox _showCiCheckBox = null!;
@@ -136,8 +135,15 @@ internal sealed class SettingsForm : Form
     private void RefreshAllCardHeights()
     {
         UpdateAuthView();
-        RefreshReposCardHeight();
+        RefreshSettingsCardHeights();
         FitClientToContent();
+    }
+
+    private void RefreshSettingsCardHeights()
+    {
+        RefreshReposCardHeight();
+        RefreshDisplayCardHeight();
+        RefreshBehaviorCardHeight();
     }
 
     private void FitClientToContent()
@@ -170,7 +176,14 @@ internal sealed class SettingsForm : Form
             height = RemeasureContentHeight();
         }
 
-        ClientSize = new Size(clientWidth, Math.Min(height, maxHeight));
+        var clientHeight = Math.Min(height, maxHeight);
+        ClientSize = new Size(clientWidth, clientHeight);
+
+        var needsScroll = height > maxHeight;
+        _contentPanel.AutoScroll = needsScroll;
+        _contentPanel.AutoScrollMinSize = needsScroll
+            ? new Size(ContentWidth + FormPadding * 2, height)
+            : Size.Empty;
     }
 
     private void ApplyPagePadding(int padding)
@@ -181,7 +194,7 @@ internal sealed class SettingsForm : Form
     private int RemeasureContentHeight()
     {
         UpdateAuthCardHeight();
-        RefreshReposCardHeight();
+        RefreshSettingsCardHeights();
         _pageLayout.PerformLayout();
         var padding = _pageLayout.Location.Y;
         return padding + _pageLayout.Height + padding;
@@ -207,6 +220,28 @@ internal sealed class SettingsForm : Form
         _reposCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
     }
 
+    private void RefreshDisplayCardHeight()
+    {
+        if (_displayCard.Body.Controls.Count == 0)
+        {
+            return;
+        }
+
+        var layout = _displayCard.Body.Controls[0];
+        _displayCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+    }
+
+    private void RefreshBehaviorCardHeight()
+    {
+        if (_behaviorCard.Body.Controls.Count == 0)
+        {
+            return;
+        }
+
+        var layout = _behaviorCard.Body.Controls[0];
+        _behaviorCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+    }
+
     private void AddPageRow(Control control)
     {
         var row = _pageLayout.RowCount;
@@ -218,7 +253,6 @@ internal sealed class SettingsForm : Form
     private void BuildMainColumns(TableLayoutPanel page)
     {
         BuildReposCard(page);
-        BuildCardDisplayCard(page);
 
         var settingsRow = new TableLayoutPanel
         {
@@ -483,10 +517,15 @@ internal sealed class SettingsForm : Form
     private void UpdateAuthView()
     {
         var signedIn = _githubSession.HasStoredToken;
-        _authSignInPanel.Visible = !signedIn;
-        _authSignedInPanel.Visible = signedIn;
         _repoHintLabel.Visible = !signedIn;
         _authCard.SetTitleVisible(!signedIn);
+
+        _authCard.Body.Controls.Clear();
+        var activePanel = signedIn ? _authSignedInPanel : _authSignInPanel;
+        activePanel.Visible = true;
+        activePanel.Dock = DockStyle.Top;
+        _authCard.Body.Controls.Add(activePanel);
+
         UpdateAuthCardHeight();
     }
 
@@ -625,17 +664,19 @@ internal sealed class SettingsForm : Form
         _removeRepoButton.Click += OnRemoveRepoClick;
         AddBodyRow(_removeRepoButton);
 
+        var displayTitle = CreateMutedLabel("Содержимое карточек");
+        displayTitle.AutoSize = true;
+        displayTitle.Margin = new Padding(0, 4, 0, 0);
+        AddBodyRow(displayTitle);
+        AddBodyRow(CreateCardDisplayPanel(innerWidth));
+
         body.Controls.Add(layout);
         _reposCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
         AddPageRow(_reposCard);
     }
 
-    private void BuildCardDisplayCard(TableLayoutPanel page)
+    private Control CreateCardDisplayPanel(int innerWidth)
     {
-        _cardDisplayCard = new SettingsCard("Содержимое карточек", ContentWidth);
-        var body = _cardDisplayCard.Body;
-        var innerWidth = SettingsCard.BodyWidth(ContentWidth);
-
         var layout = new TableLayoutPanel
         {
             AutoSize = true,
@@ -677,9 +718,7 @@ internal sealed class SettingsForm : Form
         _showCommitsCheckBox = CreateDisplayCheckBox("Последние коммиты");
         AddDisplayRow(2, _showPullRequestsCheckBox, _showIssuesCheckBox, _showCommitsCheckBox);
 
-        body.Controls.Add(layout);
-        _cardDisplayCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
-        AddPageRow(_cardDisplayCard);
+        return layout;
     }
 
     private CheckBox CreateDisplayCheckBox(string text)

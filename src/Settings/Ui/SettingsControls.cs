@@ -1,6 +1,6 @@
 namespace GitHubWallpaper.Settings.Ui;
 
-/// <summary>Область содержимого с градиентным фоном (без прокрутки).</summary>
+/// <summary>Область содержимого с градиентным фоном.</summary>
 internal sealed class ThemedContentPanel : Panel
 {
     public ThemedContentPanel()
@@ -14,8 +14,12 @@ internal sealed class ThemedContentPanel : Panel
         get
         {
             var cp = base.CreateParams;
-            cp.Style &= ~0x00200000; // WS_VSCROLL
-            cp.Style &= ~0x00100000; // WS_HSCROLL
+            if (!AutoScroll)
+            {
+                cp.Style &= ~0x00200000; // WS_VSCROLL
+                cp.Style &= ~0x00100000; // WS_HSCROLL
+            }
+
             return cp;
         }
     }
