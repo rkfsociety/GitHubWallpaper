@@ -2,6 +2,10 @@
   const overlay = document.getElementById("pause-overlay");
   const repoGrid = document.getElementById("repo-grid");
   const authBanner = document.getElementById("auth-banner");
+  const wallpaperContent = document.getElementById("wallpaper-content");
+
+  const MANY_REPOS_THRESHOLD = 4;
+  const MIN_CONTENT_ZOOM = 0.45;
 
   const state = {
     repos: Object.create(null),
@@ -16,13 +20,15 @@
   };
 
   const layoutPresets = {
-    default: { minCardRem: 20, estCardPx: 520, commitLimit: 5, heroPx: 220 },
-    compact: { minCardRem: 18, estCardPx: 460, commitLimit: 4, heroPx: 100 },
-    dense: { minCardRem: 16, estCardPx: 380, commitLimit: 3, heroPx: 80 },
-    tight: { minCardRem: 14, estCardPx: 300, commitLimit: 2, heroPx: 64 },
+    default: { minCardRem: 20, estCardPx: 640, commitLimit: 5, heroPx: 220 },
+    compact: { minCardRem: 18, estCardPx: 560, commitLimit: 4, heroPx: 100 },
+    dense: { minCardRem: 16, estCardPx: 480, commitLimit: 3, heroPx: 80 },
+    tight: { minCardRem: 14, estCardPx: 400, commitLimit: 2, heroPx: 64 },
   };
 
   let lastViewport = null;
+  let fitContentFrame = 0;
+  let contentResizeObserver = null;
 
   const icons = {
     star:
@@ -350,6 +356,7 @@
 
     const feedSection = card.querySelector(".repo-card__feed");
     window.WallpaperFeed?.markNewItemsAnimated(feedSection);
+    scheduleFitContent();
   }
 
   function refreshRepoCard(owner, repo) {
@@ -374,6 +381,7 @@
 
     const paddingPx = 48;
     const gapPx = 16;
+    const hideHero = repoCount >= MANY_REPOS_THRESHOLD;
     const availWidth = Math.max(320, viewport.width - viewport.safeLeft - viewport.safeRight - paddingPx);
     const availHeight = Math.max(320, viewport.height - viewport.safeTop - viewport.safeBottom - paddingPx);
     const densities = ["default", "compact", "dense", "tight"];
@@ -381,6 +389,7 @@
     for (const density of densities) {
       const preset = layoutPresets[density];
       const minCardPx = preset.minCardRem * 16;
+      const heroPx = hideHero ? 0 : preset.heroPx;
       const maxColsByWidth = Math.max(
         1,
         Math.min(repoCount, Math.floor((availWidth + gapPx) / (minCardPx + gapPx))),
@@ -390,7 +399,7 @@
       for (let cols = maxColsByWidth; cols <= repoCount; cols += 1) {
         const rows = Math.ceil(repoCount / cols);
         const gridHeight = rows * preset.estCardPx + Math.max(0, rows - 1) * gapPx;
-        const totalHeight = preset.heroPx + gridHeight;
+        const totalHeight = heroPx + gridHeight;
 
         if (totalHeight <= availHeight) {
           columns = cols;
@@ -399,7 +408,7 @@
 
       const rows = Math.ceil(repoCount / columns);
       const gridHeight = rows * preset.estCardPx + Math.max(0, rows - 1) * gapPx;
-      const totalHeight = preset.heroPx + gridHeight;
+      const totalHeight = heroPx + gridHeight;
 
       if (totalHeight <= availHeight || density === "tight") {
         return { density, columns, commitLimit: preset.commitLimit };
@@ -414,6 +423,68 @@
     return { density: "tight", columns, commitLimit: preset.commitLimit };
   }
 
+  function readPx(value) {
+    const number = Number.parseFloat(value);
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  function scheduleFitContent() {
+    if (fitContentFrame) {
+      cancelAnimationFrame(fitContentFrame);
+    }
+
+    fitContentFrame = requestAnimationFrame(() => {
+      fitContentFrame = 0;
+      fitContentToViewport();
+    });
+  }
+
+  function fitContentToViewport() {
+    if (!wallpaperContent || !lastViewport) {
+      return;
+    }
+
+    document.documentElement.style.setProperty("--content-zoom", "1");
+
+    const wallpaper = wallpaperContent.parentElement;
+    if (!wallpaper) {
+      return;
+    }
+
+    const wallpaperStyle = getComputedStyle(wallpaper);
+    const availWidth = Math.max(
+      1,
+      lastViewport.width - readPx(wallpaperStyle.paddingLeft) - readPx(wallpaperStyle.paddingRight),
+    );
+    const availHeight = Math.max(
+      1,
+      lastViewport.height - readPx(wallpaperStyle.paddingTop) - readPx(wallpaperStyle.paddingBottom),
+    );
+
+    const naturalWidth = wallpaperContent.scrollWidth;
+    const naturalHeight = wallpaperContent.scrollHeight;
+
+    if (naturalWidth <= 0 || naturalHeight <= 0) {
+      return;
+    }
+
+    const zoom = Math.min(1, availWidth / naturalWidth, availHeight / naturalHeight);
+    const rounded = Math.max(MIN_CONTENT_ZOOM, Math.round(zoom * 1000) / 1000);
+
+    document.documentElement.style.setProperty("--content-zoom", String(rounded));
+  }
+
+  function ensureContentResizeObserver() {
+    if (!wallpaperContent || contentResizeObserver || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    contentResizeObserver = new ResizeObserver(() => {
+      scheduleFitContent();
+    });
+    contentResizeObserver.observe(wallpaperContent);
+  }
+
   function applyLayout(layout) {
     const changed =
       layoutState.density !== layout.density ||
@@ -426,11 +497,15 @@
 
     document.body.dataset.layout = layout.density;
     document.body.dataset.repoCount = String(Object.keys(state.repos).length);
+    document.body.dataset.manyRepos =
+      Object.keys(state.repos).length >= MANY_REPOS_THRESHOLD ? "true" : "false";
     repoGrid.style.setProperty("--grid-columns", String(layout.columns));
 
     if (changed) {
       refreshAllRepoCards();
     }
+
+    scheduleFitContent();
   }
 
   function updateLayout(viewport) {
@@ -577,4 +652,6 @@
   }
 
   refreshAllRepoCards();
+  ensureContentResizeObserver();
+  scheduleFitContent();
 })();
