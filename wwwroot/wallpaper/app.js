@@ -115,14 +115,6 @@
     return String(sha || "").slice(0, 7);
   }
 
-  function openRepoUrl(url) {
-    if (!url || !window.chrome?.webview) {
-      return;
-    }
-
-    window.chrome.webview.postMessage(JSON.stringify({ type: "open-url", url }));
-  }
-
   function setPaused(paused) {
     document.body.classList.toggle("is-paused", paused);
     overlay.hidden = !paused;
@@ -206,8 +198,7 @@
       .map((item) => {
         const title = escapeHtml(item.title || "Без названия");
         const number = item.number ? `#${item.number}` : "";
-        const href = escapeHtml(item.htmlUrl || "#");
-        return `<li><a href="${href}" target="_blank" rel="noopener noreferrer"><span class="repo-card__mini-number">${escapeHtml(number)}</span>${title}</a></li>`;
+        return `<li><span class="repo-card__mini-item"><span class="repo-card__mini-number">${escapeHtml(number)}</span>${title}</span></li>`;
       })
       .join("");
 
@@ -232,11 +223,10 @@
         const message = escapeHtml(commit.message || "Без сообщения");
         const author = escapeHtml(commit.authorName || "Неизвестный автор");
         const when = escapeHtml(formatRelativeDate(commit.authorDate));
-        const href = escapeHtml(commit.htmlUrl || "#");
 
         return `
           <li class="repo-card__commit">
-            <a class="repo-card__commit-sha" href="${href}" target="_blank" rel="noopener noreferrer">${sha}</a>
+            <span class="repo-card__commit-sha">${sha}</span>
             <span class="repo-card__commit-message" title="${message}">${message}</span>
             <span class="repo-card__commit-meta">${author}${when ? ` · ${when}` : ""}</span>
           </li>
@@ -276,7 +266,6 @@
     const key = repoKey(entry.owner, entry.repo);
     const metadata = entry.metadata;
     const fullName = metadata?.fullName || key;
-    const htmlUrl = metadata?.htmlUrl || `https://github.com/${key}`;
     const description = metadata?.description
       ? `<p class="repo-card__description">${escapeHtml(metadata.description)}</p>`
       : "";
@@ -293,15 +282,15 @@
     const loadingClass = metadata ? "" : " is-loading";
     const latestRelease = entry.releases?.[0];
     const releaseLine = latestRelease
-      ? `<p class="repo-card__release">Последний релиз: <a href="${escapeHtml(latestRelease.htmlUrl || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(latestRelease.name || latestRelease.tagName)}</a></p>`
+      ? `<p class="repo-card__release">Последний релиз: <span class="repo-card__release-name">${escapeHtml(latestRelease.name || latestRelease.tagName)}</span></p>`
       : "";
 
     return `
-      <article class="repo-card${loadingClass}" data-repo-key="${escapeHtml(key)}" data-repo-url="${escapeHtml(htmlUrl)}" tabindex="0" role="link" aria-label="Открыть ${escapeHtml(fullName)} на GitHub">
+      <article class="repo-card${loadingClass}" data-repo-key="${escapeHtml(key)}">
         <header class="repo-card__header">
           <div class="repo-card__title-row">
             <h2 class="repo-card__title">
-              <a href="${escapeHtml(htmlUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(fullName)}</a>
+              <span class="repo-card__title-text">${escapeHtml(fullName)}</span>
             </h2>
             ${ciBadge}
           </div>
@@ -347,27 +336,6 @@
     `;
   }
 
-  function bindRepoCardInteractions(card, entry) {
-    const htmlUrl = entry.metadata?.htmlUrl || `https://github.com/${repoKey(entry.owner, entry.repo)}`;
-
-    card.onclick = (event) => {
-      if (event.target.closest("a")) {
-        return;
-      }
-
-      openRepoUrl(htmlUrl);
-    };
-
-    card.onkeydown = (event) => {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-
-      event.preventDefault();
-      openRepoUrl(htmlUrl);
-    };
-  }
-
   function mountRepoCard(entry) {
     const key = repoKey(entry.owner, entry.repo);
     let card = cardElements.get(key);
@@ -379,7 +347,6 @@
     }
 
     card.innerHTML = renderRepoCard(entry);
-    bindRepoCardInteractions(card.firstElementChild, entry);
 
     const feedSection = card.querySelector(".repo-card__feed");
     window.WallpaperFeed?.markNewItemsAnimated(feedSection);

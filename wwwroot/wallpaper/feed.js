@@ -68,17 +68,16 @@
         const title = escapeHtml(item.title || "Событие");
         const subtitle = item.subtitle ? `<span class="feed__subtitle">${escapeHtml(item.subtitle)}</span>` : "";
         const when = escapeHtml(formatRelativeDate(item.timestamp));
-        const href = escapeHtml(item.htmlUrl || "#");
         const newClass = item.isNew ? " feed__item--new" : "";
 
         return `
           <li class="feed__item${newClass}" data-feed-id="${escapeHtml(item.id || "")}">
-            <a class="feed__link" href="${href}" target="_blank" rel="noopener noreferrer">
+            <div class="feed__row">
               <span class="feed__kind">${kind}</span>
               <span class="feed__title" title="${title}">${title}</span>
               ${subtitle}
               <span class="feed__time">${when}</span>
-            </a>
+            </div>
           </li>
         `;
       })

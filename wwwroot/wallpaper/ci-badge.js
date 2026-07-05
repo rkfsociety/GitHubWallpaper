@@ -61,13 +61,12 @@
 
   function renderBadge(run) {
     const status = resolveStatus(run);
-    const href = run?.htmlUrl ? escapeHtml(run.htmlUrl) : "#";
 
     return `
-      <a class="ci-badge ${status.className}" href="${href}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(status.title)}">
+      <span class="ci-badge ${status.className}" title="${escapeHtml(status.title)}">
         <span class="ci-badge__dot" aria-hidden="true"></span>
         <span class="ci-badge__label">${escapeHtml(status.label)}</span>
-      </a>
+      </span>
     `;
   }
 

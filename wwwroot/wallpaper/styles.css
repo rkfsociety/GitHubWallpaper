@@ -11,6 +11,8 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   color: #e6edf3;
   background: #0d1117;
@@ -45,6 +47,7 @@ body {
     calc(var(--safe-bottom) + 1.5rem)
     calc(var(--safe-left) + 2rem);
   overflow: hidden;
+  pointer-events: none;
   background:
     radial-gradient(ellipse 80% 60% at 50% 0%, rgba(56, 139, 253, 0.12), transparent 60%),
     radial-gradient(ellipse 60% 50% at 100% 100%, rgba(136, 87, 255, 0.08), transparent 50%),
@@ -227,19 +230,13 @@ body.is-paused .hero__hint-dot {
   background: rgba(22, 27, 34, 0.82);
   backdrop-filter: blur(8px);
   box-shadow: 0 12px 32px rgba(1, 4, 9, 0.35);
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   min-width: 0;
+  overflow: hidden;
 }
 
 .repo-card:hover {
-  border-color: rgba(88, 166, 255, 0.45);
-  box-shadow: 0 12px 32px rgba(1, 4, 9, 0.45);
-}
-
-.repo-card:focus-visible {
-  outline: 2px solid #58a6ff;
-  outline-offset: 2px;
+  border-color: rgba(48, 54, 61, 0.9);
+  box-shadow: 0 12px 32px rgba(1, 4, 9, 0.35);
 }
 
 .repo-card__header {
@@ -261,13 +258,8 @@ body.is-paused .hero__hint-dot {
   gap: 0.75rem;
 }
 
-.repo-card__title a {
+.repo-card__title-text {
   color: #58a6ff;
-  text-decoration: none;
-}
-
-.repo-card__title a:hover {
-  text-decoration: underline;
 }
 
 .repo-card__description {
@@ -326,13 +318,8 @@ body.is-paused .hero__hint-dot {
   color: #8b949e;
 }
 
-.repo-card__release a {
+.repo-card__release-name {
   color: #58a6ff;
-  text-decoration: none;
-}
-
-.repo-card__release a:hover {
-  text-decoration: underline;
 }
 
 .repo-card__columns {
@@ -354,18 +341,13 @@ body.is-paused .hero__hint-dot {
   list-style: none;
 }
 
-.repo-card__mini-list a {
+.repo-card__mini-item {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.45rem;
   align-items: baseline;
   font-size: 0.8rem;
   color: #c9d1d9;
-  text-decoration: none;
-}
-
-.repo-card__mini-list a:hover {
-  color: #58a6ff;
 }
 
 .repo-card__mini-number {
@@ -383,7 +365,6 @@ body.is-paused .hero__hint-dot {
   background: rgba(13, 17, 23, 0.65);
   font-size: 0.72rem;
   font-weight: 600;
-  text-decoration: none;
   color: #c9d1d9;
   white-space: nowrap;
 }
@@ -428,8 +409,7 @@ body.is-paused .hero__hint-dot {
 .heatmap__grid {
   display: flex;
   gap: 3px;
-  overflow-x: auto;
-  padding-bottom: 0.15rem;
+  overflow: hidden;
 }
 
 .heatmap__week {
@@ -464,7 +444,7 @@ body.is-paused .hero__hint-dot {
   gap: 0.4rem;
   list-style: none;
   max-height: var(--feed-max-height);
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .feed__item {
@@ -488,14 +468,13 @@ body.is-paused .hero__hint-dot {
   }
 }
 
-.feed__link {
+.feed__row {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 0.45rem 0.65rem;
   align-items: baseline;
   padding: 0.5rem 0.65rem;
   color: inherit;
-  text-decoration: none;
 }
 
 .feed__kind {
@@ -547,11 +526,6 @@ body.is-paused .hero__hint-dot {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.78rem;
   color: #58a6ff;
-  text-decoration: none;
-}
-
-.repo-card__commit-sha:hover {
-  text-decoration: underline;
 }
 
 .repo-card__commit-message {
@@ -734,7 +708,7 @@ body[data-layout="tight"] .feed__title {
     grid-template-columns: 1fr;
   }
 
-  .feed__link {
+  .feed__row {
     grid-template-columns: auto 1fr;
   }
 
