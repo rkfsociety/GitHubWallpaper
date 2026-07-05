@@ -236,7 +236,6 @@ internal sealed class RepoPoller : IDisposable
             return;
         }
 
-        var now = DateTimeOffset.UtcNow;
         var repositories = Repositories;
         ActivityPollIntervals intervals;
         CardDisplaySettings display;
@@ -247,65 +246,91 @@ internal sealed class RepoPoller : IDisposable
             display = _cardDisplay;
         }
 
+        if (includeNeverPolled)
+        {
+            await Task.WhenAll(repositories.Select(repository =>
+                    PollRepositoryAsync(repository, intervals, display, includeNeverPolled, cancellationToken)))
+                .ConfigureAwait(false);
+            return;
+        }
+
         foreach (var repository in repositories)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            await PollRepositoryAsync(repository, intervals, display, includeNeverPolled, cancellationToken)
+                .ConfigureAwait(false);
+        }
+    }
 
-            var state = GetState(repository);
+    private async Task PollRepositoryAsync(
+        RepoReference repository,
+        ActivityPollIntervals intervals,
+        CardDisplaySettings display,
+        bool includeNeverPolled,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
-            if (IsDue(state.LastMetadataPoll, intervals.Metadata, includeNeverPolled))
-            {
-                await PollMetadataAsync(repository, cancellationToken).ConfigureAwait(false);
-            }
+        var state = GetState(repository);
 
-            if (state.FatalError is null)
-            {
-                if (display.ShowCommits
-                    && IsDue(state.LastCommitsPoll, intervals.Commits, includeNeverPolled))
-                {
-                    await PollCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
-                }
+        if (IsDue(state.LastMetadataPoll, intervals.Metadata, includeNeverPolled))
+        {
+            await PollMetadataAsync(repository, cancellationToken).ConfigureAwait(false);
+        }
 
-                if ((display.ShowPullRequests || display.ShowStats)
-                    && IsDue(state.LastPullsPoll, intervals.PullRequests, includeNeverPolled))
-                {
-                    await PollPullsAsync(repository, cancellationToken).ConfigureAwait(false);
-                }
+        state = GetState(repository);
 
-                if (display.ShowIssues
-                    && IsDue(state.LastIssuesPoll, intervals.Issues, includeNeverPolled))
-                {
-                    await PollIssuesAsync(repository, cancellationToken).ConfigureAwait(false);
-                }
+        if (state.FatalError is not null)
+        {
+            return;
+        }
 
-                if (display.ShowRelease
-                    && IsDue(state.LastReleasesPoll, intervals.Releases, includeNeverPolled))
-                {
-                    await PollReleasesAsync(repository, cancellationToken).ConfigureAwait(false);
-                }
+        if (display.ShowCommits
+            && IsDue(state.LastCommitsPoll, intervals.Commits, includeNeverPolled))
+        {
+            await PollCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
+        }
 
-                if (display.ShowCi
-                    && IsDue(state.LastCiPoll, intervals.CiRuns, includeNeverPolled))
-                {
-                    await PollCiRunAsync(repository, cancellationToken).ConfigureAwait(false);
-                }
+        if ((display.ShowPullRequests || display.ShowStats)
+            && IsDue(state.LastPullsPoll, intervals.PullRequests, includeNeverPolled))
+        {
+            await PollPullsAsync(repository, cancellationToken).ConfigureAwait(false);
+        }
 
-                var heatmapInterval = state.HeatmapPending
-                    ? PendingHeatmapPollInterval
-                    : intervals.Heatmap;
+        if (display.ShowIssues
+            && IsDue(state.LastIssuesPoll, intervals.Issues, includeNeverPolled))
+        {
+            await PollIssuesAsync(repository, cancellationToken).ConfigureAwait(false);
+        }
 
-                if (display.ShowHeatmap
-                    && IsDue(state.LastHeatmapPoll, heatmapInterval, includeNeverPolled))
-                {
-                    await PollHeatmapAsync(repository, cancellationToken).ConfigureAwait(false);
-                }
+        if (display.ShowRelease
+            && IsDue(state.LastReleasesPoll, intervals.Releases, includeNeverPolled))
+        {
+            await PollReleasesAsync(repository, cancellationToken).ConfigureAwait(false);
+        }
 
-                if (display.ShowFeed
-                    && IsDue(state.LastEventsPoll, intervals.Events, includeNeverPolled))
-                {
-                    await PollEventsAsync(repository, cancellationToken).ConfigureAwait(false);
-                }
-            }
+        if (display.ShowCi
+            && IsDue(state.LastCiPoll, intervals.CiRuns, includeNeverPolled))
+        {
+            await PollCiRunAsync(repository, cancellationToken).ConfigureAwait(false);
+        }
+
+        state = GetState(repository);
+
+        var heatmapInterval = state.HeatmapPending
+            ? PendingHeatmapPollInterval
+            : intervals.Heatmap;
+
+        if (display.ShowHeatmap
+            && IsDue(state.LastHeatmapPoll, heatmapInterval, includeNeverPolled))
+        {
+            await PollHeatmapAsync(repository, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (display.ShowFeed
+            && IsDue(state.LastEventsPoll, intervals.Events, includeNeverPolled))
+        {
+            await PollEventsAsync(repository, cancellationToken).ConfigureAwait(false);
         }
     }
 

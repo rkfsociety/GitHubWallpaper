@@ -19,7 +19,12 @@ public sealed class WallpaperController : IDisposable
     private string? _displayDeviceName;
     private bool _displaySettingsHooked;
     private bool _viewportHooksAttached;
+    private bool _pageReady;
+    private readonly Queue<string> _pendingMessages = new();
+    private readonly object _pendingLock = new();
 
+    /// <summary>Страница обоев загружена и готова принимать сообщения bridge.</summary>
+    public event EventHandler? PageReady;
     /// <summary>Обои прикреплены к рабочему столу.</summary>
     public bool IsApplied => _surface?.IsAttached ?? false;
 
@@ -72,7 +77,16 @@ public sealed class WallpaperController : IDisposable
         void Send()
         {
             if (surface.WebView.CoreWebView2 is null)
+            {
+                EnqueuePending(json);
                 return;
+            }
+
+            if (!_pageReady)
+            {
+                EnqueuePending(json);
+                return;
+            }
 
             surface.WebView.CoreWebView2.PostWebMessageAsJson(json);
         }
@@ -107,6 +121,7 @@ public sealed class WallpaperController : IDisposable
         _surface.AttachToDesktop();
 
         var targetUri = wallpaperUri ?? DefaultWallpaperUri;
+        ResetPageReady();
         _surface.WebView.CoreWebView2.Navigate(targetUri.AbsoluteUri);
 
         _paused = false;
@@ -318,8 +333,70 @@ public sealed class WallpaperController : IDisposable
 
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
-        if (e.IsSuccess)
-            PostViewportUpdate(DisplayScreenHelper.Resolve(_displayDeviceName));
+        if (!e.IsSuccess)
+        {
+            return;
+        }
+
+        NotifyPageReady();
+        PostViewportUpdate(DisplayScreenHelper.Resolve(_displayDeviceName));
+    }
+
+    /// <summary>Вызывается после загрузки HTML или handshake <c>page:ready</c> из JS.</summary>
+    internal void NotifyPageReady()
+    {
+        var firstReady = !_pageReady;
+        _pageReady = true;
+
+        if (firstReady)
+        {
+            PageReady?.Invoke(this, EventArgs.Empty);
+        }
+
+        FlushPendingMessages();
+    }
+
+    private void ResetPageReady()
+    {
+        lock (_pendingLock)
+        {
+            _pendingMessages.Clear();
+        }
+
+        _pageReady = false;
+    }
+
+    private void EnqueuePending(string json)
+    {
+        lock (_pendingLock)
+        {
+            _pendingMessages.Enqueue(json);
+        }
+    }
+
+    private void FlushPendingMessages()
+    {
+        if (_surface?.WebView.CoreWebView2 is not { } core)
+        {
+            return;
+        }
+
+        string[] batch;
+        lock (_pendingLock)
+        {
+            if (_pendingMessages.Count == 0)
+            {
+                return;
+            }
+
+            batch = _pendingMessages.ToArray();
+            _pendingMessages.Clear();
+        }
+
+        foreach (var json in batch)
+        {
+            core.PostWebMessageAsJson(json);
+        }
     }
 
     private void PostViewportUpdate(Screen screen)

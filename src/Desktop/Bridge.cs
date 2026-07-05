@@ -63,11 +63,11 @@ internal sealed class Bridge : IDisposable
         _repoPoller.PollFailed += OnPollFailed;
         _repoPoller.RepositoriesChanged += OnRepositoriesChanged;
         _wallpaperController.Applied += OnWallpaperApplied;
+        _wallpaperController.PageReady += OnPageReady;
         _githubSession.TokenChanged += OnTokenChanged;
 
         _started = true;
         EnsureWebMessageHandler();
-        PushInitialState();
     }
 
     public void Dispose()
@@ -88,6 +88,7 @@ internal sealed class Bridge : IDisposable
             _repoPoller.PollFailed -= OnPollFailed;
             _repoPoller.RepositoriesChanged -= OnRepositoriesChanged;
             _wallpaperController.Applied -= OnWallpaperApplied;
+            _wallpaperController.PageReady -= OnPageReady;
             _githubSession.TokenChanged -= OnTokenChanged;
         }
 
@@ -98,8 +99,9 @@ internal sealed class Bridge : IDisposable
     private void OnWallpaperApplied(object? sender, EventArgs e)
     {
         EnsureWebMessageHandler();
-        PushInitialState();
     }
+
+    private void OnPageReady(object? sender, EventArgs e) => PushInitialState();
 
     private void OnRepositoriesChanged(object? sender, EventArgs e)
     {
@@ -329,15 +331,27 @@ internal sealed class Bridge : IDisposable
         });
     }
 
-    private static void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
         {
             using var document = JsonDocument.Parse(e.WebMessageAsJson);
             var root = document.RootElement;
 
-            if (!root.TryGetProperty("type", out var typeElement)
-                || typeElement.GetString() != "open-url")
+            if (!root.TryGetProperty("type", out var typeElement))
+            {
+                return;
+            }
+
+            var type = typeElement.GetString();
+            if (type == "page:ready")
+            {
+                _wallpaperController.NotifyPageReady();
+                PushInitialState();
+                return;
+            }
+
+            if (type != "open-url")
             {
                 return;
             }

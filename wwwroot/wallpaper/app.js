@@ -939,6 +939,8 @@
 
       handleBridgeMessage(data);
     });
+
+    window.chrome.webview.postMessage(JSON.stringify({ type: "page:ready" }));
   }
 
   refreshAllRepoCards();
