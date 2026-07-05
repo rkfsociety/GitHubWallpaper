@@ -54,21 +54,37 @@ internal sealed class GlassSection : Panel
     }
 }
 
+/// <summary>Базовая кнопка с полностью кастомной отрисовкой.</summary>
+internal abstract class ThemedButtonBase : Button
+{
+    protected ThemedButtonBase()
+    {
+        SetStyle(
+            ControlStyles.UserPaint |
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.ResizeRedraw,
+            true);
+        UpdateStyles();
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        UseVisualStyleBackColor = false;
+        Cursor = Cursors.Hand;
+        Height = 32;
+        SettingsTheme.EnableDoubleBuffer(this);
+    }
+}
+
 /// <summary>Кнопка с оранжевым свечением.</summary>
-internal sealed class GlowButton : Button
+internal sealed class GlowButton : ThemedButtonBase
 {
     private bool _hover;
 
     public GlowButton()
     {
-        FlatStyle = FlatStyle.Flat;
-        FlatAppearance.BorderSize = 0;
         BackColor = SettingsTheme.Accent;
         ForeColor = Color.White;
         Font = new Font("Segoe UI Semibold", 9.25F, FontStyle.Bold);
-        Cursor = Cursors.Hand;
-        Height = 32;
-        SettingsTheme.EnableDoubleBuffer(this);
         MouseEnter += (_, _) => { _hover = true; Invalidate(); };
         MouseLeave += (_, _) => { _hover = false; Invalidate(); };
     }
@@ -101,20 +117,15 @@ internal sealed class GlowButton : Button
 }
 
 /// <summary>Полупрозрачная вторичная кнопка.</summary>
-internal sealed class GhostButton : Button
+internal sealed class GhostButton : ThemedButtonBase
 {
     private bool _hover;
 
     public GhostButton()
     {
-        FlatStyle = FlatStyle.Flat;
-        FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         ForeColor = SettingsTheme.TextPrimary;
         Font = SettingsTheme.BodyFont;
-        Cursor = Cursors.Hand;
-        Height = 32;
-        SettingsTheme.EnableDoubleBuffer(this);
         MouseEnter += (_, _) => { _hover = true; Invalidate(); };
         MouseLeave += (_, _) => { _hover = false; Invalidate(); };
     }
