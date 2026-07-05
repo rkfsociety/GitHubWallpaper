@@ -438,38 +438,30 @@
     }
   }
 
-  function computeLayout(viewport, repoCount) {
-    if (!viewport || repoCount === 0) {
-      return {
-        density: "default",
-        columns: 1,
-        rows: gridSettings.rows,
-        commitLimit: 5,
-      };
-    }
-
-    const paddingPx = 48;
+  function computeLayout(viewport) {
     const configuredColumns = Math.max(1, gridSettings.columns);
     const configuredRows = Math.max(1, gridSettings.rows);
     const gridCapacity = configuredColumns * configuredRows;
+    const occupiedCount = Object.keys(state.repos).length;
 
     let density = "default";
-    if (repoCount > gridCapacity) {
-      density = "tight";
-    } else if (repoCount >= 6 || gridCapacity >= 6) {
-      density = repoCount >= 6 ? "tight" : "dense";
-    } else if (repoCount >= 4) {
-      density = "dense";
-    } else if (repoCount >= 2) {
-      density = "compact";
+    if (viewport) {
+      if (occupiedCount > gridCapacity) {
+        density = "tight";
+      } else if (occupiedCount >= 6 || gridCapacity >= 6) {
+        density = occupiedCount >= 6 ? "tight" : "dense";
+      } else if (occupiedCount >= 4) {
+        density = "dense";
+      } else if (occupiedCount >= 2) {
+        density = "compact";
+      }
     }
 
     const preset = layoutPresets[density];
-    const columns = Math.min(configuredColumns, repoCount);
 
     return {
       density,
-      columns,
+      columns: configuredColumns,
       rows: configuredRows,
       commitLimit: preset.commitLimit,
     };
@@ -612,6 +604,7 @@
     repoGrid.style.setProperty("--grid-columns", String(layout.columns));
     repoGrid.style.setProperty("--grid-rows", String(layout.rows));
     repoGrid.style.gridTemplateColumns = `repeat(${layout.columns}, minmax(0, 1fr))`;
+    repoGrid.style.gridTemplateRows = `repeat(${layout.rows}, minmax(0, auto))`;
 
     if (changed) {
       refreshAllRepoCards();
@@ -636,8 +629,7 @@
     root.style.setProperty("--viewport-width", `${width}px`);
     root.style.setProperty("--viewport-height", `${height}px`);
 
-    const repoCount = Object.keys(state.repos).length;
-    applyLayout(computeLayout(size, repoCount));
+    applyLayout(computeLayout(size));
   }
 
   function handleBridgeMessage(data) {
