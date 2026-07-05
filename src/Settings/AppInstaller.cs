@@ -69,31 +69,60 @@ internal static class AppInstaller
     }
 
     /// <summary>
-    /// Гарантирует наличие HTML/CSS/JS обоев рядом с exe.
-    /// Для portable single-file копирует из <c>wwwroot</c> в AppData при установке;
-    /// при обычном запуске — из <see cref="AppContext.BaseDirectory"/>.
+    /// Копирует HTML/CSS/JS обоев в AppData для portable single-file.
+    /// Источник — извлечённый bundle (<see cref="AppContext.BaseDirectory"/>) или папка рядом с exe.
     /// </summary>
     public static void EnsureWallpaperAssets()
     {
-        var indexPath = Path.Combine(AppPaths.WallpaperRoot, "index.html");
-        if (File.Exists(indexPath))
+        if (IsDevelopmentBuild())
         {
             return;
         }
 
-        var sourceWallpaper = Path.Combine(AppContext.BaseDirectory, "wwwroot", "wallpaper");
-        if (!Directory.Exists(sourceWallpaper))
+        var targetRoot = AppPaths.InstalledWallpaperRoot;
+        if (File.Exists(Path.Combine(targetRoot, "index.html")))
         {
             return;
         }
 
-        Directory.CreateDirectory(AppPaths.WallpaperRoot);
-
-        foreach (var file in Directory.GetFiles(sourceWallpaper))
+        var sourceRoot = FindBundledWallpaperRoot();
+        if (sourceRoot is null)
         {
-            var targetFile = Path.Combine(AppPaths.WallpaperRoot, Path.GetFileName(file));
-            CopyFileWithRetry(file, targetFile);
+            return;
         }
+
+        Directory.CreateDirectory(targetRoot);
+
+        foreach (var file in Directory.GetFiles(sourceRoot))
+        {
+            CopyFileWithRetry(file, Path.Combine(targetRoot, Path.GetFileName(file)));
+        }
+    }
+
+    private static string? FindBundledWallpaperRoot()
+    {
+        foreach (var candidate in EnumerateWallpaperSourceCandidates())
+        {
+            if (File.Exists(Path.Combine(candidate, "index.html")))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> EnumerateWallpaperSourceCandidates()
+    {
+        yield return Path.Combine(AppContext.BaseDirectory, "wwwroot", "wallpaper");
+
+        var exeDirectory = Path.GetDirectoryName(GetExecutablePath());
+        if (string.IsNullOrWhiteSpace(exeDirectory))
+        {
+            yield break;
+        }
+
+        yield return Path.Combine(exeDirectory, "wwwroot", "wallpaper");
     }
 
     /// <summary>Создаёт ярлыки в меню «Пуск» и на рабочем столе.</summary>
@@ -151,6 +180,15 @@ internal static class AppInstaller
         CopyFileWithRetry(sourceExe, AppPaths.InstalledExecutablePath);
 
         var sourceWwwroot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
+        if (!Directory.Exists(sourceWwwroot))
+        {
+            var bundledWallpaper = FindBundledWallpaperRoot();
+            if (bundledWallpaper is not null)
+            {
+                sourceWwwroot = Path.GetDirectoryName(bundledWallpaper)!;
+            }
+        }
+
         if (Directory.Exists(sourceWwwroot))
         {
             CopyDirectory(sourceWwwroot, Path.Combine(AppPaths.AppData, "wwwroot"));

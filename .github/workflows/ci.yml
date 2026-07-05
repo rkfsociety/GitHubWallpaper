@@ -94,6 +94,9 @@ jobs:
         run: |
           $exe = Get-Item publish/GitHubWallpaper.exe
           if ($exe.Length -lt 1MB) { throw "Published exe is unexpectedly small." }
+          if (Test-Path publish/wwwroot) {
+            throw "wwwroot must be embedded in single-file exe, not shipped as a loose folder."
+          }
           $expected = "${{ steps.version.outputs.version }}"
           $productVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe.FullName).ProductVersion
           Write-Host "GitHubWallpaper.exe size: $([math]::Round($exe.Length / 1MB, 2)) MB"

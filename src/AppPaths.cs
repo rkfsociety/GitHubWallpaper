@@ -6,8 +6,25 @@ internal static class AppPaths
 
     public const string IconFileName = "app.ico";
 
+    /// <summary>Постоянная папка HTML/CSS/JS обоев в AppData.</summary>
+    public static string InstalledWallpaperRoot =>
+        Path.Combine(AppData, "wwwroot", "wallpaper");
+
+    /// <summary>
+    /// Папка обоев для WebView2: в dev — из output, в portable — из AppData.
+    /// </summary>
     public static string WallpaperRoot =>
-        Path.Combine(AppContext.BaseDirectory, "wwwroot", "wallpaper");
+        IsDevelopmentBuild()
+            ? Path.Combine(AppContext.BaseDirectory, "wwwroot", "wallpaper")
+            : InstalledWallpaperRoot;
+
+    private static bool IsDevelopmentBuild()
+    {
+        var path = Environment.ProcessPath ?? Application.ExecutablePath ?? string.Empty;
+        return path.Contains(@"\bin\Debug\", StringComparison.OrdinalIgnoreCase)
+            || path.Contains(@"\bin\Release\", StringComparison.OrdinalIgnoreCase)
+            || path.Contains(@"\obj\", StringComparison.OrdinalIgnoreCase);
+    }
 
     public static string AppData =>
         Path.Combine(
