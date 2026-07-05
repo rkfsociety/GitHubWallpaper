@@ -17,6 +17,8 @@ internal sealed class GridLayoutEditor : UserControl
     private string?[] _slots = [];
     private int? _dragSourceIndex;
     private bool _suppressEvents;
+    private int _lastGridColumns = 3;
+    private int _lastGridRows = 2;
 
     public GridLayoutEditor()
     {
@@ -72,6 +74,8 @@ internal sealed class GridLayoutEditor : UserControl
         Controls.Add(_table);
 
         RebuildGrid();
+        _lastGridColumns = GridColumns;
+        _lastGridRows = GridRows;
     }
 
     public event EventHandler? LayoutChanged;
@@ -93,6 +97,8 @@ internal sealed class GridLayoutEditor : UserControl
         RebuildGrid();
         RefreshSlotPanels();
 
+        _lastGridColumns = GridColumns;
+        _lastGridRows = GridRows;
         _suppressEvents = false;
     }
 
@@ -175,11 +181,51 @@ internal sealed class GridLayoutEditor : UserControl
             return;
         }
 
-        var previous = _slots.Select(slot => slot ?? string.Empty).ToList();
+        var newColumns = (int)_columnsUpDown.Value;
+        var newRows = (int)_rowsUpDown.Value;
+        var newCapacity = newColumns * newRows;
+        var occupied = CollectOccupiedRepos(_slots);
+
+        if (occupied.Count > newCapacity)
+        {
+            _suppressEvents = true;
+            _columnsUpDown.Value = _lastGridColumns;
+            _rowsUpDown.Value = _lastGridRows;
+            _suppressEvents = false;
+
+            MessageBox.Show(
+                $"В сетке {occupied.Count} репозиториев — при размере {newColumns}×{newRows} помещается только {newCapacity}.\n\n" +
+                "Удалите лишние репозитории или выберите больший размер сетки.",
+                FindForm()?.Text ?? "GitHub Wallpaper",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            return;
+        }
+
+        _slots = CompactSlots(occupied, newCapacity);
         RebuildGrid();
-        _slots = NormalizeSlots(previous, SlotCapacity);
+        _lastGridColumns = newColumns;
+        _lastGridRows = newRows;
         RefreshSlotPanels();
         RaiseLayoutChanged();
+    }
+
+    private static List<string> CollectOccupiedRepos(string?[] slots) =>
+        slots
+            .Where(slot => !string.IsNullOrWhiteSpace(slot))
+            .Select(slot => slot!.Trim())
+            .ToList();
+
+    private static string?[] CompactSlots(IReadOnlyList<string> occupied, int capacity)
+    {
+        var compacted = new string?[capacity];
+
+        for (var index = 0; index < occupied.Count && index < capacity; index++)
+        {
+            compacted[index] = occupied[index];
+        }
+
+        return compacted;
     }
 
     private void RebuildGrid()
