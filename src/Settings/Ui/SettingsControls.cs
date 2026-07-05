@@ -434,3 +434,151 @@ internal sealed class GridHostPanel : Panel
         SettingsTheme.PaintInnerPanel(e.Graphics, bounds, SettingsTheme.ControlCornerRadius);
     }
 }
+
+/// <summary>Переключатель в стиле toggle (оранжевый — вкл.).</summary>
+internal sealed class ToggleSwitch : Control
+{
+    private bool _checked;
+    private bool _hover;
+
+    public ToggleSwitch()
+    {
+        Size = new Size(44, 24);
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        SetStyle(
+            ControlStyles.UserPaint |
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.ResizeRedraw |
+            ControlStyles.Selectable,
+            true);
+        UpdateStyles();
+        SettingsTheme.EnableDoubleBuffer(this);
+    }
+
+    public bool Checked
+    {
+        get => _checked;
+        set
+        {
+            if (_checked == value)
+            {
+                return;
+            }
+
+            _checked = value;
+            CheckedChanged?.Invoke(this, EventArgs.Empty);
+            Invalidate();
+        }
+    }
+
+    public event EventHandler? CheckedChanged;
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        base.OnMouseEnter(e);
+        _hover = true;
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _hover = false;
+        Invalidate();
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        base.OnClick(e);
+        Checked = !Checked;
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.KeyCode is Keys.Space or Keys.Enter)
+        {
+            Checked = !Checked;
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var bounds = ClientRectangle;
+        bounds.Width -= 1;
+        bounds.Height -= 1;
+
+        var trackColor = Checked
+            ? (_hover ? SettingsTheme.AccentHover : SettingsTheme.Accent)
+            : Color.FromArgb(52, 58, 72);
+        using var trackPath = SettingsTheme.CreateRoundedRectangle(bounds, bounds.Height / 2);
+        using var trackBrush = new SolidBrush(trackColor);
+        e.Graphics.FillPath(trackBrush, trackPath);
+
+        var thumbSize = bounds.Height - 6;
+        var thumbX = Checked
+            ? bounds.Right - thumbSize - 3
+            : bounds.Left + 3;
+        var thumbRect = new Rectangle(thumbX, bounds.Top + 3, thumbSize, thumbSize);
+        using var thumbBrush = new SolidBrush(Color.White);
+        e.Graphics.FillEllipse(thumbBrush, thumbRect);
+    }
+}
+
+/// <summary>Строка настройки: подпись слева, toggle справа.</summary>
+internal sealed class ToggleSettingRow : Panel
+{
+    private readonly Label _label;
+    private readonly ToggleSwitch _switch;
+
+    public ToggleSettingRow(string text)
+    {
+        BackColor = SettingsTheme.CardFill;
+        Height = SettingsTheme.ControlHeight;
+        SettingsTheme.EnableDoubleBuffer(this);
+
+        _label = new Label
+        {
+            AutoSize = false,
+            BackColor = SettingsTheme.CardFill,
+            Font = SettingsTheme.BodyFont,
+            ForeColor = SettingsTheme.TextPrimary,
+            Text = text,
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+
+        _switch = new ToggleSwitch();
+        Controls.Add(_label);
+        Controls.Add(_switch);
+    }
+
+    public bool Checked
+    {
+        get => _switch.Checked;
+        set => _switch.Checked = value;
+    }
+
+    public event EventHandler? CheckedChanged
+    {
+        add => _switch.CheckedChanged += value;
+        remove => _switch.CheckedChanged -= value;
+    }
+
+    protected override void OnLayout(LayoutEventArgs levent)
+    {
+        base.OnLayout(levent);
+
+        const int switchWidth = 44;
+        const int switchHeight = 24;
+        _switch.Size = new Size(switchWidth, switchHeight);
+        _switch.Location = new Point(
+            Math.Max(0, Width - switchWidth),
+            Math.Max(0, (Height - switchHeight) / 2));
+        _label.Location = new Point(0, 0);
+        _label.Size = new Size(Math.Max(0, Width - switchWidth - 10), Height);
+    }
+}

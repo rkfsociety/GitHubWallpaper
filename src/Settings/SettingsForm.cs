@@ -12,7 +12,10 @@ internal sealed class SettingsForm : Form
     private const int FormPadding = 24;
     private const int ContentWidth = 880;
     private const int ColumnGap = 16;
+    private const int SidebarWidth = 320;
     private static int SettingsColumnWidth => (ContentWidth - ColumnGap) / 2;
+    private static int WorkspaceMainWidth =>
+        SettingsCard.BodyWidth(ContentWidth) - SidebarWidth - ColumnGap;
 
     private readonly GitHubSession _githubSession;
     private readonly SettingsStore _settingsStore;
@@ -31,12 +34,15 @@ internal sealed class SettingsForm : Form
     private SettingsCard _authCard = null!;
     private SettingsCard _reposCard = null!;
     private SettingsCard _displayCard = null!;
-    private SettingsCard _behaviorCard = null!;
+    private SettingsCard _monitorCard = null!;
+    private SettingsCard _pollCard = null!;
+    private SettingsCard _startupCard = null!;
     private Panel _authSignInPanel = null!;
     private Panel _authSignedInPanel = null!;
     private Label _authUserLabel = null!;
     private Button _authLogoutButton = null!;
     private Label _repoHintLabel = null!;
+    private Panel _reposLeftPanel = null!;
     private GridLayoutEditor _gridLayoutEditor = null!;
     private TextBox _repoInputTextBox = null!;
     private Button _removeRepoButton = null!;
@@ -48,15 +54,15 @@ internal sealed class SettingsForm : Form
     private CheckBox _pauseBatteryCheckBox = null!;
     private CheckBox _autoCheckUpdatesCheckBox = null!;
     private ComboBox _monitorComboBox = null!;
-    private CheckBox _showDescriptionCheckBox = null!;
-    private CheckBox _showStatsCheckBox = null!;
-    private CheckBox _showCiCheckBox = null!;
-    private CheckBox _showReleaseCheckBox = null!;
-    private CheckBox _showHeatmapCheckBox = null!;
-    private CheckBox _showFeedCheckBox = null!;
-    private CheckBox _showPullRequestsCheckBox = null!;
-    private CheckBox _showIssuesCheckBox = null!;
-    private CheckBox _showCommitsCheckBox = null!;
+    private ToggleSettingRow _showDescriptionToggle = null!;
+    private ToggleSettingRow _showStatsToggle = null!;
+    private ToggleSettingRow _showCiToggle = null!;
+    private ToggleSettingRow _showReleaseToggle = null!;
+    private ToggleSettingRow _showHeatmapToggle = null!;
+    private ToggleSettingRow _showFeedToggle = null!;
+    private ToggleSettingRow _showPullRequestsToggle = null!;
+    private ToggleSettingRow _showIssuesToggle = null!;
+    private ToggleSettingRow _showCommitsToggle = null!;
     private bool _suppressBehaviorEvents;
     private bool _suppressGridEvents;
     private bool _suppressCardDisplayEvents;
@@ -144,8 +150,26 @@ internal sealed class SettingsForm : Form
     private void RefreshSettingsCardHeights()
     {
         RefreshReposCardHeight();
+        RefreshSidebarCardHeights();
+        RefreshStartupCardHeight();
+    }
+
+    private void RefreshSidebarCardHeights()
+    {
         RefreshDisplayCardHeight();
-        RefreshBehaviorCardHeight();
+        RefreshMonitorCardHeight();
+        RefreshPollCardHeight();
+    }
+
+    private void RefreshMonitorCardHeight()
+    {
+        if (_monitorCard.Body.Controls.Count == 0)
+        {
+            return;
+        }
+
+        var layout = _monitorCard.Body.Controls[0];
+        _monitorCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
     }
 
     private void FitClientToContent()
@@ -297,15 +321,26 @@ internal sealed class SettingsForm : Form
         _displayCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
     }
 
-    private void RefreshBehaviorCardHeight()
+    private void RefreshPollCardHeight()
     {
-        if (_behaviorCard.Body.Controls.Count == 0)
+        if (_pollCard.Body.Controls.Count == 0)
         {
             return;
         }
 
-        var layout = _behaviorCard.Body.Controls[0];
-        _behaviorCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+        var layout = _pollCard.Body.Controls[0];
+        _pollCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+    }
+
+    private void RefreshStartupCardHeight()
+    {
+        if (_startupCard.Body.Controls.Count == 0)
+        {
+            return;
+        }
+
+        var layout = _startupCard.Body.Controls[0];
+        _startupCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
     }
 
     private void AddPageRow(Control control)
@@ -318,27 +353,9 @@ internal sealed class SettingsForm : Form
 
     private void BuildMainColumns(TableLayoutPanel page)
     {
-        BuildReposCard(page);
-
-        var settingsRow = new TableLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
-            ColumnCount = 3,
-            Dock = DockStyle.Top,
-            Width = ContentWidth,
-        };
-        settingsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, SettingsColumnWidth));
-        settingsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ColumnGap));
-        settingsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, SettingsColumnWidth));
-        settingsRow.RowCount = 1;
-        settingsRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-        BuildDisplayCard(settingsRow);
-        BuildBehaviorCard(settingsRow);
-
-        AddPageRow(settingsRow);
+        BuildAuthCard(page);
+        BuildWorkspaceCard(page);
+        BuildStartupCard(page);
     }
 
     protected override void OnPaintBackground(PaintEventArgs e) =>
@@ -595,17 +612,18 @@ internal sealed class SettingsForm : Form
         {
             _authSignedInPanel.Dock = DockStyle.Top;
             _authSignedInPanel.Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
-            if (!_reposCard.Body.Controls.Contains(_authSignedInPanel))
+            _authSignedInPanel.Width = WorkspaceMainWidth;
+            if (!_reposLeftPanel.Controls.Contains(_authSignedInPanel))
             {
-                _reposCard.Body.Controls.Add(_authSignedInPanel);
-                _reposCard.Body.Controls.SetChildIndex(_authSignedInPanel, 0);
+                _reposLeftPanel.Controls.Add(_authSignedInPanel);
+                _reposLeftPanel.Controls.SetChildIndex(_authSignedInPanel, 0);
             }
         }
         else
         {
             _authSignInPanel.Dock = DockStyle.Top;
             _authCard.Body.Controls.Add(_authSignInPanel);
-            _reposCard.Body.Controls.Remove(_authSignedInPanel);
+            _reposLeftPanel.Controls.Remove(_authSignedInPanel);
         }
 
         UpdateAuthCardHeight();
@@ -659,11 +677,46 @@ internal sealed class SettingsForm : Form
         }
     }
 
-    private void BuildReposCard(TableLayoutPanel page)
+    private void BuildWorkspaceCard(TableLayoutPanel page)
     {
         _reposCard = new SettingsCard("Сетка обоев", ContentWidth);
         var body = _reposCard.Body;
         var innerWidth = SettingsCard.BodyWidth(ContentWidth);
+        var mainWidth = WorkspaceMainWidth;
+
+        var split = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            ColumnCount = 2,
+            Dock = DockStyle.Top,
+            Width = innerWidth,
+        };
+        split.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, mainWidth));
+        split.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, SidebarWidth));
+        split.RowCount = 1;
+        split.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        _reposLeftPanel = BuildReposLeftPanel(mainWidth);
+        split.Controls.Add(_reposLeftPanel, 0, 0);
+        split.Controls.Add(BuildSidebar(SidebarWidth), 1, 0);
+
+        body.Controls.Add(split);
+        _reposCard.ApplyBodyHeight(MeasureReposCardBodyHeight());
+        AddPageRow(_reposCard);
+    }
+
+    private Panel BuildReposLeftPanel(int innerWidth)
+    {
+        var panel = new Panel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            Dock = DockStyle.Top,
+            Width = innerWidth,
+        };
 
         var layout = new TableLayoutPanel
         {
@@ -747,15 +800,41 @@ internal sealed class SettingsForm : Form
         _removeRepoButton.Click += OnRemoveRepoClick;
         AddBodyRow(_removeRepoButton);
 
-        var displayTitle = CreateMutedLabel("Содержимое карточек");
-        displayTitle.AutoSize = true;
-        displayTitle.Margin = new Padding(0, 4, 0, 0);
-        AddBodyRow(displayTitle);
-        AddBodyRow(CreateCardDisplayPanel(innerWidth));
+        panel.Controls.Add(layout);
+        return panel;
+    }
 
-        body.Controls.Add(layout);
-        _reposCard.ApplyBodyHeight(MeasureReposCardBodyHeight());
-        AddPageRow(_reposCard);
+    private Control BuildSidebar(int sidebarWidth)
+    {
+        var sidebar = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            ColumnCount = 1,
+            Dock = DockStyle.Top,
+            Width = sidebarWidth,
+        };
+        sidebar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+
+        void AddSection(Control section)
+        {
+            var row = sidebar.RowCount;
+            sidebar.RowCount++;
+            sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            section.Dock = DockStyle.Top;
+            section.Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
+            sidebar.Controls.Add(section, 0, row);
+        }
+
+        BuildDisplayCard(sidebarWidth);
+        AddSection(_displayCard);
+        BuildMonitorCard(sidebarWidth);
+        AddSection(_monitorCard);
+        BuildPollCard(sidebarWidth);
+        AddSection(_pollCard);
+
+        return sidebar;
     }
 
     private Control CreateCardDisplayPanel(int innerWidth)
@@ -765,51 +844,51 @@ internal sealed class SettingsForm : Form
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = SettingsTheme.CardFill,
-            ColumnCount = 3,
+            ColumnCount = 1,
             Dock = DockStyle.Top,
             Width = innerWidth,
         };
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
-        void AddDisplayRow(int row, params CheckBox[] boxes)
+        void AddToggleRow(ToggleSettingRow toggle)
         {
-            layout.RowCount = row + 1;
+            var row = layout.RowCount;
+            layout.RowCount++;
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-            for (var column = 0; column < boxes.Length; column++)
-            {
-                boxes[column].Dock = DockStyle.Top;
-                boxes[column].Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
-                layout.Controls.Add(boxes[column], column, row);
-            }
+            toggle.Dock = DockStyle.Top;
+            toggle.Margin = new Padding(0, 0, 0, 4);
+            toggle.Width = innerWidth;
+            layout.Controls.Add(toggle, 0, row);
         }
 
-        _showDescriptionCheckBox = CreateDisplayCheckBox("Описание");
-        _showStatsCheckBox = CreateDisplayCheckBox("Статистика (★, форки, PR, issues)");
-        _showCiCheckBox = CreateDisplayCheckBox("CI статус");
-        AddDisplayRow(0, _showDescriptionCheckBox, _showStatsCheckBox, _showCiCheckBox);
+        _showDescriptionToggle = CreateDisplayToggle("Описание");
+        _showStatsToggle = CreateDisplayToggle("Статистика");
+        _showCiToggle = CreateDisplayToggle("CI статус");
+        _showReleaseToggle = CreateDisplayToggle("Последний релиз");
+        _showHeatmapToggle = CreateDisplayToggle("Активность (heatmap)");
+        _showFeedToggle = CreateDisplayToggle("Лента событий");
+        _showPullRequestsToggle = CreateDisplayToggle("Pull requests");
+        _showIssuesToggle = CreateDisplayToggle("Issues");
+        _showCommitsToggle = CreateDisplayToggle("Последние коммиты");
 
-        _showReleaseCheckBox = CreateDisplayCheckBox("Последний релиз");
-        _showHeatmapCheckBox = CreateDisplayCheckBox("Активность (heatmap)");
-        _showFeedCheckBox = CreateDisplayCheckBox("Лента событий");
-        AddDisplayRow(1, _showReleaseCheckBox, _showHeatmapCheckBox, _showFeedCheckBox);
-
-        _showPullRequestsCheckBox = CreateDisplayCheckBox("Pull requests");
-        _showIssuesCheckBox = CreateDisplayCheckBox("Issues");
-        _showCommitsCheckBox = CreateDisplayCheckBox("Последние коммиты");
-        AddDisplayRow(2, _showPullRequestsCheckBox, _showIssuesCheckBox, _showCommitsCheckBox);
+        AddToggleRow(_showDescriptionToggle);
+        AddToggleRow(_showStatsToggle);
+        AddToggleRow(_showCiToggle);
+        AddToggleRow(_showReleaseToggle);
+        AddToggleRow(_showHeatmapToggle);
+        AddToggleRow(_showFeedToggle);
+        AddToggleRow(_showPullRequestsToggle);
+        AddToggleRow(_showIssuesToggle);
+        AddToggleRow(_showCommitsToggle);
 
         return layout;
     }
 
-    private CheckBox CreateDisplayCheckBox(string text)
+    private ToggleSettingRow CreateDisplayToggle(string text)
     {
-        var checkBox = new CheckBox { AutoSize = true, Text = text };
-        SettingsTheme.ApplyToCheckBox(checkBox);
-        checkBox.CheckedChanged += OnCardDisplayChanged;
-        return checkBox;
+        var toggle = new ToggleSettingRow(text);
+        toggle.CheckedChanged += OnCardDisplayChanged;
+        return toggle;
     }
 
     private void LoadCardDisplaySettings()
@@ -818,15 +897,15 @@ internal sealed class SettingsForm : Form
 
         _suppressCardDisplayEvents = true;
 
-        _showDescriptionCheckBox.Checked = display.ShowDescription;
-        _showStatsCheckBox.Checked = display.ShowStats;
-        _showCiCheckBox.Checked = display.ShowCi;
-        _showReleaseCheckBox.Checked = display.ShowRelease;
-        _showHeatmapCheckBox.Checked = display.ShowHeatmap;
-        _showFeedCheckBox.Checked = display.ShowFeed;
-        _showPullRequestsCheckBox.Checked = display.ShowPullRequests;
-        _showIssuesCheckBox.Checked = display.ShowIssues;
-        _showCommitsCheckBox.Checked = display.ShowCommits;
+        _showDescriptionToggle.Checked = display.ShowDescription;
+        _showStatsToggle.Checked = display.ShowStats;
+        _showCiToggle.Checked = display.ShowCi;
+        _showReleaseToggle.Checked = display.ShowRelease;
+        _showHeatmapToggle.Checked = display.ShowHeatmap;
+        _showFeedToggle.Checked = display.ShowFeed;
+        _showPullRequestsToggle.Checked = display.ShowPullRequests;
+        _showIssuesToggle.Checked = display.ShowIssues;
+        _showCommitsToggle.Checked = display.ShowCommits;
 
         _suppressCardDisplayEvents = false;
     }
@@ -843,15 +922,15 @@ internal sealed class SettingsForm : Form
 
     private CardDisplaySettings ReadCardDisplaySettings() => new()
     {
-        ShowDescription = _showDescriptionCheckBox.Checked,
-        ShowStats = _showStatsCheckBox.Checked,
-        ShowCi = _showCiCheckBox.Checked,
-        ShowRelease = _showReleaseCheckBox.Checked,
-        ShowHeatmap = _showHeatmapCheckBox.Checked,
-        ShowFeed = _showFeedCheckBox.Checked,
-        ShowPullRequests = _showPullRequestsCheckBox.Checked,
-        ShowIssues = _showIssuesCheckBox.Checked,
-        ShowCommits = _showCommitsCheckBox.Checked,
+        ShowDescription = _showDescriptionToggle.Checked,
+        ShowStats = _showStatsToggle.Checked,
+        ShowCi = _showCiToggle.Checked,
+        ShowRelease = _showReleaseToggle.Checked,
+        ShowHeatmap = _showHeatmapToggle.Checked,
+        ShowFeed = _showFeedToggle.Checked,
+        ShowPullRequests = _showPullRequestsToggle.Checked,
+        ShowIssues = _showIssuesToggle.Checked,
+        ShowCommits = _showCommitsToggle.Checked,
     };
 
     private void SaveCardDisplaySettings()
@@ -882,11 +961,20 @@ internal sealed class SettingsForm : Form
         }
     }
 
-    private void BuildDisplayCard(TableLayoutPanel row)
+    private void BuildDisplayCard(int cardWidth)
     {
-        _displayCard = new SettingsCard("Экран", SettingsColumnWidth);
-        var body = _displayCard.Body;
-        var innerWidth = SettingsCard.BodyWidth(SettingsColumnWidth);
+        _displayCard = new SettingsCard("Содержимое карточек", cardWidth);
+        var innerWidth = SettingsCard.BodyWidth(cardWidth);
+        var panel = CreateCardDisplayPanel(innerWidth);
+        _displayCard.Body.Controls.Add(panel);
+        _displayCard.ApplyBodyHeight(SettingsCard.MeasureControl(panel));
+    }
+
+    private void BuildMonitorCard(int cardWidth)
+    {
+        _monitorCard = new SettingsCard("Экран", cardWidth);
+        var body = _monitorCard.Body;
+        var innerWidth = SettingsCard.BodyWidth(cardWidth);
 
         var layout = new TableLayoutPanel
         {
@@ -898,30 +986,23 @@ internal sealed class SettingsForm : Form
             Width = innerWidth,
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        layout.RowCount = 2;
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowCount = 1;
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, SettingsTheme.ControlHeight));
-
-        var monitorLabel = CreateMutedLabel("Монитор");
-        monitorLabel.AutoSize = true;
-        monitorLabel.Margin = new Padding(0, 0, 0, 6);
-        layout.Controls.Add(monitorLabel, 0, 0);
 
         _monitorComboBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         SettingsTheme.ApplyToComboBox(_monitorComboBox);
         _monitorComboBox.SelectedIndexChanged += OnBehaviorChanged;
-        layout.Controls.Add(new ComboField(_monitorComboBox) { Dock = DockStyle.Fill }, 0, 1);
+        layout.Controls.Add(new ComboField(_monitorComboBox) { Dock = DockStyle.Fill }, 0, 0);
 
         body.Controls.Add(layout);
-        _displayCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
-        row.Controls.Add(_displayCard, 0, 0);
+        _monitorCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
     }
 
-    private void BuildBehaviorCard(TableLayoutPanel row)
+    private void BuildPollCard(int cardWidth)
     {
-        _behaviorCard = new SettingsCard("Поведение", SettingsColumnWidth);
-        var body = _behaviorCard.Body;
-        var innerWidth = SettingsCard.BodyWidth(SettingsColumnWidth);
+        _pollCard = new SettingsCard("Интервал обновления", cardWidth);
+        var body = _pollCard.Body;
+        var innerWidth = SettingsCard.BodyWidth(cardWidth);
 
         var layout = new TableLayoutPanel
         {
@@ -940,13 +1021,9 @@ internal sealed class SettingsForm : Form
             layout.RowCount++;
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             control.Dock = DockStyle.Top;
-            control.Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap);
+            control.Margin = new Padding(0, 0, 0, 6);
             layout.Controls.Add(control, 0, row);
         }
-
-        var pollLabel = CreateMutedLabel("Интервал опроса GitHub API");
-        pollLabel.AutoSize = true;
-        AddBodyRow(pollLabel);
 
         _economyRadio = new RadioButton { Text = "Экономный — каждые 20 минут" };
         SettingsTheme.ApplyToRadio(_economyRadio);
@@ -963,29 +1040,54 @@ internal sealed class SettingsForm : Form
         _frequentRadio.CheckedChanged += OnBehaviorChanged;
         AddBodyRow(_frequentRadio);
 
-        _autoStartCheckBox = new CheckBox { Text = "Запускать при старте Windows" };
+        body.Controls.Add(layout);
+        _pollCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+    }
+
+    private void BuildStartupCard(TableLayoutPanel page)
+    {
+        _startupCard = new SettingsCard("Запуск и поведение", ContentWidth);
+        var body = _startupCard.Body;
+        var innerWidth = SettingsCard.BodyWidth(ContentWidth);
+
+        var flow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = SettingsTheme.CardFill,
+            Dock = DockStyle.Top,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            Width = innerWidth,
+        };
+
+        _autoStartCheckBox = new CheckBox { Text = "Запускать при старте Windows", AutoSize = true };
         SettingsTheme.ApplyToCheckBox(_autoStartCheckBox);
         _autoStartCheckBox.CheckedChanged += OnBehaviorChanged;
-        AddBodyRow(_autoStartCheckBox);
+        _autoStartCheckBox.Margin = new Padding(0, 0, 24, 8);
+        flow.Controls.Add(_autoStartCheckBox);
 
-        _pauseFullscreenCheckBox = new CheckBox { Text = "Пауза при полноэкранных приложениях" };
+        _pauseFullscreenCheckBox = new CheckBox { Text = "Пауза при полноэкранных приложениях", AutoSize = true };
         SettingsTheme.ApplyToCheckBox(_pauseFullscreenCheckBox);
         _pauseFullscreenCheckBox.CheckedChanged += OnBehaviorChanged;
-        AddBodyRow(_pauseFullscreenCheckBox);
+        _pauseFullscreenCheckBox.Margin = new Padding(0, 0, 24, 8);
+        flow.Controls.Add(_pauseFullscreenCheckBox);
 
-        _pauseBatteryCheckBox = new CheckBox { Text = "Пауза при работе от батареи" };
+        _pauseBatteryCheckBox = new CheckBox { Text = "Пауза при работе от батареи", AutoSize = true };
         SettingsTheme.ApplyToCheckBox(_pauseBatteryCheckBox);
         _pauseBatteryCheckBox.CheckedChanged += OnBehaviorChanged;
-        AddBodyRow(_pauseBatteryCheckBox);
+        _pauseBatteryCheckBox.Margin = new Padding(0, 0, 24, 8);
+        flow.Controls.Add(_pauseBatteryCheckBox);
 
-        _autoCheckUpdatesCheckBox = new CheckBox { Text = "Автопроверка обновлений (раз в сутки)" };
+        _autoCheckUpdatesCheckBox = new CheckBox { Text = "Автопроверка обновлений (раз в сутки)", AutoSize = true };
         SettingsTheme.ApplyToCheckBox(_autoCheckUpdatesCheckBox);
         _autoCheckUpdatesCheckBox.CheckedChanged += OnBehaviorChanged;
-        AddBodyRow(_autoCheckUpdatesCheckBox);
+        _autoCheckUpdatesCheckBox.Margin = new Padding(0, 0, 24, 8);
+        flow.Controls.Add(_autoCheckUpdatesCheckBox);
 
-        body.Controls.Add(layout);
-        _behaviorCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
-        row.Controls.Add(_behaviorCard, 2, 0);
+        body.Controls.Add(flow);
+        _startupCard.ApplyBodyHeight(SettingsCard.MeasureControl(flow));
+        AddPageRow(_startupCard);
     }
 
     private static Label CreateFieldLabel(string text)
