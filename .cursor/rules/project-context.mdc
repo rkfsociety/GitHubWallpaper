@@ -21,9 +21,9 @@ C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в
 | 2 GitHub + один репо | ✅ |
 | 3 Мульти-репо и настройки | ✅ |
 | 4 Полная активность | ✅ |
-| 5 Полировка и релиз | 🔄 |
+| 5 Полировка и релиз | ✅ |
 
-**Сейчас:** v1.0.0 — обработка ошибок API, проверка WebView2, CI/CD, README. Осталось опубликовать тег в Releases.
+**Сейчас:** push в `main` → CI автотег `v1.0.<build>` + GitHub Release с portable exe.
 
 ## Архитектура
 
