@@ -30,7 +30,8 @@ body {
   --heatmap-2: #006d32;
   --heatmap-3: #26a641;
   --heatmap-4: #39d353;
-  --content-bottom-gap: 2.75rem;
+  --content-bottom-gap: 3.5rem;
+  --card-padding-bottom: 2rem;
   --content-side-gap: 2rem;
   --content-top-gap: 1.5rem;
 }
@@ -414,7 +415,7 @@ body.is-paused .wallpaper__glow {
   flex: 1 1 auto;
   flex-direction: column;
   gap: var(--card-gap);
-  padding: 1.1rem 1.25rem 1.45rem;
+  padding: 1.1rem 1.25rem var(--card-padding-bottom);
   border: 1px solid rgba(48, 54, 61, 0.9);
   border-radius: 0.85rem;
   background: rgba(22, 27, 34, 0.82);
@@ -793,8 +794,12 @@ body[data-layout="compact"] .wallpaper__content {
   gap: 1.1rem;
 }
 
+body[data-layout="compact"] {
+  --card-padding-bottom: 1.65rem;
+}
+
 body[data-layout="compact"] .repo-card {
-  padding: 0.95rem 1.05rem 1.2rem;
+  padding: 0.95rem 1.05rem var(--card-padding-bottom);
 }
 
 body[data-layout="dense"] {
@@ -806,7 +811,8 @@ body[data-layout="dense"] {
 
 body[data-layout="dense"] {
   --content-top-gap: 1rem;
-  --content-bottom-gap: 2rem;
+  --content-bottom-gap: 2.75rem;
+  --card-padding-bottom: 1.45rem;
 }
 
 body[data-layout="dense"] .wallpaper__content {
@@ -828,7 +834,7 @@ body[data-layout="dense"] .hero__title {
 }
 
 body[data-layout="dense"] .repo-card {
-  padding: 0.8rem 0.95rem 1.05rem;
+  padding: 0.8rem 0.95rem var(--card-padding-bottom);
   gap: 0.65rem;
 }
 
@@ -859,8 +865,9 @@ body[data-layout="tight"] {
 
 body[data-layout="tight"] {
   --content-top-gap: 0.75rem;
-  --content-bottom-gap: 1.75rem;
+  --content-bottom-gap: 2.25rem;
   --content-side-gap: 1rem;
+  --card-padding-bottom: 1.25rem;
 }
 
 body[data-layout="tight"] .wallpaper__content {
@@ -882,7 +889,7 @@ body[data-layout="tight"] .hero__title {
 }
 
 body[data-layout="tight"] .repo-card {
-  padding: 0.65rem 0.8rem 0.9rem;
+  padding: 0.65rem 0.8rem var(--card-padding-bottom);
 }
 
 body[data-layout="tight"] .repo-card__description,
@@ -914,7 +921,8 @@ body[data-layout="tight"] .feed__title {
 @media (max-width: 40rem) {
   :root {
     --content-top-gap: 1.25rem;
-    --content-bottom-gap: 2rem;
+    --content-bottom-gap: 2.75rem;
+    --card-padding-bottom: 1.75rem;
     --content-side-gap: 1.25rem;
   }
 
