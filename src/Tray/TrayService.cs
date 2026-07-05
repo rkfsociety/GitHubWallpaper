@@ -384,7 +384,8 @@ internal sealed class TrayService : IDisposable
         {
             progressForm.Close();
             MessageBox.Show(
-                $"Не удалось установить обновление:\n{ex.Message}",
+                $"Не удалось установить обновление:\n{AppUpdateInstaller.FormatDownloadError(ex)}\n\n" +
+                $"Можно скачать вручную:\n{update.ReleasePageUrl}",
                 "GitHub Wallpaper",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
