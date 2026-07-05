@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using GitHubWallpaper.Desktop;
 
 namespace GitHubWallpaper.GitHub;
@@ -192,13 +193,18 @@ internal sealed class GitHubOAuthDeviceAuth : IDisposable
 /// <summary>Ответ GitHub на запрос device code.</summary>
 internal sealed record GitHubDeviceAuthorization
 {
+    [JsonPropertyName("device_code")]
     public string DeviceCode { get; init; } = string.Empty;
 
+    [JsonPropertyName("user_code")]
     public string UserCode { get; init; } = string.Empty;
 
+    [JsonPropertyName("verification_uri")]
     public string VerificationUri { get; init; } = string.Empty;
 
+    [JsonPropertyName("expires_in")]
     public int ExpiresIn { get; init; }
 
+    [JsonPropertyName("interval")]
     public int Interval { get; init; }
 }

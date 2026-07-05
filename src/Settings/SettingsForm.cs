@@ -851,7 +851,8 @@ internal sealed class SettingsForm : Form
         {
             _tokenStatusLabel.Text = previousStatus;
             MessageBox.Show(
-                "Время ожидания авторизации истекло.",
+                "Время ожидания авторизации истекло.\n\n" +
+                "Закройте вкладку GitHub в браузере и повторите вход.",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);

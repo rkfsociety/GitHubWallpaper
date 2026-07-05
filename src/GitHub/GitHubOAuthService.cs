@@ -84,7 +84,6 @@ internal sealed class GitHubOAuthService : IDisposable
 
     private static bool ShouldFallbackToDeviceFlow(GitHubOAuthException exception) =>
         exception.Message.Contains("локальный порт", StringComparison.OrdinalIgnoreCase)
-        || exception.Message.Contains("callback", StringComparison.OrdinalIgnoreCase)
         || exception.Message.Contains("client_id and/or client_secret", StringComparison.OrdinalIgnoreCase)
         || exception.Message.Contains("incorrect_client_credentials", StringComparison.OrdinalIgnoreCase);
 }
