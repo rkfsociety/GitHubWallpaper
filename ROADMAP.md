@@ -17,7 +17,7 @@
 | 5 | [Полировка и релиз](#этап-5--полировка-и-релиз) | ✅ Готов | Стабильный exe, CI/CD, документация |
 | — | [Фаза 2 (будущее)](#фаза-2--будущее) | 💡 Идеи | Расширения после v1.0 |
 
-**Текущее состояние:** v1.0 — при push в `main` CI пересоздаёт единственный Release `latest` с актуальным exe.
+**Текущее состояние:** v1.0 — [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) на GitHub; при push в `main` CI собирает portable exe и пересоздаёт релиз (`gh release create --target`).
 
 ---
 
@@ -142,14 +142,17 @@
 
 - [x] Обработка ошибок: 404, private repo, сетевые сбои
 - [x] Проверка WebView2 runtime при старте + ссылка на bootstrapper
-- [x] GitHub Actions `ci.yml` — сборка на push/PR
-- [x] GitHub Actions `release.yml` — single-file exe по тегу `v*`
+- [x] GitHub Actions `ci.yml` — сборка на PR, Release `latest` на push в `main`
+- [x] OAuth-вход через github.com (Authorization Code + PKCE, Device Flow)
+- [x] Автообновление portable exe из Release `latest`
+- [x] Первый запуск: копирование в AppData, ярлыки на рабочем столе и в «Пуск»
+- [x] Выбор монитора и корректное позиционирование на нескольких экранах
 - [x] README: установка, создание PAT, скриншоты, FAQ
 - [x] Тест на Windows 11 24H2 (сборка и publish на build 10.0.26300)
 
 ### Критерии готовности
 
-- [x] Релизы публикуются автоматически при push в `main` (один Release `latest`, пересоздаётся при каждой сборке)
+- [x] Релизы публикуются автоматически при push в `main` (один Release `latest`, пересоздаётся через `--target`)
 - [x] Portable exe работает без установки .NET
 - [ ] Все 5 сценариев из раздела «Проверка» пройдены (ручная проверка)
 
@@ -160,13 +163,15 @@
 Идеи после v1.0, не входят в текущий scope:
 
 - [x] Выбор одного монитора для отображения обоев (настройки → «Экран»)
+- [x] Корректное позиционирование обоев на втором и последующих мониторах
+- [x] OAuth-вход через github.com (Authorization Code + PKCE и Device Flow)
+- [x] Автообновление portable exe из GitHub Release `latest`
+- [x] Первый запуск: копирование в AppData и ярлыки
 - GraphQL batch-запросы для 10+ репозиториев
 - Per-monitor: разные наборы репо на каждом мониторе
 - Кастомные темы / пользовательский CSS
 - Webhook / real-time обновления
 - Звуковые уведомления о важных событиях
-- [x] OAuth-вход через github.com (Authorization Code + PKCE и Device Flow)
-- [x] Автообновление portable exe из GitHub Release `latest`
 
 ---
 
@@ -206,3 +211,4 @@ RepoPoller ──► GitHubApiClient ──► ActivityAggregator ─┘
 3. Push в свой тестовый репо → событие в ленте
 4. Pause из трея → обои замирают, polling снижается
 5. Без токена → предупреждение + ограниченный режим
+6. Второй монитор → обои на выбранном экране, не смещаются на основной
