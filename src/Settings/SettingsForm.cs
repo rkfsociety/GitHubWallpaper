@@ -11,9 +11,8 @@ internal sealed class SettingsForm : Form
 {
     private const int FormPadding = 24;
     private const int ContentWidth = 880;
-    private const int LeftColumnWidth = 520;
-    private const int ColumnGap = 14;
-    private static int RightColumnWidth => ContentWidth - LeftColumnWidth - ColumnGap;
+    private const int ColumnGap = 16;
+    private static int SettingsColumnWidth => (ContentWidth - ColumnGap) / 2;
 
     private readonly GitHubSession _githubSession;
     private readonly SettingsStore _settingsStore;
@@ -29,6 +28,9 @@ internal sealed class SettingsForm : Form
     private TextBox _oauthClientSecretTextBox = null!;
     private TableLayoutPanel _pageLayout = null!;
     private SettingsCard _authCard = null!;
+    private SettingsCard _reposCard = null!;
+    private SettingsCard _displayCard = null!;
+    private SettingsCard _behaviorCard = null!;
     private Panel _authSignInPanel = null!;
     private Panel _authSignedInPanel = null!;
     private Label _authUserLabel = null!;
@@ -114,6 +116,26 @@ internal sealed class SettingsForm : Form
         UpdateTokenStatus();
         UpdateAuthView();
         RefreshAuthUserAsync();
+
+        Load += (_, _) => RefreshAllCardHeights();
+        Shown += (_, _) => RefreshAllCardHeights();
+    }
+
+    private void RefreshAllCardHeights()
+    {
+        UpdateAuthView();
+        RefreshReposCardHeight();
+    }
+
+    private void RefreshReposCardHeight()
+    {
+        if (_reposCard.Body.Controls.Count == 0)
+        {
+            return;
+        }
+
+        var layout = _reposCard.Body.Controls[0];
+        _reposCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
     }
 
     private void AddPageRow(Control control)
@@ -126,36 +148,27 @@ internal sealed class SettingsForm : Form
 
     private void BuildMainColumns(TableLayoutPanel page)
     {
-        var columns = new TableLayoutPanel
+        BuildReposCard(page);
+
+        var settingsRow = new TableLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = SettingsTheme.BackgroundTop,
-            ColumnCount = 2,
+            ColumnCount = 3,
             Dock = DockStyle.Top,
             Width = ContentWidth,
         };
-        columns.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LeftColumnWidth));
-        columns.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, RightColumnWidth));
+        settingsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, SettingsColumnWidth));
+        settingsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ColumnGap));
+        settingsRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, SettingsColumnWidth));
+        settingsRow.RowCount = 1;
+        settingsRow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        var rightStack = new TableLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.BackgroundTop,
-            ColumnCount = 1,
-            Dock = DockStyle.Top,
-            Margin = new Padding(ColumnGap, 0, 0, 0),
-            Width = RightColumnWidth,
-        };
-        rightStack.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        BuildDisplayCard(settingsRow);
+        BuildBehaviorCard(settingsRow);
 
-        BuildReposCard(columns);
-        BuildDisplayCard(rightStack);
-        BuildBehaviorCard(rightStack);
-
-        columns.Controls.Add(rightStack, 1, 0);
-        AddPageRow(columns);
+        AddPageRow(settingsRow);
     }
 
     protected override void OnPaintBackground(PaintEventArgs e) =>
@@ -173,6 +186,12 @@ internal sealed class SettingsForm : Form
         body.Controls.Add(_authSignInPanel);
         body.Controls.Add(_authSignedInPanel);
         AddPageRow(_authCard);
+    }
+
+    private void UpdateAuthCardHeight()
+    {
+        var active = _authSignedInPanel.Visible ? _authSignedInPanel : _authSignInPanel;
+        _authCard.ApplyBodyHeight(SettingsCard.MeasureControl(active));
     }
 
     private Panel CreateAuthSignedInPanel(int innerWidth)
@@ -398,7 +417,7 @@ internal sealed class SettingsForm : Form
         _authSignedInPanel.Visible = signedIn;
         _repoHintLabel.Visible = !signedIn;
         _authCard.SetTitleVisible(!signedIn);
-        _authCard.PerformLayout();
+        UpdateAuthCardHeight();
     }
 
     private void SetAuthUserLogin(string? login)
@@ -448,11 +467,11 @@ internal sealed class SettingsForm : Form
         }
     }
 
-    private void BuildReposCard(TableLayoutPanel columns)
+    private void BuildReposCard(TableLayoutPanel page)
     {
-        var card = new SettingsCard("Сетка обоев", LeftColumnWidth);
-        var body = card.Body;
-        var innerWidth = SettingsCard.BodyWidth(LeftColumnWidth);
+        _reposCard = new SettingsCard("Сетка обоев", ContentWidth);
+        var body = _reposCard.Body;
+        var innerWidth = SettingsCard.BodyWidth(ContentWidth);
 
         var layout = new TableLayoutPanel
         {
@@ -537,24 +556,15 @@ internal sealed class SettingsForm : Form
         AddBodyRow(_removeRepoButton);
 
         body.Controls.Add(layout);
-        columns.Controls.Add(card, 0, 0);
+        _reposCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+        AddPageRow(_reposCard);
     }
 
-    private static void AddStackRow(TableLayoutPanel stack, Control control)
+    private void BuildDisplayCard(TableLayoutPanel row)
     {
-        var row = stack.RowCount;
-        stack.RowCount++;
-        stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        control.Dock = DockStyle.Top;
-        control.Margin = new Padding(0, 0, 0, SettingsTheme.SectionGap);
-        stack.Controls.Add(control, 0, row);
-    }
-
-    private void BuildDisplayCard(TableLayoutPanel stack)
-    {
-        var card = new SettingsCard("Экран", RightColumnWidth);
-        var body = card.Body;
-        var innerWidth = SettingsCard.BodyWidth(RightColumnWidth);
+        _displayCard = new SettingsCard("Экран", SettingsColumnWidth);
+        var body = _displayCard.Body;
+        var innerWidth = SettingsCard.BodyWidth(SettingsColumnWidth);
 
         var layout = new TableLayoutPanel
         {
@@ -581,14 +591,15 @@ internal sealed class SettingsForm : Form
         layout.Controls.Add(new ComboField(_monitorComboBox) { Dock = DockStyle.Fill }, 0, 1);
 
         body.Controls.Add(layout);
-        AddStackRow(stack, card);
+        _displayCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+        row.Controls.Add(_displayCard, 0, 0);
     }
 
-    private void BuildBehaviorCard(TableLayoutPanel stack)
+    private void BuildBehaviorCard(TableLayoutPanel row)
     {
-        var card = new SettingsCard("Поведение", RightColumnWidth);
-        var body = card.Body;
-        var innerWidth = SettingsCard.BodyWidth(RightColumnWidth);
+        _behaviorCard = new SettingsCard("Поведение", SettingsColumnWidth);
+        var body = _behaviorCard.Body;
+        var innerWidth = SettingsCard.BodyWidth(SettingsColumnWidth);
 
         var layout = new TableLayoutPanel
         {
@@ -651,7 +662,8 @@ internal sealed class SettingsForm : Form
         AddBodyRow(_autoCheckUpdatesCheckBox);
 
         body.Controls.Add(layout);
-        AddStackRow(stack, card);
+        _behaviorCard.ApplyBodyHeight(SettingsCard.MeasureControl(layout));
+        row.Controls.Add(_behaviorCard, 2, 0);
     }
 
     private static Label CreateFieldLabel(string text)
@@ -693,6 +705,7 @@ internal sealed class SettingsForm : Form
         }
 
         ApplyGridLayout();
+        RefreshReposCardHeight();
     }
 
     private void LoadOAuthClientId()

@@ -14,64 +14,47 @@ internal sealed class ThemedScrollPanel : Panel
         SettingsTheme.PaintFormBackground(e.Graphics, ClientRectangle);
 }
 
-/// <summary>Карточка секции: заголовок + тело с автоматической высотой.</summary>
+/// <summary>Карточка секции с явным расчётом высоты (без AutoSize на Panel).</summary>
 internal sealed class SettingsCard : Panel
 {
     private readonly Label? _titleLabel;
+    private int _bodyTop;
 
     public SettingsCard(string? title, int width)
     {
         Width = width;
+        Dock = DockStyle.Top;
         Margin = new Padding(0, 0, 0, SettingsTheme.SectionGap);
-        Padding = new Padding(SettingsTheme.SectionPadding);
+        Padding = Padding.Empty;
         BackColor = SettingsTheme.CardFill;
-        AutoSize = true;
-        AutoSizeMode = AutoSizeMode.GrowAndShrink;
         SettingsTheme.EnableDoubleBuffer(this);
 
-        var innerWidth = width - SettingsTheme.SectionPadding * 2;
-
-        var stack = new TableLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = SettingsTheme.CardFill,
-            ColumnCount = 1,
-            Dock = DockStyle.Top,
-            Width = innerWidth,
-        };
-        stack.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-
-        var row = 0;
+        var y = SettingsTheme.SectionPadding;
         if (!string.IsNullOrEmpty(title))
         {
-            stack.RowCount++;
-            stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _titleLabel = new Label
             {
                 AutoSize = true,
                 BackColor = SettingsTheme.CardFill,
                 Font = SettingsTheme.SectionFont,
                 ForeColor = SettingsTheme.TextPrimary,
-                Margin = new Padding(0, 0, 0, SettingsTheme.ContentGap),
+                Location = new Point(SettingsTheme.SectionPadding, y),
                 Text = title,
             };
-            stack.Controls.Add(_titleLabel, 0, row++);
+            Controls.Add(_titleLabel);
+            y += SettingsTheme.TitleHeight + SettingsTheme.ContentGap;
         }
 
-        stack.RowCount++;
-        stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _bodyTop = y;
+        var innerWidth = BodyWidth(width);
         Body = new Panel
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = SettingsTheme.CardFill,
-            Dock = DockStyle.Top,
+            Location = new Point(SettingsTheme.SectionPadding, _bodyTop),
             Width = innerWidth,
         };
         SettingsTheme.EnableDoubleBuffer(Body);
-        stack.Controls.Add(Body, 0, row);
-        Controls.Add(stack);
+        Controls.Add(Body);
     }
 
     public Panel Body { get; }
@@ -81,10 +64,31 @@ internal sealed class SettingsCard : Panel
 
     public void SetTitleVisible(bool visible)
     {
-        if (_titleLabel is not null)
+        if (_titleLabel is null)
         {
-            _titleLabel.Visible = visible;
+            return;
         }
+
+        _titleLabel.Visible = visible;
+        _bodyTop = visible
+            ? SettingsTheme.SectionPadding + SettingsTheme.TitleHeight + SettingsTheme.ContentGap
+            : SettingsTheme.SectionPadding;
+        Body.Location = new Point(SettingsTheme.SectionPadding, _bodyTop);
+        ApplyBodyHeight(Body.Height);
+    }
+
+    public void ApplyBodyHeight(int bodyHeight)
+    {
+        Body.Height = Math.Max(1, bodyHeight);
+        Height = _bodyTop + Body.Height + SettingsTheme.SectionPadding;
+    }
+
+    public static int MeasureControl(Control control)
+    {
+        control.PerformLayout();
+        var width = control.Width > 0 ? control.Width : control.PreferredSize.Width;
+        var preferred = control.GetPreferredSize(new Size(width, 0));
+        return Math.Max(preferred.Height, control.PreferredSize.Height);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -290,7 +294,6 @@ internal sealed class ComboField : Panel
     }
 }
 
-/// <summary>Обёртка редактора сетки.</summary>
 internal sealed class GridHostPanel : Panel
 {
     public GridHostPanel()
