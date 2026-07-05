@@ -13,6 +13,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly TrayService _trayService;
     private readonly Bridge _bridge;
     private readonly AutoPauseMonitor _autoPauseMonitor;
+    private readonly SettingsStore _settingsStore;
     private readonly HashSet<string> _notifiedRepoErrors = new(StringComparer.OrdinalIgnoreCase);
 
     public TrayApplicationContext(
@@ -28,6 +29,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _repoPoller = repoPoller;
         _trayService = trayService;
         _autoPauseMonitor = autoPauseMonitor;
+        _settingsStore = settingsStore;
         _bridge = new Bridge(wallpaperController, githubSession, repoPoller);
         _trayService.ExitRequested += OnExitRequested;
         _wallpaperController.Paused += OnWallpaperPaused;
@@ -39,8 +41,42 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _repoPoller.ConfigurePollIntervals(settings.PollIntervalPreset);
         SyncAutostart(settings.AutoStart);
         _autoPauseMonitor.Configure(settings);
-        _repoPoller.Start(settingsStore.LoadRepositories());
-        _bridge.Start();
+
+        // WebView2 требует STA и работающий message pump — инициализация после Application.Run.
+        Application.Idle += OnStartupIdle;
+    }
+
+    private async void OnStartupIdle(object? sender, EventArgs e)
+    {
+        Application.Idle -= OnStartupIdle;
+
+        try
+        {
+            await _wallpaperController.ApplyAsync().ConfigureAwait(true);
+            _bridge.Start();
+            _repoPoller.Start(_settingsStore.LoadRepositories());
+        }
+        catch (Exception ex)
+        {
+            _trayService.ExitRequested -= OnExitRequested;
+            _wallpaperController.Paused -= OnWallpaperPaused;
+            _wallpaperController.Resumed -= OnWallpaperResumed;
+            _repoPoller.PollFailed -= OnPollFailed;
+            _repoPoller.RepositoriesChanged -= OnRepositoriesChanged;
+            _trayService.Dispose();
+            _autoPauseMonitor.Dispose();
+            _bridge.Dispose();
+            _repoPoller.Dispose();
+            _wallpaperController.Dispose();
+            _githubSession.Dispose();
+
+            MessageBox.Show(
+                $"Не удалось запустить обои:\n{ex.Message}",
+                "GitHub Wallpaper",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            ExitThread();
+        }
     }
 
     private static void SyncAutostart(bool enabled)

@@ -8,7 +8,7 @@ namespace GitHubWallpaper;
 internal static class Program
 {
     [STAThread]
-    private static async Task Main()
+    private static void Main()
     {
         ApplicationConfiguration.Initialize();
 
@@ -31,25 +31,6 @@ internal static class Program
             settingsStore,
             repoPoller,
             autoPauseMonitor);
-
-        try
-        {
-            await wallpaperController.ApplyAsync().ConfigureAwait(true);
-        }
-        catch (Exception ex)
-        {
-            autoPauseMonitor.Dispose();
-            trayService.Dispose();
-            repoPoller.Dispose();
-            wallpaperController.Dispose();
-            githubSession.Dispose();
-            MessageBox.Show(
-                $"Не удалось запустить обои:\n{ex.Message}",
-                "GitHub Wallpaper",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
-            return;
-        }
 
         Application.Run(new TrayApplicationContext(
             wallpaperController,
