@@ -40,7 +40,7 @@ internal sealed class GridLayoutEditor : UserControl
         var columnsLabel = new Label
         {
             AutoSize = true,
-            Margin = new Padding(0, 6, 8, 0),
+            Margin = new Padding(0, 10, 8, 0),
             Text = "Колонки:",
         };
         SettingsTheme.ApplyToLabel(columnsLabel, muted: true);
@@ -48,12 +48,12 @@ internal sealed class GridLayoutEditor : UserControl
 
         _columnsUpDown = CreateGridSizeUpDown(3);
         _columnsUpDown.ValueChanged += OnGridSizeChanged;
-        sizePanel.Controls.Add(_columnsUpDown);
+        sizePanel.Controls.Add(new NumericField(_columnsUpDown));
 
         var rowsLabel = new Label
         {
             AutoSize = true,
-            Margin = new Padding(16, 6, 8, 0),
+            Margin = new Padding(16, 10, 8, 0),
             Text = "Строки:",
         };
         SettingsTheme.ApplyToLabel(rowsLabel, muted: true);
@@ -61,7 +61,7 @@ internal sealed class GridLayoutEditor : UserControl
 
         _rowsUpDown = CreateGridSizeUpDown(2);
         _rowsUpDown.ValueChanged += OnGridSizeChanged;
-        sizePanel.Controls.Add(_rowsUpDown);
+        sizePanel.Controls.Add(new NumericField(_rowsUpDown));
 
         _table = new TableLayoutPanel
         {
@@ -207,14 +207,12 @@ internal sealed class GridLayoutEditor : UserControl
 
     private static NumericUpDown CreateGridSizeUpDown(decimal value)
     {
-        var numeric = new NumericUpDown
+        var numeric = new ThemedNumericUpDown
         {
             Minimum = MinGridSize,
             Maximum = MaxGridSize,
-            Width = 52,
             Value = value,
         };
-        SettingsTheme.ApplyToNumeric(numeric);
         return numeric;
     }
 

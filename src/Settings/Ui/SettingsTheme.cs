@@ -191,7 +191,8 @@ internal static class SettingsTheme
     {
         numeric.BackColor = InputFill;
         numeric.ForeColor = TextPrimary;
-        numeric.BorderStyle = BorderStyle.FixedSingle;
+        numeric.BorderStyle = BorderStyle.None;
         numeric.Font = BodyFont;
+        numeric.TextAlign = HorizontalAlignment.Center;
     }
 }

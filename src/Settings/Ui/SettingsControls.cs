@@ -291,6 +291,65 @@ internal sealed class TextField : Panel
     }
 }
 
+internal sealed class ThemedNumericUpDown : NumericUpDown
+{
+    public ThemedNumericUpDown()
+    {
+        SettingsTheme.ApplyToNumeric(this);
+    }
+
+    protected override void OnLayout(LayoutEventArgs e)
+    {
+        base.OnLayout(e);
+
+        foreach (Control control in Controls)
+        {
+            if (control is not TextBox textBox)
+            {
+                continue;
+            }
+
+            textBox.BorderStyle = BorderStyle.None;
+            textBox.TextAlign = HorizontalAlignment.Center;
+            var offsetY = Math.Max(0, (Height - textBox.Height) / 2);
+            if (textBox.Top != offsetY)
+            {
+                textBox.Top = offsetY;
+            }
+        }
+    }
+}
+
+internal sealed class NumericField : Panel
+{
+    public NumericField(NumericUpDown inner, int width = 52, int height = SettingsTheme.ControlHeight)
+    {
+        BackColor = SettingsTheme.CardFill;
+        SettingsTheme.EnableDoubleBuffer(this);
+        Width = width;
+        Height = height;
+        Padding = new Padding(6, 0, 2, 0);
+        inner.Dock = DockStyle.Fill;
+        inner.Margin = Padding.Empty;
+        inner.BorderStyle = BorderStyle.None;
+        inner.TextAlign = HorizontalAlignment.Center;
+        Controls.Add(inner);
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        var bounds = ClientRectangle;
+        bounds.Width -= 1;
+        bounds.Height -= 1;
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using var path = SettingsTheme.CreateRoundedRectangle(bounds, SettingsTheme.ControlCornerRadius);
+        using var fill = new SolidBrush(SettingsTheme.InputFill);
+        e.Graphics.FillPath(fill, path);
+        using var border = new Pen(SettingsTheme.InputBorder, 1f);
+        e.Graphics.DrawPath(border, path);
+    }
+}
+
 internal sealed class ComboField : Panel
 {
     public ComboField(ComboBox inner, int height = SettingsTheme.ControlHeight)
