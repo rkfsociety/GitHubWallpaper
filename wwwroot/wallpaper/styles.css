@@ -72,11 +72,6 @@ body {
   font-size: clamp(1.5rem, 3vw, 2rem);
 }
 
-.wallpaper:has(.repo-grid > div:nth-child(3)) .hero__subtitle,
-.wallpaper:has(.repo-grid > div:nth-child(3)) .hero__hint {
-  display: none;
-}
-
 .wallpaper__glow {
   position: absolute;
   inset: 0;
@@ -113,40 +108,6 @@ body {
   color: transparent;
 }
 
-.hero__subtitle {
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  color: #8b949e;
-  line-height: 1.5;
-}
-
-.hero__hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border: 1px solid rgba(48, 54, 61, 0.8);
-  border-radius: 999px;
-  background: rgba(22, 27, 34, 0.75);
-  font-size: 0.95rem;
-  color: #8b949e;
-}
-
-.hero__hint strong {
-  color: #58a6ff;
-  font-weight: 600;
-}
-
-.hero__hint-dot {
-  flex-shrink: 0;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: #3fb950;
-  box-shadow: 0 0 8px rgba(63, 185, 80, 0.6);
-  animation: pulse 2s ease-in-out infinite;
-}
-
 @keyframes pulse {
   0%,
   100% {
@@ -177,12 +138,6 @@ body {
 
 .pause-overlay[hidden] {
   display: none;
-}
-
-body.is-paused .hero__hint-dot {
-  animation: none;
-  background: #d29922;
-  box-shadow: 0 0 8px rgba(210, 153, 34, 0.5);
 }
 
 .auth-banner {
