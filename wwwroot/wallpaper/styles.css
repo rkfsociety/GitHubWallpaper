@@ -362,7 +362,14 @@ body.is-paused .wallpaper__glow {
   gap: 1rem;
   width: 100%;
   align-content: start;
-  align-items: start;
+  align-items: stretch;
+}
+
+.repo-grid > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
 }
 
 .repo-grid:empty {
@@ -377,6 +384,7 @@ body.is-paused .wallpaper__glow {
 
 .repo-card {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--card-gap);
   padding: 1.1rem 1.25rem;
@@ -385,7 +393,9 @@ body.is-paused .wallpaper__glow {
   background: rgba(22, 27, 34, 0.82);
   backdrop-filter: blur(8px);
   box-shadow: 0 12px 32px rgba(1, 4, 9, 0.35);
+  width: 100%;
   min-width: 0;
+  min-height: 100%;
   overflow: hidden;
 }
 
@@ -480,6 +490,7 @@ body.is-paused .wallpaper__glow {
 .repo-card__columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 0.75rem;
 }
 
