@@ -313,7 +313,6 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
     {
         SettingsTheme.ApplyToNumeric(this);
         InterceptArrowKeys = true;
-        BackColor = Color.Transparent;
     }
 
     protected override void OnHandleCreated(EventArgs e)
@@ -342,7 +341,7 @@ internal sealed class ThemedNumericUpDown : NumericUpDown
 
             textBox.BorderStyle = BorderStyle.None;
             textBox.TextAlign = HorizontalAlignment.Center;
-            textBox.BackColor = Color.Transparent;
+            textBox.BackColor = SettingsTheme.InputFill;
             textBox.SetBounds(0, 0, Width, Height);
         }
     }
