@@ -46,15 +46,22 @@ public sealed class WallpaperController : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(message);
 
-        if (_surface?.WebView.CoreWebView2 is null)
+        var surface = _surface;
+        if (surface is null)
             return;
 
         var json = Bridge.Serialize(message);
 
-        void Send() => _surface.WebView.CoreWebView2?.PostWebMessageAsJson(json);
+        void Send()
+        {
+            if (surface.WebView.CoreWebView2 is null)
+                return;
 
-        if (_surface.InvokeRequired)
-            _surface.BeginInvoke(Send);
+            surface.WebView.CoreWebView2.PostWebMessageAsJson(json);
+        }
+
+        if (surface.InvokeRequired)
+            surface.BeginInvoke(Send);
         else
             Send();
     }
