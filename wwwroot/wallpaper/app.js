@@ -9,6 +9,7 @@
   const DEFAULT_GRID_COLUMNS = 3;
   const DEFAULT_GRID_ROWS = 2;
   const MIN_CONTENT_ZOOM = 0.4;
+  const MIN_CARD_CONTENT_ZOOM = 0.52;
   const FIT_RETRY_DELAYS_MS = [0, 120, 400, 1200];
 
   const state = {
@@ -417,13 +418,17 @@
           ${description}
         </header>
 
-        ${statsBlock}
-        ${releaseLine}
-        ${error}
-        ${heatmapBlock}
-        ${feedBlock}
-        ${columnsBlock}
-        ${commitsBlock}
+        <div class="repo-card__fit">
+          <div class="repo-card__fit-inner">
+            ${statsBlock}
+            ${releaseLine}
+            ${error}
+            ${heatmapBlock}
+            ${feedBlock}
+            ${columnsBlock}
+            ${commitsBlock}
+          </div>
+        </div>
       </article>
     `;
   }
@@ -471,10 +476,15 @@
       const card = slot.querySelector(".repo-card");
       if (card) {
         card.style.minHeight = "";
+        const fitInner = card.querySelector(".repo-card__fit-inner");
+        if (fitInner) {
+          fitInner.style.zoom = "";
+        }
       }
     }
 
     if (slots.length <= 1) {
+      fitCardContents();
       return;
     }
 
@@ -496,6 +506,35 @@
       for (const slot of rowSlots) {
         slot.style.minHeight = `${maxHeight}px`;
       }
+    }
+
+    fitCardContents();
+  }
+
+  function fitCardContents() {
+    const cards = document.querySelectorAll(".repo-card");
+    for (const card of cards) {
+      const fit = card.querySelector(".repo-card__fit");
+      const inner = card.querySelector(".repo-card__fit-inner");
+      if (!fit || !inner) {
+        continue;
+      }
+
+      inner.style.zoom = "1";
+      forceReflow();
+
+      const available = fit.clientHeight;
+      if (available <= 0) {
+        continue;
+      }
+
+      const natural = inner.scrollHeight;
+      if (natural <= available + 1) {
+        continue;
+      }
+
+      const zoom = Math.max(MIN_CARD_CONTENT_ZOOM, available / natural);
+      inner.style.zoom = String(Math.round(zoom * 1000) / 1000);
     }
   }
 
@@ -677,6 +716,8 @@
     document.body.style.zoom = "1";
     forceReflow();
     equalizeRepoCardHeights();
+    forceReflow();
+    fitCardContents();
     forceReflow();
 
     const { width: availWidth, height: availHeight } = getAvailableContentSize();

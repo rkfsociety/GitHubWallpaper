@@ -30,7 +30,7 @@ body {
   --heatmap-2: #006d32;
   --heatmap-3: #26a641;
   --heatmap-4: #39d353;
-  --content-bottom-gap: 2rem;
+  --content-bottom-gap: 2.75rem;
   --content-side-gap: 2rem;
   --content-top-gap: 1.5rem;
 }
@@ -414,7 +414,7 @@ body.is-paused .wallpaper__glow {
   flex: 1 1 auto;
   flex-direction: column;
   gap: var(--card-gap);
-  padding: 1.1rem 1.25rem;
+  padding: 1.1rem 1.25rem 1.45rem;
   border: 1px solid rgba(48, 54, 61, 0.9);
   border-radius: 0.85rem;
   background: rgba(22, 27, 34, 0.82);
@@ -427,15 +427,37 @@ body.is-paused .wallpaper__glow {
   overflow: hidden;
 }
 
-.repo-card:hover {
-  border-color: rgba(48, 54, 61, 0.9);
-  box-shadow: 0 12px 32px rgba(1, 4, 9, 0.35);
+.repo-card__fit {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.repo-card__fit-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+  min-height: 0;
+  width: 100%;
+}
+
+.repo-card__fit-inner > * {
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .repo-card__header {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.repo-card:hover {
+  border-color: rgba(48, 54, 61, 0.9);
+  box-shadow: 0 12px 32px rgba(1, 4, 9, 0.35);
 }
 
 .repo-card__title {
@@ -598,6 +620,8 @@ body.is-paused .wallpaper__glow {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .heatmap__grid {
@@ -644,6 +668,8 @@ body.is-paused .wallpaper__glow {
   list-style: none;
   max-height: var(--feed-max-height);
   overflow: hidden;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .feed__item {
@@ -768,7 +794,7 @@ body[data-layout="compact"] .wallpaper__content {
 }
 
 body[data-layout="compact"] .repo-card {
-  padding: 0.95rem 1.05rem;
+  padding: 0.95rem 1.05rem 1.2rem;
 }
 
 body[data-layout="dense"] {
@@ -780,7 +806,7 @@ body[data-layout="dense"] {
 
 body[data-layout="dense"] {
   --content-top-gap: 1rem;
-  --content-bottom-gap: 1.5rem;
+  --content-bottom-gap: 2rem;
 }
 
 body[data-layout="dense"] .wallpaper__content {
@@ -802,7 +828,7 @@ body[data-layout="dense"] .hero__title {
 }
 
 body[data-layout="dense"] .repo-card {
-  padding: 0.8rem 0.95rem;
+  padding: 0.8rem 0.95rem 1.05rem;
   gap: 0.65rem;
 }
 
@@ -833,7 +859,7 @@ body[data-layout="tight"] {
 
 body[data-layout="tight"] {
   --content-top-gap: 0.75rem;
-  --content-bottom-gap: 1.25rem;
+  --content-bottom-gap: 1.75rem;
   --content-side-gap: 1rem;
 }
 
@@ -856,7 +882,7 @@ body[data-layout="tight"] .hero__title {
 }
 
 body[data-layout="tight"] .repo-card {
-  padding: 0.65rem 0.8rem;
+  padding: 0.65rem 0.8rem 0.9rem;
 }
 
 body[data-layout="tight"] .repo-card__description,
@@ -888,7 +914,7 @@ body[data-layout="tight"] .feed__title {
 @media (max-width: 40rem) {
   :root {
     --content-top-gap: 1.25rem;
-    --content-bottom-gap: 1.5rem;
+    --content-bottom-gap: 2rem;
     --content-side-gap: 1.25rem;
   }
 
