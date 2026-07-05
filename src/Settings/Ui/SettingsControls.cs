@@ -538,7 +538,6 @@ internal sealed class ToggleSettingRow : Panel
     public ToggleSettingRow(string text)
     {
         BackColor = SettingsTheme.CardFill;
-        Height = SettingsTheme.ControlHeight;
         SettingsTheme.EnableDoubleBuffer(this);
 
         _label = new Label
@@ -554,6 +553,7 @@ internal sealed class ToggleSettingRow : Panel
         _switch = new ToggleSwitch();
         Controls.Add(_label);
         Controls.Add(_switch);
+        Height = SettingsTheme.ControlHeight;
     }
 
     public bool Checked

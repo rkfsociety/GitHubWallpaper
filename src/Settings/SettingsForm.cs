@@ -112,7 +112,6 @@ internal sealed class SettingsForm : Form
         _pageLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         SettingsTheme.EnableDoubleBuffer(_pageLayout);
 
-        BuildAuthCard(_pageLayout);
         BuildMainColumns(_pageLayout);
 
         _repoHintLabel = CreateMutedLabel(
@@ -163,7 +162,7 @@ internal sealed class SettingsForm : Form
 
     private void RefreshMonitorCardHeight()
     {
-        if (_monitorCard.Body.Controls.Count == 0)
+        if (_monitorCard?.Body.Controls.Count is not > 0)
         {
             return;
         }
@@ -178,7 +177,10 @@ internal sealed class SettingsForm : Form
         var maxHeight = GetMaxClientHeight();
 
         ApplyPagePadding(FormPadding);
-        _gridLayoutEditor.SetSlotRowHeight(GridLayoutEditor.DefaultSlotRowHeight);
+        if (_gridLayoutEditor is not null)
+        {
+            _gridLayoutEditor.SetSlotRowHeight(GridLayoutEditor.DefaultSlotRowHeight);
+        }
         var height = RemeasureContentHeight();
 
         if (height > maxHeight)
@@ -187,7 +189,7 @@ internal sealed class SettingsForm : Form
                  slot >= GridLayoutEditor.MinSlotRowHeight;
                  slot--)
             {
-                _gridLayoutEditor.SetSlotRowHeight(slot);
+                _gridLayoutEditor?.SetSlotRowHeight(slot);
                 height = RemeasureContentHeight();
                 if (height <= maxHeight)
                 {
@@ -286,7 +288,7 @@ internal sealed class SettingsForm : Form
 
     private void RefreshReposCardHeight()
     {
-        if (_reposCard.Body.Controls.Count == 0)
+        if (_reposCard?.Body.Controls.Count is not > 0)
         {
             return;
         }
@@ -296,8 +298,13 @@ internal sealed class SettingsForm : Form
 
     private int MeasureReposCardBodyHeight()
     {
+        if (_reposCard?.Body is not { } body)
+        {
+            return 1;
+        }
+
         var height = 0;
-        foreach (Control control in _reposCard.Body.Controls)
+        foreach (Control control in body.Controls)
         {
             if (!control.Visible)
             {
@@ -312,7 +319,7 @@ internal sealed class SettingsForm : Form
 
     private void RefreshDisplayCardHeight()
     {
-        if (_displayCard.Body.Controls.Count == 0)
+        if (_displayCard?.Body.Controls.Count is not > 0)
         {
             return;
         }
@@ -323,7 +330,7 @@ internal sealed class SettingsForm : Form
 
     private void RefreshPollCardHeight()
     {
-        if (_pollCard.Body.Controls.Count == 0)
+        if (_pollCard?.Body.Controls.Count is not > 0)
         {
             return;
         }
@@ -334,7 +341,7 @@ internal sealed class SettingsForm : Form
 
     private void RefreshStartupCardHeight()
     {
-        if (_startupCard.Body.Controls.Count == 0)
+        if (_startupCard?.Body.Controls.Count is not > 0)
         {
             return;
         }
@@ -599,6 +606,11 @@ internal sealed class SettingsForm : Form
 
     private void UpdateAuthView()
     {
+        if (_repoHintLabel is null || _reposLeftPanel is null || _authCard is null)
+        {
+            return;
+        }
+
         var signedIn = _githubSession.HasStoredToken;
         _repoHintLabel.Visible = !signedIn;
         _authCard.SetTitleVisible(!signedIn);
@@ -623,7 +635,10 @@ internal sealed class SettingsForm : Form
         {
             _authSignInPanel.Dock = DockStyle.Top;
             _authCard.Body.Controls.Add(_authSignInPanel);
-            _reposLeftPanel.Controls.Remove(_authSignedInPanel);
+            if (_reposLeftPanel.Controls.Contains(_authSignedInPanel))
+            {
+                _reposLeftPanel.Controls.Remove(_authSignedInPanel);
+            }
         }
 
         UpdateAuthCardHeight();
@@ -893,6 +908,11 @@ internal sealed class SettingsForm : Form
 
     private void LoadCardDisplaySettings()
     {
+        if (_showDescriptionToggle is null)
+        {
+            return;
+        }
+
         var display = _settingsStore.Load().CardDisplay;
 
         _suppressCardDisplayEvents = true;
@@ -1115,6 +1135,11 @@ internal sealed class SettingsForm : Form
 
     private void LoadGridLayout()
     {
+        if (_gridLayoutEditor is null)
+        {
+            return;
+        }
+
         var settings = _settingsStore.Load();
         _suppressGridEvents = true;
         _gridLayoutEditor.LoadLayout(settings.GridColumns, settings.GridRows, settings.RepositorySlots);
@@ -1134,6 +1159,11 @@ internal sealed class SettingsForm : Form
 
     private void LoadOAuthClientId()
     {
+        if (_oauthClientIdTextBox is null)
+        {
+            return;
+        }
+
         var settings = _settingsStore.Load();
         _oauthClientIdTextBox.Text = settings.GitHubOAuthClientId;
     }
@@ -1160,6 +1190,11 @@ internal sealed class SettingsForm : Form
 
     private void LoadOAuthClientSecret()
     {
+        if (_oauthClientSecretTextBox is null)
+        {
+            return;
+        }
+
         if (GitHubOAuthClientSecretCredentialStore.Exists())
         {
             _oauthClientSecretTextBox.PlaceholderText = "сохранён в Credential Manager";
@@ -1207,6 +1242,14 @@ internal sealed class SettingsForm : Form
 
     private void LoadBehaviorSettings()
     {
+        if (_economyRadio is null || _normalRadio is null || _frequentRadio is null
+            || _autoStartCheckBox is null || _pauseFullscreenCheckBox is null
+            || _pauseBatteryCheckBox is null || _autoCheckUpdatesCheckBox is null
+            || _monitorComboBox is null)
+        {
+            return;
+        }
+
         var settings = _settingsStore.Load();
 
         _suppressBehaviorEvents = true;
@@ -1235,6 +1278,11 @@ internal sealed class SettingsForm : Form
 
     private void PopulateMonitorComboBox()
     {
+        if (_monitorComboBox is null)
+        {
+            return;
+        }
+
         _monitorComboBox.Items.Clear();
 
         var screens = DisplayScreenHelper.GetAllScreens();
