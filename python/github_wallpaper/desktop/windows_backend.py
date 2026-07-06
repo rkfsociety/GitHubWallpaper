@@ -56,12 +56,24 @@ user32 = ctypes.windll.user32
 
 EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
+_LONG_PTR = ctypes.c_longlong if ctypes.sizeof(ctypes.c_void_p) == 8 else ctypes.c_long
+
 if ctypes.sizeof(ctypes.c_void_p) == 8:
     _get_window_long = user32.GetWindowLongPtrW
     _set_window_long = user32.SetWindowLongPtrW
 else:
     _get_window_long = user32.GetWindowLongW
     _set_window_long = user32.SetWindowLongW
+
+_get_window_long.restype = _LONG_PTR
+_get_window_long.argtypes = [wintypes.HWND, ctypes.c_int]
+_set_window_long.restype = _LONG_PTR
+_set_window_long.argtypes = [wintypes.HWND, ctypes.c_int, _LONG_PTR]
+
+
+def _window_style(value: int) -> int:
+    """DWORD-стиль окна: маска 32 бита для SetWindowLong(Ptr)."""
+    return value & 0xFFFF_FFFF
 
 
 class _POINT(ctypes.Structure):
@@ -153,17 +165,28 @@ class WindowsDesktopBackend(DesktopBackend):
 
         self._initialize_worker()
 
-        self._saved_style = _get_window_long(window_handle, GWL_STYLE)
-        self._saved_ex_style = _get_window_long(window_handle, GWL_EXSTYLE)
+        self._saved_style = _window_style(_get_window_long(window_handle, GWL_STYLE))
+        self._saved_ex_style = _window_style(_get_window_long(window_handle, GWL_EXSTYLE))
 
-        style = self._saved_style & ~(
-            WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_BORDER | WS_POPUP
+        style = _window_style(
+            self._saved_style
+            & ~(
+                WS_CAPTION
+                | WS_THICKFRAME
+                | WS_MINIMIZEBOX
+                | WS_MAXIMIZEBOX
+                | WS_SYSMENU
+                | WS_BORDER
+                | WS_POPUP
+            )
+            | WS_CHILD
+            | WS_VISIBLE
         )
-        style |= WS_CHILD | WS_VISIBLE
         _set_window_long(window_handle, GWL_STYLE, style)
 
-        ex_style = self._saved_ex_style | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW
-        ex_style &= ~WS_EX_APPWINDOW
+        ex_style = _window_style(
+            (self._saved_ex_style | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW
+        )
         _set_window_long(window_handle, GWL_EXSTYLE, ex_style)
 
         user32.SetParent(window_handle, self._worker_window)
@@ -301,8 +324,8 @@ def _ensure_desktop_icons_above_wallpaper() -> None:
 def _enable_mouse_click_through(window_handle: int) -> None:
     if not window_handle:
         return
-    ex_style = _get_window_long(window_handle, GWL_EXSTYLE)
-    _set_window_long(window_handle, GWL_EXSTYLE, ex_style | WS_EX_TRANSPARENT)
+    ex_style = _window_style(_get_window_long(window_handle, GWL_EXSTYLE))
+    _set_window_long(window_handle, GWL_EXSTYLE, _window_style(ex_style | WS_EX_TRANSPARENT))
 
 
 def _get_virtual_screen_bounds() -> QRect:
