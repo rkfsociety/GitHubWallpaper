@@ -480,8 +480,6 @@ internal sealed class NumericField : Panel
         _inner = inner;
         BackColor = SettingsTheme.CardFill;
         SettingsTheme.EnableDoubleBuffer(this);
-        Width = width;
-        Height = height;
         Padding = Padding.Empty;
 
         inner.BorderStyle = BorderStyle.None;
@@ -494,6 +492,9 @@ internal sealed class NumericField : Panel
         Controls.Add(inner);
         Controls.Add(_upButton);
         Controls.Add(_downButton);
+
+        Width = width;
+        Height = height;
     }
 
     protected override void OnLayout(LayoutEventArgs levent)

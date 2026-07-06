@@ -36,6 +36,8 @@ public sealed class WallpaperSurface : Form
         TopMost = false;
 
         _webView.Dock = DockStyle.Fill;
+        _webView.DefaultBackgroundColor = Color.Transparent;
+        _webView.HandleCreated += (_, _) => ApplyClickThrough();
         Controls.Add(_webView);
     }
 
@@ -60,6 +62,7 @@ public sealed class WallpaperSurface : Form
         settings.AreBrowserAcceleratorKeysEnabled = false;
         settings.AreDevToolsEnabled = false;
 
+        _webView.DefaultBackgroundColor = Color.Transparent;
         _coreInitialized = true;
     }
 
@@ -79,6 +82,16 @@ public sealed class WallpaperSurface : Form
 
         // WinForms Show() может сбросить HWND-позицию после SetParent — переприменяем bounds.
         _desktopHost.ResizeAttached();
+        ApplyClickThrough();
+    }
+
+    private void ApplyClickThrough()
+    {
+        if (IsHandleCreated)
+            DesktopHost.EnableMouseClickThrough(Handle);
+
+        if (_webView.IsHandleCreated)
+            DesktopHost.EnableMouseClickThrough(_webView.Handle);
     }
 
     /// <summary>Открепляет окно от WorkerW и скрывает поверхность.</summary>
