@@ -10,11 +10,23 @@
 
 ## Установка
 
-1. Скачайте из [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest):
-   - **Windows** — `GitHubWallpaper.exe`
-   - **Linux (X11)** — `GitHubWallpaper`
-2. Запустите файл. При первом запуске приложение скачает компоненты (~150 МБ) в каталог данных и установит launcher в `%APPDATA%\GitHubWallpaper\` (Win) или `~/.config/GitHubWallpaper/` (Linux).
-3. Трей → **Настройки** → GitHub OAuth или PAT → добавьте репозитории.
+### Linux (X11)
+
+```bash
+curl -fsSL -o GitHubWallpaper https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper \
+  && chmod +x GitHubWallpaper \
+  && ./GitHubWallpaper
+```
+
+При первом запуске скачаются компоненты (~150 МБ) в `~/.config/GitHubWallpaper/`. Требуется X11 и OpenGL.
+
+### Windows
+
+Скачайте [`GitHubWallpaper.exe`](https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper.exe) из [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) и запустите. Компоненты установятся в `%APPDATA%\GitHubWallpaper\`.
+
+### Первый запуск
+
+Трей → **Настройки** → GitHub OAuth или PAT → добавьте репозитории.
 
 Без Python/.NET на машине. Обновления: трей → «Проверить обновления…».
 
