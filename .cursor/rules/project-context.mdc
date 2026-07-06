@@ -25,7 +25,7 @@ alwaysApply: true
 | 5 Полировка и релиз (C# v1) | ✅ |
 | 6 Python + Qt v2.0 | 🔄 |
 
-**Сейчас:** v1.0 — push в `main` → CI обновляет Release `latest` (portable exe). v2.0 — ветка `python-qt`, см. `ROADMAP.md` этап 6.
+**Сейчас:** единая ветка `main`. v1.0 — push → CI обновляет Release `latest` (portable exe). v2.0 (Python/PySide6) — этап 6, каталог `python/`.
 
 ## Git (агент)
 
@@ -50,7 +50,7 @@ PAT: GitHubPatCredentialStore (Credential Manager)
 | GitHub | `src/GitHub/` — `GitHubApiClient`, `RepoPoller`, `RepoUrlParser` |
 | Настройки | `src/Settings/` — `SettingsForm`, `SettingsStore`, `GitHubPatCredentialStore` |
 | UI обоев | `wwwroot/wallpaper/` — `index.html`, `app.js`, `styles.css` |
-| Python v2.0 | `python/` — PySide6-приложение (ветка `python-qt`) |
+| Python v2.0 | `python/` — PySide6-приложение (ветка `main`) |
 | AppData | `%APPDATA%\GitHubWallpaper\` (`AppPaths.AppData`, `settings.json`) |
 | Публикация | `src/Properties/PublishProfiles/win-x64.pubxml` → `publish/` |
 

@@ -19,7 +19,7 @@
 | 6 | [Python + Qt (v2.0)](#этап-6--python--qt-v20-кроссплатформа) | 🔄 В работе | Windows + Linux, общий UI и логика |
 | — | [Фаза 2 (будущее)](#фаза-2--будущее) | 💡 Идеи | Расширения после v2.0 |
 
-**Текущее состояние:** v1.0 (C#) — [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest); push в `main` → CI собирает portable exe. v2.0 (Python/PySide6) — разработка в ветке `python-qt` (заменяет заготовку `python-gtk-linux`).
+**Текущее состояние:** единая ветка **`main`**. v1.0 (C#) — [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest); push в `main` → CI собирает portable exe. v2.0 (Python/PySide6) — этап 6, каталог `python/`, те же коммиты в `main`.
 
 ---
 
@@ -164,8 +164,8 @@
 
 **Цель:** единое приложение на **Windows и Linux** с переиспользованием `wwwroot/wallpaper/` и совместимым `settings.json`. C#-версия (этапы 1–5) остаётся в `src/` до паритета функций v2.0.
 
-**Ветка:** `python-qt`  
-**Каталог:** `python/` (`pyproject.toml`, пакет `github_wallpaper`)
+**Ветка:** `main` (v1 и v2 в одном репозитории)  
+**Каталог v2.0:** `python/` (`pyproject.toml`, пакет `github_wallpaper`)
 
 ### Стратегия
 
@@ -198,7 +198,7 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 ### 6.1 — Каркас проекта
 
-- [ ] Ветка `python-qt`; `python/pyproject.toml` (PySide6, httpx, keyring, pydantic)
+- [ ] `python/pyproject.toml` (PySide6, httpx, keyring, pydantic)
 - [ ] Структура пакета: `main.py`, `app.py`, `paths.py`, `single_instance.py`
 - [ ] `paths.py`: Windows `%APPDATA%` · Linux XDG (`XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`)
 - [ ] `QApplication` + `QSystemTrayIcon`: меню Настройки / Пауза / Выход
@@ -250,7 +250,7 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 - [ ] `README` раздел v2.0: зависимости (PySide6, Qt WebEngine), запуск из исходников
 - [ ] Сборка: PyInstaller / cx_Freeze — `GitHubWallpaper` exe (Win) и AppImage или tarball (Linux)
-- [ ] GitHub Actions: job `python-qt` на `windows-latest` и `ubuntu-latest`
+- [ ] GitHub Actions: job сборки v2.0 на `windows-latest` и `ubuntu-latest` (в `ci.yml`, ветка `main`)
 - [ ] Release: отдельный тег `v2.0` или pre-release `v2.0-beta` (не ломать `latest` для C# до готовности)
 - [ ] Автообновление v2.0 из GitHub Releases (порт `AppUpdateService`)
 
@@ -270,7 +270,7 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 | `window.chrome.webview` нет в WebEngine | JS-shim + QWebChannel в `bridge-shim.js` |
 | WorkerW на новых сборках Win11 | Порт проверенной логики из `DesktopHost.cs`; fallback overlay |
 | Wayland на Linux | MVP на X11; Wayland — отдельный подэтап по DE |
-| Два стека в репо (C# + Python) | v1 в `main`/`src`, v2 в `python-qt`/`python` до слияния |
+| Два стека в репо (C# + Python) | v1 в `src/`, v2 в `python/`; оба в `main` до замены v1 релизом v2 |
 | Дублирование логики GitHub | Единая таблица API в ROADMAP; тесты на паритет ответов bridge |
 
 ### Порядок реализации (кратко)

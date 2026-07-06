@@ -28,6 +28,6 @@ alwaysApply: true
 
 ## Следующие приоритеты (этап 6)
 
-- Ветка `python-qt`: каркас PySide6, bridge, WorkerW, GitHub polling
+- Этап 6 в `main`: каркас PySide6 в `python/`, bridge, GitHub polling
 - Qt WebEngine + shim `window.chrome.webview`
 - Linux desktop backend (X11)

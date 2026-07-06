@@ -44,7 +44,7 @@
 | Версия | Платформа | Стек | Статус |
 |--------|-----------|------|--------|
 | v1.0 | Windows 10/11 | C# / .NET 8 · WebView2 | ✅ [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) |
-| v2.0 | Windows + Linux | Python · PySide6 · Qt WebEngine | 🔄 [Этап 6](ROADMAP.md#этап-6--python--qt-v20-кроссплатформа), ветка `python-qt` |
+| v2.0 | Windows + Linux | Python · PySide6 · Qt WebEngine | 🔄 [Этап 6](ROADMAP.md#этап-6--python--qt-v20-кроссплатформа), ветка `main` |
 
 ## Разработка
 
