@@ -18,7 +18,7 @@ curl -fsSL -o GitHubWallpaper https://github.com/rkfsociety/GitHubWallpaper/rele
   && ./GitHubWallpaper
 ```
 
-При первом запуске скачаются компоненты (~150 МБ) в `~/.config/GitHubWallpaper/`. Требуется X11 и OpenGL.
+При первом запуске скачаются компоненты (~150 МБ) в `~/.config/GitHubWallpaper/`. Требуется X11, OpenGL и glibc 2.31+ (Debian 11 / Ubuntu 20.04+).
 
 ### Windows
 
