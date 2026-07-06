@@ -250,3 +250,7 @@ def _format_size(value: int) -> str:
     if value >= 1_000:
         return f"{value / 1_000:.0f} КБ"
     return f"{value} Б"
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

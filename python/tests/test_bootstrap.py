@@ -88,5 +88,13 @@ class AppVersionBootstrapTests(unittest.TestCase):
                 self.assertFalse(app_version.can_self_update())
 
 
+class BootstrapEntryPointTests(unittest.TestCase):
+    def test_main_py_has_script_entry_guard(self) -> None:
+        main_py = Path(__file__).resolve().parents[1] / "github_wallpaper" / "bootstrap" / "main.py"
+        source = main_py.read_text(encoding="utf-8")
+        self.assertIn('if __name__ == "__main__":', source)
+        self.assertIn("raise SystemExit(main())", source)
+
+
 if __name__ == "__main__":
     unittest.main()
