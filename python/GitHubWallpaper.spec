@@ -11,7 +11,13 @@ wwwroot = repo_root / "wwwroot" / "wallpaper"
 
 pyside_datas, pyside_binaries, pyside_hiddenimports = collect_all("PySide6")
 
-datas = [(str(wwwroot), "wwwroot/wallpaper"), *pyside_datas]
+assets_dir = spec_dir / "github_wallpaper" / "wallpaper" / "assets"
+
+datas = [
+    (str(wwwroot), "wwwroot/wallpaper"),
+    (str(assets_dir), "github_wallpaper/wallpaper/assets"),
+    *pyside_datas,
+]
 hiddenimports = [
     *pyside_hiddenimports,
     "PySide6.QtWebEngineWidgets",
