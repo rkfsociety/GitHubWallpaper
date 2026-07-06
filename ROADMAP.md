@@ -248,11 +248,11 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 ### 6.6 — Сборка, CI и релиз
 
-- [ ] `README` раздел v2.0: зависимости (PySide6, Qt WebEngine), запуск из исходников
-- [ ] Сборка: PyInstaller / cx_Freeze — `GitHubWallpaper` exe (Win) и AppImage или tarball (Linux)
-- [ ] GitHub Actions: job сборки v2.0 на `windows-latest` и `ubuntu-latest` (в `ci.yml`, ветка `main`)
-- [ ] Release: отдельный тег `v2.0` или pre-release `v2.0-beta` (не ломать `latest` для C# до готовности)
-- [ ] Автообновление v2.0 из GitHub Releases (порт `AppUpdateService`)
+- [x] `README` раздел v2.0: зависимости (PySide6, Qt WebEngine), запуск из исходников
+- [x] Сборка: PyInstaller / cx_Freeze — `GitHubWallpaper` exe (Win) и AppImage или tarball (Linux)
+- [x] GitHub Actions: job сборки v2.0 на `windows-latest` и `ubuntu-latest` (в `ci.yml`, ветка `main`)
+- [x] Release: отдельный тег `v2.0` или pre-release `v2.0-beta` (не ломать `latest` для C# до готовности)
+- [x] Автообновление v2.0 из GitHub Releases (порт `AppUpdateService`)
 
 ### Критерии готовности v2.0
 

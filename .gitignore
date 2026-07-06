@@ -2,6 +2,12 @@
 bin/
 obj/
 publish/
+python/build/
+python/dist/
+python/publish/
+__pycache__/
+*.pyc
+*.pyo
 *.user
 *.suo
 .vs/
