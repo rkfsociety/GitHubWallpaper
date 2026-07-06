@@ -59,6 +59,9 @@
   let pendingRepoRefreshKeys = new Set();
   let fitContentDebounceTimer = 0;
   let resizeLayoutTimer = 0;
+  let layoutFitGeneration = 0;
+  let lastAppliedFitGeneration = -1;
+  let lastFitViewportKey = "";
   const LAYOUT_DEBOUNCE_MS = 150;
 
   const icons = {
@@ -335,6 +338,41 @@
     }
   }
 
+  function computeLayoutSig(entry) {
+    return JSON.stringify({
+      loading: !entry.metadata,
+      density: layoutState.density,
+      columns: layoutState.columns,
+      rows: layoutState.rows,
+      display: displaySettings,
+    });
+  }
+
+  function patchRepoCardContent(slot, html) {
+    const template = document.createElement("div");
+    template.innerHTML = html;
+    const source = template.firstElementChild;
+    const target = slot.querySelector(".repo-card");
+    if (!target || !source) {
+      slot.innerHTML = html;
+      return;
+    }
+
+    target.className = source.className;
+
+    const targetHeader = target.querySelector(".repo-card__header");
+    const sourceHeader = source.querySelector(".repo-card__header");
+    if (targetHeader && sourceHeader) {
+      targetHeader.innerHTML = sourceHeader.innerHTML;
+    }
+
+    const targetInner = target.querySelector(".repo-card__fit-inner");
+    const sourceInner = source.querySelector(".repo-card__fit-inner");
+    if (targetInner && sourceInner) {
+      targetInner.innerHTML = sourceInner.innerHTML;
+    }
+  }
+
   function renderRepoCard(entry) {
     const key = repoKey(entry.owner, entry.repo);
     const metadata = entry.metadata;
@@ -443,6 +481,7 @@
   function mountRepoCard(entry, options = {}) {
     const key = repoKey(entry.owner, entry.repo);
     let card = cardElements.get(key);
+    const isNewCard = !card;
 
     if (!card) {
       card = document.createElement("div");
@@ -451,22 +490,31 @@
     }
 
     const html = renderRepoCard(entry);
+    const layoutSig = computeLayoutSig(entry);
+    const layoutChanged = isNewCard || card.dataset.layoutSig !== layoutSig;
+
     if (card.dataset.renderSig === html) {
-      if (!options.deferLayout) {
-        scheduleEqualizeAndFit();
-      }
-      return;
+      return false;
     }
 
     card.dataset.renderSig = html;
-    card.innerHTML = html;
+    card.dataset.layoutSig = layoutSig;
+
+    if (layoutChanged) {
+      card.innerHTML = html;
+      layoutFitGeneration += 1;
+    } else {
+      patchRepoCardContent(card, html);
+    }
 
     const feedSection = card.querySelector(".repo-card__feed");
     window.WallpaperFeed?.markNewItemsAnimated(feedSection);
 
-    if (!options.deferLayout) {
+    if (!options.deferLayout && layoutChanged) {
       scheduleEqualizeAndFit();
     }
+
+    return layoutChanged;
   }
 
   function refreshRepoCard(owner, repo) {
@@ -480,15 +528,20 @@
       const keys = [...pendingRepoRefreshKeys];
       pendingRepoRefreshKeys.clear();
 
+      let layoutChanged = false;
       for (const key of keys) {
         const entry = state.repos[key];
         if (!entry) {
           continue;
         }
-        mountRepoCard(entry, { deferLayout: true });
+        if (mountRepoCard(entry, { deferLayout: true })) {
+          layoutChanged = true;
+        }
       }
 
-      scheduleEqualizeAndFit();
+      if (layoutChanged) {
+        scheduleEqualizeAndFit();
+      }
     });
   }
 
@@ -569,11 +622,16 @@
   }
 
   function refreshAllRepoCards() {
+    let layoutChanged = false;
     for (const entry of Object.values(state.repos)) {
-      mountRepoCard(entry, { deferLayout: true });
+      if (mountRepoCard(entry, { deferLayout: true })) {
+        layoutChanged = true;
+      }
     }
 
-    scheduleEqualizeAndFit();
+    if (layoutChanged) {
+      scheduleEqualizeAndFit();
+    }
   }
 
   function scheduleEqualizeAndFit() {
@@ -732,7 +790,12 @@
   }
 
   function runFitContentPasses() {
-    for (const delay of FIT_RETRY_DELAYS_MS) {
+    const delays =
+      layoutFitGeneration !== lastAppliedFitGeneration
+        ? FIT_RETRY_DELAYS_MS
+        : [0];
+
+    for (const delay of delays) {
       window.setTimeout(() => {
         if (delay === 0) {
           if (fitContentFrame) {
@@ -758,6 +821,16 @@
       return;
     }
 
+    const { width: availWidth, height: availHeight } = getAvailableContentSize();
+    const viewportKey = `${availWidth}x${availHeight}`;
+    const layoutUnchanged =
+      viewportKey === lastFitViewportKey &&
+      layoutFitGeneration === lastAppliedFitGeneration;
+
+    if (layoutUnchanged) {
+      return;
+    }
+
     isFittingContent = true;
     document.body.style.zoom = "1";
     if (wallpaperScaler) {
@@ -769,7 +842,6 @@
     fitCardContents();
     forceReflow();
 
-    const { width: availWidth, height: availHeight } = getAvailableContentSize();
     const { width: naturalWidth, height: naturalHeight } = measureWallpaperSize();
 
     if (naturalWidth <= 0 || naturalHeight <= 0) {
@@ -783,6 +855,8 @@
       wallpaperScaler.style.zoom = String(rounded);
     }
 
+    lastFitViewportKey = viewportKey;
+    lastAppliedFitGeneration = layoutFitGeneration;
     isFittingContent = false;
   }
 
