@@ -5,13 +5,14 @@ alwaysApply: true
 
 # GitHubWallpaper — контекст
 
-Динамические обои Windows: HTML за иконками рабочего стола + данные GitHub REST API.
+Динамические обои: HTML за иконками рабочего стола + данные GitHub REST API.
 
-**Репозиторий:** [rkfsociety/GitHubWallpaper](https://github.com/rkfsociety/GitHubWallpaper) · **Платформа:** Windows 10/11 · **Ответы:** только на русском
+**Репозиторий:** [rkfsociety/GitHubWallpaper](https://github.com/rkfsociety/GitHubWallpaper) · **Платформы:** v1.0 Windows 10/11 · v2.0 Windows + Linux · **Ответы:** только на русском
 
 ## Стек
 
-C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в `wwwroot/wallpaper/`
+**v1.0:** C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в `wwwroot/wallpaper/`  
+**v2.0:** Python 3.11+ · PySide6 · Qt WebEngine · `keyring` · каталог `python/`
 
 ## Текущий этап (ROADMAP)
 
@@ -21,9 +22,10 @@ C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в
 | 2 GitHub + один репо | ✅ |
 | 3 Мульти-репо и настройки | ✅ |
 | 4 Полная активность | ✅ |
-| 5 Полировка и релиз | ✅ |
+| 5 Полировка и релиз (C# v1) | ✅ |
+| 6 Python + Qt v2.0 | 🔄 |
 
-**Сейчас:** push в `main` → CI обновляет единственный Release `latest` с portable exe.
+**Сейчас:** v1.0 — push в `main` → CI обновляет Release `latest` (portable exe). v2.0 — ветка `python-qt`, см. `ROADMAP.md` этап 6.
 
 ## Git (агент)
 
@@ -48,6 +50,7 @@ PAT: GitHubPatCredentialStore (Credential Manager)
 | GitHub | `src/GitHub/` — `GitHubApiClient`, `RepoPoller`, `RepoUrlParser` |
 | Настройки | `src/Settings/` — `SettingsForm`, `SettingsStore`, `GitHubPatCredentialStore` |
 | UI обоев | `wwwroot/wallpaper/` — `index.html`, `app.js`, `styles.css` |
+| Python v2.0 | `python/` — PySide6-приложение (ветка `python-qt`) |
 | AppData | `%APPDATA%\GitHubWallpaper\` (`AppPaths.AppData`, `settings.json`) |
 | Публикация | `src/Properties/PublishProfiles/win-x64.pubxml` → `publish/` |
 

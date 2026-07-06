@@ -2,7 +2,7 @@
 
 Динамические обои для Windows: живые карточки GitHub-репозиториев **позади иконок рабочего стола**.
 
-> **v1.0** — [скачать exe](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · [дорожная карта](ROADMAP.md)
+> **v1.0** (Windows, C#) — [скачать exe](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · **v2.0** (кроссплатформа, Python/PySide6) — в разработке · [дорожная карта](ROADMAP.md)
 
 ![Карточки репозиториев на рабочем столе](docs/screenshots/wallpaper.svg)
 
@@ -39,14 +39,18 @@
 
 Настройки: `%APPDATA%\GitHubWallpaper\settings.json`. Удаление: трей → **Выход**, затем папка AppData и запись `GitHubWallpaper` в Credential Manager.
 
+## Статус
+
+| Версия | Платформа | Стек | Статус |
+|--------|-----------|------|--------|
+| v1.0 | Windows 10/11 | C# / .NET 8 · WebView2 | ✅ [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) |
+| v2.0 | Windows + Linux | Python · PySide6 · Qt WebEngine | 🔄 [Этап 6](ROADMAP.md#этап-6--python--qt-v20-кроссплатформа), ветка `python-qt` |
+
 ## Разработка
 
-C# / .NET 8 · WebView2 · WorkerW · HTML/CSS/JS · GitHub REST API
+**v1.0 (C#):** `dotnet run --project src` · portable: `dotnet publish src -p:PublishProfile=win-x64`
 
-```
-src/          — хост (Desktop, GitHub, Settings, Tray)
-wwwroot/      — UI обоев
-```
+**v2.0 (Python):** каталог `python/` (см. [ROADMAP, этап 6](ROADMAP.md#этап-6--python--qt-v20-кроссплатформа))
 
 ## Лицензия
 

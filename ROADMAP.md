@@ -1,8 +1,9 @@
 # Дорожная карта GitHubWallpaper
 
-Динамические обои для Windows с отслеживанием активности GitHub-репозиториев.
+Динамические обои с отслеживанием активности GitHub-репозиториев.
 
-**Стек:** C# / .NET 8 · WebView2 · WorkerW · GitHub REST API
+**Стек v1.0 (Windows):** C# / .NET 8 · WebView2 · WorkerW · GitHub REST API  
+**Стек v2.0 (кроссплатформа):** Python 3.11+ · PySide6 · Qt WebEngine · GitHub REST API
 
 ---
 
@@ -15,9 +16,10 @@
 | 3 | [Мульти-репо и настройки](#этап-3--мульти-репо-и-настройки) | ✅ Готов | Список репо, токен, автозапуск |
 | 4 | [Полная активность](#этап-4--полная-активность) | ✅ Готов | PR, issues, CI, heatmap, лента |
 | 5 | [Полировка и релиз](#этап-5--полировка-и-релиз) | ✅ Готов | Стабильный exe, CI/CD, документация |
-| — | [Фаза 2 (будущее)](#фаза-2--будущее) | 💡 Идеи | Расширения после v1.0 |
+| 6 | [Python + Qt (v2.0)](#этап-6--python--qt-v20-кроссплатформа) | 🔄 В работе | Windows + Linux, общий UI и логика |
+| — | [Фаза 2 (будущее)](#фаза-2--будущее) | 💡 Идеи | Расширения после v2.0 |
 
-**Текущее состояние:** v1.0 — [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) на GitHub; при push в `main` CI собирает portable exe и пересоздаёт релиз (`gh release create --target`).
+**Текущее состояние:** v1.0 (C#) — [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest); push в `main` → CI собирает portable exe. v2.0 (Python/PySide6) — разработка в ветке `python-qt` (заменяет заготовку `python-gtk-linux`).
 
 ---
 
@@ -158,9 +160,131 @@
 
 ---
 
+## Этап 6 — Python + Qt (v2.0, кроссплатформа)
+
+**Цель:** единое приложение на **Windows и Linux** с переиспользованием `wwwroot/wallpaper/` и совместимым `settings.json`. C#-версия (этапы 1–5) остаётся в `src/` до паритета функций v2.0.
+
+**Ветка:** `python-qt`  
+**Каталог:** `python/` (`pyproject.toml`, пакет `github_wallpaper`)
+
+### Стратегия
+
+| Слой | Решение |
+|------|---------|
+| UI обоев | `wwwroot/wallpaper/` без изменений (HTML/CSS/JS) |
+| WebView | `QWebEngineView` (Chromium, есть на Win и Linux) |
+| Bridge | Тот же JSON-протокол, что в `Bridge.cs` / `app.js` |
+| Настройки | Тот же `settings.json` (без PAT) |
+| Секреты | `keyring` (Win Credential Manager / Linux Secret Service) |
+| Обои | Платформенные бэкенды: WorkerW (Win) · desktop layer (Linux) |
+| Трей | `QSystemTrayIcon` |
+| Окно настроек | Qt Widgets (PySide6), функциональный паритет с `SettingsForm` |
+
+### Архитектура v2.0
+
+```
+QSystemTrayIcon + SettingsDialog (PySide6)
+        │
+        ▼
+WallpaperController ──► DesktopBackend ──► QWebEngineView
+   (windows / linux)         │                    ▲
+        │                   │                    │
+        ▼                   ▼                    │
+RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
+                    │
+                    ▼
+              keyring (PAT)
+```
+
+### 6.1 — Каркас проекта
+
+- [ ] Ветка `python-qt`; `python/pyproject.toml` (PySide6, httpx, keyring, pydantic)
+- [ ] Структура пакета: `main.py`, `app.py`, `paths.py`, `single_instance.py`
+- [ ] `paths.py`: Windows `%APPDATA%` · Linux XDG (`XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`)
+- [ ] `QApplication` + `QSystemTrayIcon`: меню Настройки / Пауза / Выход
+- [ ] Single-instance (named mutex на Win · Unix socket на Linux)
+- [ ] Копирование `wwwroot/wallpaper/` в каталог данных при первом запуске (аналог `AppInstaller.EnsureWallpaperAssets`)
+
+### 6.2 — Обои и WebEngine
+
+- [ ] `WallpaperWindow` — borderless `QWebEngineView` на весь выбранный экран
+- [ ] Загрузка UI: локальный HTTP-сервер или `qrc://` / `file://` + разрешения WebEngine
+- [ ] `DesktopBackend` (абстракция): `apply` / `remove` / `pause` / `resume` / `set_screen`
+- [ ] **Windows:** `WindowsDesktopBackend` — WorkerW через `ctypes` (порт логики `DesktopHost.cs`)
+- [ ] **Linux:** `LinuxDesktopBackend` — окно типа desktop (X11 `_NET_WM_WINDOW_TYPE_DESKTOP`; Wayland — по DE, MVP на X11)
+- [ ] Выбор монитора: `QScreen` / `DisplayDeviceName` в настройках (совместимость с полем из C#)
+- [ ] Пауза рендера: `QWebEngineView.setVisible(False)` + снижение polling
+
+### 6.3 — Bridge (C# ↔ JS)
+
+Сообщения **без изменений** в `app.js` (см. `Bridge.cs`):
+
+`pause` · `resume` · `auth:status` · `repos:init` · `repo:metadata` · `repo:commits` · `repo:pulls` · `repo:issues` · `repo:releases` · `repo:ci-run` · `repo:heatmap` · `repo:activity-feed` · `repo:poll-failed` · (JS→host) `open-url` · `page:ready`
+
+- [ ] Shim для `window.chrome.webview` в WebEngine: `QWebChannel` или `runJavaScript` + `QWebEngineScript` injection
+- [ ] `bridge.py` — сериализация JSON (camelCase), очередь до `page:ready`
+- [ ] Обработка `open-url` → `QDesktopServices.openUrl`
+- [ ] Тест: статичная страница + `auth:status` / `repos:init` в консоли
+
+### 6.4 — GitHub и polling
+
+Порт логики из `src/GitHub/` (не копипаста, а эквивалентное поведение):
+
+- [ ] `repo_url_parser.py` — `owner/repo`, URL GitHub
+- [ ] `github_client.py` — httpx, `Authorization`, ETag / `If-None-Match`
+- [ ] `rate_limit_guard.py` — заголовки `X-RateLimit-*`, backoff при 403
+- [ ] `repo_poller.py` — asyncio или `QThread` + таймеры; те же интервалы, что `PollIntervals`
+- [ ] `activity_aggregator.py` — лента событий
+- [ ] `keyring` store для PAT и OAuth client secret (имена как в C#: `GitHubWallpaper/PersonalAccessToken`)
+- [ ] OAuth: Authorization Code + PKCE и Device Flow (порт `GitHubOAuthService`)
+
+### 6.5 — Настройки (Qt)
+
+- [ ] `SettingsStore` — чтение/запись `settings.json` (поля из `AppSettings.cs`, camelCase)
+- [ ] `SettingsDialog` — репозитории, сетка, интервалы, экран, OAuth/PAT, видимость блоков карточек
+- [ ] Миграция: Qt-приложение читает существующий `%APPDATA%` / `~/.config` файл от C#-версии
+- [ ] Автозапуск: registry Run (Win) · `.desktop` в `~/.config/autostart` (Linux)
+- [ ] Пауза при полноэкранном приложении и на батарее (платформенные хуки)
+
+### 6.6 — Сборка, CI и релиз
+
+- [ ] `README` раздел v2.0: зависимости (PySide6, Qt WebEngine), запуск из исходников
+- [ ] Сборка: PyInstaller / cx_Freeze — `GitHubWallpaper` exe (Win) и AppImage или tarball (Linux)
+- [ ] GitHub Actions: job `python-qt` на `windows-latest` и `ubuntu-latest`
+- [ ] Release: отдельный тег `v2.0` или pre-release `v2.0-beta` (не ломать `latest` для C# до готовности)
+- [ ] Автообновление v2.0 из GitHub Releases (порт `AppUpdateService`)
+
+### Критерии готовности v2.0
+
+- [ ] **Windows:** обои за иконками, трей, настройки, 3+ репо, PAT/OAuth, пауза
+- [ ] **Linux (X11):** обои на рабочем столе, трей, настройки, те же виджеты на обоях
+- [ ] `settings.json` и PAT переносятся между C# v1 и Python v2 на одной ОС
+- [ ] Все сценарии из раздела «Проверка» пройдены на Win и Linux
+- [ ] CI зелёный на обеих платформах
+
+### Риски v2.0
+
+| Риск | Митигация |
+|------|-----------|
+| Qt WebEngine тяжёлый (~150 MB) | PyInstaller one-folder; документировать размер |
+| `window.chrome.webview` нет в WebEngine | JS-shim + QWebChannel в `bridge-shim.js` |
+| WorkerW на новых сборках Win11 | Порт проверенной логики из `DesktopHost.cs`; fallback overlay |
+| Wayland на Linux | MVP на X11; Wayland — отдельный подэтап по DE |
+| Два стека в репо (C# + Python) | v1 в `main`/`src`, v2 в `python-qt`/`python` до слияния |
+| Дублирование логики GitHub | Единая таблица API в ROADMAP; тесты на паритет ответов bridge |
+
+### Порядок реализации (кратко)
+
+```
+6.1 каркас → 6.3 bridge (минимальный) → 6.2 обои (Win) → 6.4 GitHub → 6.5 настройки
+     → 6.2 Linux backend → 6.6 CI/релиз
+```
+
+---
+
 ## Фаза 2 — Будущее
 
-Идеи после v1.0, не входят в текущий scope:
+Идеи после v2.0, не входят в текущий scope этапа 6:
 
 - [x] Выбор одного монитора для отображения обоев (настройки → «Экран»)
 - [x] Корректное позиционирование обоев на втором и последующих мониторах
