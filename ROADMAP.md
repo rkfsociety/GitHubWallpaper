@@ -207,13 +207,13 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 ### 6.2 — Обои и WebEngine
 
-- [ ] `WallpaperWindow` — borderless `QWebEngineView` на весь выбранный экран
-- [ ] Загрузка UI: локальный HTTP-сервер или `qrc://` / `file://` + разрешения WebEngine
-- [ ] `DesktopBackend` (абстракция): `apply` / `remove` / `pause` / `resume` / `set_screen`
-- [ ] **Windows:** `WindowsDesktopBackend` — WorkerW через `ctypes` (порт логики `DesktopHost.cs`)
-- [ ] **Linux:** `LinuxDesktopBackend` — окно типа desktop (X11 `_NET_WM_WINDOW_TYPE_DESKTOP`; Wayland — по DE, MVP на X11)
-- [ ] Выбор монитора: `QScreen` / `DisplayDeviceName` в настройках (совместимость с полем из C#)
-- [ ] Пауза рендера: `QWebEngineView.setVisible(False)` + снижение polling
+- [x] `WallpaperWindow` — borderless `QWebEngineView` на весь выбранный экран
+- [x] Загрузка UI: локальный HTTP-сервер или `qrc://` / `file://` + разрешения WebEngine
+- [x] `DesktopBackend` (абстракция): `apply` / `remove` / `pause` / `resume` / `set_screen`
+- [x] **Windows:** `WindowsDesktopBackend` — WorkerW через `ctypes` (порт логики `DesktopHost.cs`)
+- [x] **Linux:** `LinuxDesktopBackend` — окно типа desktop (X11 `_NET_WM_WINDOW_TYPE_DESKTOP`; Wayland — по DE, MVP на X11)
+- [x] Выбор монитора: `QScreen` / `DisplayDeviceName` в настройках (совместимость с полем из C#)
+- [x] Пауза рендера: `QWebEngineView.setVisible(False)` + снижение polling
 
 ### 6.3 — Bridge (C# ↔ JS)
 

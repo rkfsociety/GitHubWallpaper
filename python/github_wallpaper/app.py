@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QTimer, QSize
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
+from github_wallpaper.settings_store import AppSettings
+from github_wallpaper.wallpaper.controller import WallpaperController
+
 APP_DISPLAY_NAME = "GitHub Wallpaper"
+_logger = logging.getLogger(__name__)
 
 
 def create_tray_icon() -> QIcon:
@@ -30,15 +35,20 @@ def create_tray_icon() -> QIcon:
 
 
 class GitHubWallpaperApp:
-    """Каркас приложения: трей с меню Настройки / Пауза / Выход."""
+    """Каркас приложения: трей, обои (WebEngine) и меню Настройки / Пауза / Выход."""
 
     def __init__(self) -> None:
         self._app = QApplication(sys.argv)
         self._app.setQuitOnLastWindowClosed(False)
         self._app.setApplicationName(APP_DISPLAY_NAME)
         self._app.setOrganizationName("rkfsociety")
+        self._app.aboutToQuit.connect(self._on_about_to_quit)
 
         self._paused = False
+        self._wallpaper = WallpaperController()
+
+        settings = AppSettings.load()
+        self._wallpaper.configure_display(settings.display_device_name)
 
         self._pause_action = QAction("Пауза", self._app)
         self._pause_action.triggered.connect(self._on_pause)
@@ -64,7 +74,23 @@ class GitHubWallpaperApp:
             return 1
 
         self._tray.show()
+        QTimer.singleShot(0, self._apply_wallpaper)
         return self._app.exec()
+
+    def _apply_wallpaper(self) -> None:
+        try:
+            self._wallpaper.apply()
+        except Exception as ex:
+            _logger.exception("Не удалось запустить обои")
+            QMessageBox.critical(
+                None,
+                APP_DISPLAY_NAME,
+                f"Не удалось запустить обои:\n{ex}",
+            )
+            self._app.quit()
+
+    def _on_about_to_quit(self) -> None:
+        self._wallpaper.dispose()
 
     def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
@@ -79,8 +105,11 @@ class GitHubWallpaperApp:
 
     def _on_pause(self) -> None:
         self._paused = not self._paused
+        if self._paused:
+            self._wallpaper.pause()
+        else:
+            self._wallpaper.resume()
         self._update_pause_action()
-        # WallpaperController — этап 6.2
 
     def _update_pause_action(self) -> None:
         self._pause_action.setText("Возобновить" if self._paused else "Пауза")
