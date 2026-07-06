@@ -7,8 +7,7 @@ import json
 import logging
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QThread, QUrl, Signal
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -27,12 +26,14 @@ from PySide6.QtWidgets import (
 )
 
 from github_wallpaper import autostart
+from github_wallpaper.desktop.open_url import open_url
 from github_wallpaper.desktop.screen_helper import ScreenHelper
 from github_wallpaper.github.credential_store import (
     GitHubOAuthClientSecretCredentialStore,
     GitHubPatCredentialStore,
 )
 from github_wallpaper.github.oauth import defaults as oauth_defaults
+from github_wallpaper.github.oauth.exceptions import GitHubOAuthException
 from github_wallpaper.github.oauth.service import GitHubOAuthService
 from github_wallpaper.github.poll_intervals import PollIntervalPreset
 from github_wallpaper.repo_url_parser import try_parse
@@ -174,7 +175,7 @@ class SettingsDialog(QDialog):
 
         create_app_btn = QPushButton("Создать OAuth App на GitHub")
         create_app_btn.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl(oauth_defaults.REGISTRATION_URL))
+            lambda: self._open_external_url(oauth_defaults.REGISTRATION_URL)
         )
         oauth_form.addRow("", create_app_btn)
         form.addLayout(oauth_form)
@@ -192,7 +193,11 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(group)
 
         self._grid_editor = GridLayoutEditor()
-        self._grid_editor.layout_changed.connect(self._apply_grid_layout)
+        self._grid_apply_timer = QTimer(self)
+        self._grid_apply_timer.setSingleShot(True)
+        self._grid_apply_timer.setInterval(250)
+        self._grid_apply_timer.timeout.connect(self._apply_grid_layout)
+        self._grid_editor.layout_changed.connect(self._schedule_grid_layout_apply)
         layout.addWidget(self._grid_editor)
 
         repo_row = QHBoxLayout()
@@ -440,6 +445,19 @@ class SettingsDialog(QDialog):
         self._repo_input.clear()
         self._apply_grid_layout()
 
+    def _schedule_grid_layout_apply(self) -> None:
+        self._grid_apply_timer.start()
+
+    def _open_external_url(self, url: str) -> None:
+        if open_url(url):
+            return
+        QMessageBox.information(
+            self,
+            self.windowTitle(),
+            "Браузер не открылся (часто при запуске от root).\n"
+            f"Ссылка скопирована в буфер обмена:\n{url}",
+        )
+
     def _on_remove_repo(self) -> None:
         if self._grid_editor.occupied_slot_count <= 1:
             QMessageBox.warning(self, self.windowTitle(), "В сетке должен остаться хотя бы один репозиторий.")
@@ -543,7 +561,7 @@ class SettingsDialog(QDialog):
         oauth = GitHubOAuthService(
             settings_client_id=settings.github_oauth_client_id,
             stored_client_secret=stored_secret,
-            open_url=lambda url: QDesktopServices.openUrl(QUrl(url)),
+            open_url=self._oauth_open_url,
         )
 
         async def _sign_in():
@@ -564,6 +582,14 @@ class SettingsDialog(QDialog):
                 QMessageBox.information(self, self.windowTitle(), "Вход через GitHub выполнен.")
 
         self._run_async(_sign_in, _on_success, lambda msg: QMessageBox.critical(self, self.windowTitle(), msg))
+
+    def _oauth_open_url(self, url: str) -> None:
+        if open_url(url):
+            return
+        raise GitHubOAuthException(
+            "Не удалось открыть браузер (часто при запуске от root). "
+            "Ссылка скопирована в буфер обмена — используйте вход по коду устройства."
+        )
 
     def _run_async(self, coroutine_factory, on_success, on_failed) -> None:
         if self._async_worker is not None and self._async_worker.isRunning():

@@ -84,6 +84,8 @@ def _should_fallback_to_device_flow(exception: GitHubOAuthException) -> bool:
     message = str(exception).lower()
     return (
         "локальный порт" in message
+        or "браузер" in message
+        or "время ожидания callback" in message
         or "client_id and/or client_secret" in message
         or "incorrect_client_credentials" in message
     )

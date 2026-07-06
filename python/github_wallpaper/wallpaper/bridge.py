@@ -13,11 +13,10 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from PySide6.QtCore import QObject, Slot
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtCore import QUrl
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineScript
 
+from github_wallpaper.desktop.open_url import open_url
 from github_wallpaper.github.api_parsers import (
     ActivityFeedItem,
     RepoCiRunSnapshot,
@@ -366,7 +365,7 @@ class WallpaperBridge:
         if parsed.scheme not in ("http", "https"):
             return
 
-        QDesktopServices.openUrl(QUrl(url.strip()))
+        open_url(url.strip())
 
 
 def _create_metadata_message(repository: RepoReference, snapshot: RepoMetadataSnapshot) -> dict[str, Any]:

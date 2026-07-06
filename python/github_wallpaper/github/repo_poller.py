@@ -155,22 +155,23 @@ class RepoPoller(QObject):
         with self._lock:
             self._repositories = repos
 
-        self.stop()
+        self.stop(wait=False)
         self._stop_event.clear()
         self.repositories_changed.emit()
         self._thread = threading.Thread(target=self._thread_main, name="RepoPoller", daemon=True)
         self._thread.start()
 
-    def stop(self) -> None:
+    def stop(self, *, wait: bool = True) -> None:
         self._stop_event.set()
         loop = self._loop
         if loop is not None and loop.is_running():
             loop.call_soon_threadsafe(lambda: None)
 
-        if self._thread is not None and self._thread.is_alive():
+        if wait and self._thread is not None and self._thread.is_alive():
             self._thread.join(timeout=5)
-        self._thread = None
-        self._loop = None
+        if wait:
+            self._thread = None
+            self._loop = None
 
     def set_paused(self, paused: bool) -> None:
         with self._lock:

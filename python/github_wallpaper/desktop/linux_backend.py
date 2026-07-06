@@ -34,7 +34,7 @@ class LinuxDesktopBackend(DesktopBackend):
         self._x11_available = _probe_x11()
 
     def apply(self, window: QWidget, screen: QScreen) -> None:
-        self._prepare_window_flags(window)
+        self._prepare_window_flags(window, desktop_layer=self._x11_available)
         self._position_on_screen(window, screen)
         window.show()
 
@@ -62,7 +62,14 @@ class LinuxDesktopBackend(DesktopBackend):
             self._attached_window = None
 
     @staticmethod
-    def _prepare_window_flags(window: QWidget) -> None:
+    def _prepare_window_flags(window: QWidget, *, desktop_layer: bool) -> None:
+        if desktop_layer:
+            # X11 _NET_WM_WINDOW_TYPE_DESKTOP: без Tool — иначе перекрываем иконки рабочего стола.
+            window.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowDoesNotAcceptFocus
+            )
+            return
+
         window.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnBottomHint
@@ -102,6 +109,7 @@ class LinuxDesktopBackend(DesktopBackend):
             ctypes.POINTER(ctypes.c_ulong),
             ctypes.c_int,
         ]
+        x11.XLowerWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
 
         dpy = x11.XOpenDisplay(None)
         if not dpy:
@@ -123,6 +131,7 @@ class LinuxDesktopBackend(DesktopBackend):
                 atom_data,
                 1,
             )
+            x11.XLowerWindow(dpy, ctypes.c_ulong(wid))
             x11.XFlush(dpy)
         finally:
             x11.XCloseDisplay(dpy)
