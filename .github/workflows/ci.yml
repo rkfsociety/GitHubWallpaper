@@ -33,8 +33,9 @@ jobs:
       - name: Install Linux GUI dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          if command -v sudo >/dev/null 2>&1; then SUDO=sudo; else SUDO=; fi
+          $SUDO apt-get update
+          $SUDO apt-get install -y \
             libxcb-cursor-dev libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xinerama0 \
             libxkbcommon-x11-0 libegl1 libopengl0 libfontconfig1 \
@@ -75,8 +76,9 @@ jobs:
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          if command -v sudo >/dev/null 2>&1; then SUDO=sudo; else SUDO=; fi
+          $SUDO apt-get update
+          $SUDO apt-get install -y \
             libxcb-cursor-dev libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xinerama0 \
             libxkbcommon-x11-0 libegl1 libopengl0 libfontconfig1 \
@@ -139,8 +141,9 @@ jobs:
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          if command -v sudo >/dev/null 2>&1; then SUDO=sudo; else SUDO=; fi
+          $SUDO apt-get update
+          $SUDO apt-get install -y \
             libxcb-cursor-dev libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xinerama0 \
             libxkbcommon-x11-0 libegl1 libopengl0 libfontconfig1 \
