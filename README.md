@@ -45,7 +45,7 @@
 
 | Версия | Платформа | Стек | Статус |
 |--------|-----------|------|--------|
-| v2.0 | Windows + Linux | Python · PySide6 · Qt WebEngine | 🔄 [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · [этап 6](ROADMAP.md#этап-6--python--qt-v20-кроссплатформа) |
+| v2.0 | Windows + Linux | Python · PySide6 · Qt WebEngine | 🔄 [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · [этап 6](ROADMAP.md#этап-6--python--qt-v20) |
 | v1.0 | Windows 10/11 | C# / .NET 8 · WebView2 | ✅ Архив в `src/` (CI больше не собирает) |
 
 ## Разработка
