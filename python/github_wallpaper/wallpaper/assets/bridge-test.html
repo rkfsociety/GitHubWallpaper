@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Bridge Test</title>
+</head>
+<body>
+  <p id="status">Ожидание bridge…</p>
+  <script>
+    window.__bridgeTestMessages = [];
+
+    function onBridgeMessage(event) {
+      window.__bridgeTestMessages.push(event.data);
+      console.log("bridge:", JSON.stringify(event.data));
+      document.getElementById("status").textContent =
+        "Получено сообщений: " + window.__bridgeTestMessages.length;
+    }
+
+  if (window.chrome && window.chrome.webview) {
+      window.chrome.webview.addEventListener("message", onBridgeMessage);
+    } else {
+      const wait = setInterval(function () {
+        if (window.chrome && window.chrome.webview) {
+          clearInterval(wait);
+          window.chrome.webview.addEventListener("message", onBridgeMessage);
+        }
+      }, 10);
+    }
+  </script>
+</body>
+</html>

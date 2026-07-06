@@ -10,6 +10,7 @@ from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
 from github_wallpaper.settings_store import AppSettings
+from github_wallpaper.wallpaper.bridge import WallpaperBridge
 from github_wallpaper.wallpaper.controller import WallpaperController
 
 APP_DISPLAY_NAME = "GitHub Wallpaper"
@@ -46,6 +47,9 @@ class GitHubWallpaperApp:
 
         self._paused = False
         self._wallpaper = WallpaperController()
+        self._bridge = WallpaperBridge(self._wallpaper)
+        self._wallpaper.set_bridge(self._bridge)
+        self._bridge.start()
 
         settings = AppSettings.load()
         self._wallpaper.configure_display(settings.display_device_name)
@@ -90,6 +94,7 @@ class GitHubWallpaperApp:
             self._app.quit()
 
     def _on_about_to_quit(self) -> None:
+        self._bridge.dispose()
         self._wallpaper.dispose()
 
     def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:

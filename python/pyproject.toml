@@ -20,3 +20,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["github_wallpaper"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"github_wallpaper/wallpaper/assets" = "github_wallpaper/wallpaper/assets"

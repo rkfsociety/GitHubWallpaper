@@ -221,10 +221,10 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 `pause` · `resume` · `auth:status` · `repos:init` · `repo:metadata` · `repo:commits` · `repo:pulls` · `repo:issues` · `repo:releases` · `repo:ci-run` · `repo:heatmap` · `repo:activity-feed` · `repo:poll-failed` · (JS→host) `open-url` · `page:ready`
 
-- [ ] Shim для `window.chrome.webview` в WebEngine: `QWebChannel` или `runJavaScript` + `QWebEngineScript` injection
-- [ ] `bridge.py` — сериализация JSON (camelCase), очередь до `page:ready`
-- [ ] Обработка `open-url` → `QDesktopServices.openUrl`
-- [ ] Тест: статичная страница + `auth:status` / `repos:init` в консоли
+- [x] Shim для `window.chrome.webview` в WebEngine: `QWebChannel` или `runJavaScript` + `QWebEngineScript` injection
+- [x] `bridge.py` — сериализация JSON (camelCase), очередь до `page:ready`
+- [x] Обработка `open-url` → `QDesktopServices.openUrl`
+- [x] Тест: статичная страница + `auth:status` / `repos:init` в консоли
 
 ### 6.4 — GitHub и polling
 
