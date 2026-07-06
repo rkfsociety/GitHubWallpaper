@@ -7,7 +7,7 @@ from datetime import timedelta
 
 OWNER = "rkfsociety"
 REPO = "GitHubWallpaper"
-RELEASE_TAG = "v2.0-beta"
+RELEASE_TAG = "latest"
 VERSION_ASSET_NAME = "version.json"
 
 AUTOMATIC_CHECK_INTERVAL = timedelta(hours=24)

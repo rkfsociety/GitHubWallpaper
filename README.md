@@ -2,7 +2,7 @@
 
 Динамические обои для Windows: живые карточки GitHub-репозиториев **позади иконок рабочего стола**.
 
-> **v1.0** (Windows, C#) — [скачать exe](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · **v2.0** (кроссплатформа, Python/PySide6) — в разработке · [дорожная карта](ROADMAP.md)
+> **v2.0** (Windows + Linux, Python/PySide6) — [скачать](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · [дорожная карта](ROADMAP.md)
 
 ![Карточки репозиториев на рабочем столе](docs/screenshots/wallpaper.svg)
 
@@ -12,19 +12,21 @@
 
 ## Установка
 
-**Требования:** Windows 10/11, [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (обычно уже есть).
+**Требования:** Windows 10/11 или Linux (X11), Python runtime не нужен (portable-сборка).
 
-1. Скачайте `GitHubWallpaper.exe` из [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest).
-2. Запустите — при первом старте приложение скопируется в `%APPDATA%\GitHubWallpaper\` и создаст ярлыки.
+1. Скачайте архив из [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest):
+   - **Windows:** `GitHubWallpaper-Win-x64.zip` → распакуйте и запустите `GitHubWallpaper.exe`
+   - **Linux:** `GitHubWallpaper-linux-x64.tar.gz` → распакуйте и запустите `GitHubWallpaper`
+2. При первом старте приложение создаст каталог настроек и ярлыки (Windows).
 3. Иконка в трее → **Настройки** → войдите через GitHub или вставьте PAT → добавьте репозитории.
 
-Сборка self-contained, .NET на машине не нужен. Из исходников: `dotnet run --project src` · portable: `dotnet publish src -p:PublishProfile=win-x64`.
+**Автообновление:** portable-сборка проверяет Release `latest` (трей → «Проверить обновления…»).
 
 ## Авторизация
 
 **OAuth (рекомендуется):** в настройках — **Войти через GitHub**. Для своего OAuth App: callback `http://127.0.0.1:8791/callback`, включить Device Flow.
 
-**PAT:** хранится в Windows Credential Manager. [Fine-grained](https://github.com/settings/tokens?type=beta) или [classic](https://github.com/settings/tokens) с read-доступом к репозиториям; для приватных — scope `repo`. Без токена — 60 запросов/час, только публичные репо.
+**PAT:** хранится в системном хранилище (Windows Credential Manager / Linux Secret Service). [Fine-grained](https://github.com/settings/tokens?type=beta) или [classic](https://github.com/settings/tokens) с read-доступом к репозиториям; для приватных — scope `repo`. Без токена — 60 запросов/час, только публичные репо.
 
 ![Окно настроек](docs/screenshots/settings.svg)
 
@@ -32,23 +34,21 @@
 
 | Проблема | Решение |
 |----------|---------|
-| Чёрный экран | Установите WebView2 Runtime |
+| Чёрный экран | Перезапустите приложение; на Linux проверьте X11 и драйверы OpenGL |
 | Не тот монитор | Настройки → **Экран** |
 | 404 / нет приватного репо | PAT со scope `repo` |
 | Данные не обновляются | Проверьте сеть и лимит API; пресет **Экономный** |
 
-Настройки: `%APPDATA%\GitHubWallpaper\settings.json`. Удаление: трей → **Выход**, затем папка AppData и запись `GitHubWallpaper` в Credential Manager.
+Настройки: `%APPDATA%\GitHubWallpaper\settings.json` (Windows) или `~/.config/GitHubWallpaper/settings.json` (Linux).
 
 ## Статус
 
 | Версия | Платформа | Стек | Статус |
 |--------|-----------|------|--------|
-| v1.0 | Windows 10/11 | C# / .NET 8 · WebView2 | ✅ [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) |
-| v2.0 | Windows + Linux | Python · PySide6 · Qt WebEngine | 🔄 [pre-release `v2.0-beta`](https://github.com/rkfsociety/GitHubWallpaper/releases/tag/v2.0-beta) · [этап 6](ROADMAP.md#этап-6--python--qt-v20-кроссплатформа) |
+| v2.0 | Windows + Linux | Python · PySide6 · Qt WebEngine | 🔄 [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · [этап 6](ROADMAP.md#этап-6--python--qt-v20-кроссплатформа) |
+| v1.0 | Windows 10/11 | C# / .NET 8 · WebView2 | ✅ Архив в `src/` (CI больше не собирает) |
 
 ## Разработка
-
-**v1.0 (C#):** `dotnet run --project src` · portable: `dotnet publish src -p:PublishProfile=win-x64`
 
 ### v2.0 (Python / PySide6)
 
@@ -86,9 +86,11 @@ python scripts/build_release.py
 - Windows: `GitHubWallpaper-Win-x64.zip` → `GitHubWallpaper/GitHubWallpaper.exe`
 - Linux: `GitHubWallpaper-linux-x64.tar.gz` → `GitHubWallpaper/GitHubWallpaper`
 
-Размер дистрибутива ~150–200 МБ (Qt WebEngine). CI собирает v2.0 на `windows-latest` и `ubuntu-latest`; pre-release [`v2.0-beta`](https://github.com/rkfsociety/GitHubWallpaper/releases/tag/v2.0-beta) не заменяет C# [`latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest).
+Размер дистрибутива ~150–200 МБ (Qt WebEngine). CI собирает v2.0 на `windows-latest` и `ubuntu-latest`; push в `main` публикует [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest).
 
-**Автообновление v2.0:** portable-сборка проверяет pre-release `v2.0-beta` (трей → «Проверить обновления…»).
+### v1.0 (C#, архив)
+
+Исходники в `src/`. Локальная сборка: `dotnet run --project src` · portable: `dotnet publish src -p:PublishProfile=win-x64`. Требуется [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
 
 ## Лицензия
 

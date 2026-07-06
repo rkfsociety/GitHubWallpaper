@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  test-v2:
+  test:
     if: github.event_name == 'pull_request'
     runs-on: ${{ matrix.os }}
     strategy:
@@ -52,7 +52,7 @@ jobs:
             python -m unittest discover -s tests -p "test_*.py"
           fi
 
-  build-v2:
+  build:
     if: github.event_name == 'pull_request'
     runs-on: ${{ matrix.os }}
     strategy:
@@ -99,7 +99,7 @@ jobs:
             ls -lh publish/GitHubWallpaper-linux-x64.tar.gz
           fi
 
-  release-v2-build:
+  release-build:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     strategy:
@@ -148,19 +148,21 @@ jobs:
       - name: Upload platform artifact
         uses: actions/upload-artifact@v4
         with:
-          name: v2-${{ matrix.os }}
+          name: release-${{ matrix.os }}
           path: python/publish/
           if-no-files-found: error
 
-  release-v2-publish:
+  release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: release-v2-build
+    needs: release-build
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Determine version
         id: version
@@ -184,31 +186,31 @@ jobs:
           {
             "version": "${{ steps.version.outputs.version }}",
             "publishedAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "releaseTag": "v2.0-beta",
-            "windowsDownloadUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/v2.0-beta/GitHubWallpaper-Win-x64.zip",
-            "linuxDownloadUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/v2.0-beta/GitHubWallpaper-linux-x64.tar.gz"
+            "releaseTag": "latest",
+            "windowsDownloadUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper-Win-x64.zip",
+            "linuxDownloadUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper-linux-x64.tar.gz"
           }
           EOF
 
-      - name: Recreate v2.0-beta pre-release
+      - name: Recreate latest release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          TAG="v2.0-beta"
+          TAG="latest"
           SHA="${{ github.sha }}"
           VERSION="${{ steps.version.outputs.version }}"
           SHORT_SHA="${SHA:0:7}"
           NOTES=$(cat <<EOF
-          ## GitHubWallpaper v2.0 (beta)
+          ## GitHubWallpaper
 
           Сборка **${VERSION}** (${SHORT_SHA}).
 
           - Windows: \`GitHubWallpaper-Win-x64.zip\` (распакуйте и запустите \`GitHubWallpaper.exe\`)
           - Linux: \`GitHubWallpaper-linux-x64.tar.gz\` (распакуйте и запустите \`GitHubWallpaper\`)
 
-          Pre-release v2.0 (Python/PySide6).
+          Python / PySide6 · Qt WebEngine.
           EOF
           )
 
@@ -222,6 +224,19 @@ jobs:
             release/GitHubWallpaper-linux-x64.tar.gz \
             release/version.json \
             --target "$SHA" \
-            --title "GitHubWallpaper v2.0-beta ${VERSION}" \
+            --title "GitHubWallpaper ${VERSION}" \
             --notes "$NOTES" \
-            --prerelease
+            --latest
+
+          for OLD_TAG in v2.0-beta; do
+            if gh release view "$OLD_TAG" >/dev/null 2>&1; then
+              echo "Removing obsolete release $OLD_TAG"
+              gh release delete "$OLD_TAG" --yes --cleanup-tag
+            fi
+          done
+
+          OLD_TAGS=$(gh release list --limit 100 --json tagName -q '.[].tagName' | grep -E '^v1\.0\.[0-9]+$' || true)
+          for OLD_TAG in $OLD_TAGS; do
+            echo "Removing old v1 release $OLD_TAG"
+            gh release delete "$OLD_TAG" --yes --cleanup-tag
+          done

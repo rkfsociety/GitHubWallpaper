@@ -19,7 +19,7 @@
 | 6 | [Python + Qt (v2.0)](#этап-6--python--qt-v20-кроссплатформа) | 🔄 В работе | Windows + Linux, общий UI и логика |
 | — | [Фаза 2 (будущее)](#фаза-2--будущее) | 💡 Идеи | Расширения после v2.0 |
 
-**Текущее состояние:** единая ветка **`main`**. v1.0 (C#) — [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest); push в `main` → CI собирает portable exe. v2.0 (Python/PySide6) — этап 6, каталог `python/`, те же коммиты в `main`.
+**Текущее состояние:** единая ветка **`main`**. v2.0 (Python/PySide6) — [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest); push в `main` → CI собирает portable-архивы Win/Linux. C# v1.0 остаётся в `src/` для справки, CI больше не публикует exe.
 
 ---
 
@@ -251,8 +251,8 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 - [x] `README` раздел v2.0: зависимости (PySide6, Qt WebEngine), запуск из исходников
 - [x] Сборка: PyInstaller / cx_Freeze — `GitHubWallpaper` exe (Win) и AppImage или tarball (Linux)
 - [x] GitHub Actions: job сборки v2.0 на `windows-latest` и `ubuntu-latest` (в `ci.yml`, ветка `main`)
-- [x] Release: отдельный тег `v2.0` или pre-release `v2.0-beta` (не ломать `latest` для C# до готовности)
-- [x] Автообновление v2.0 из GitHub Releases (порт `AppUpdateService`)
+- [x] Release `latest` на push в `main` (Windows zip + Linux tarball, пересоздаётся через `--target`)
+- [x] Автообновление v2.0 из GitHub Release `latest` (порт `AppUpdateService`)
 
 ### Критерии готовности v2.0
 
@@ -270,7 +270,7 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 | `window.chrome.webview` нет в WebEngine | JS-shim + QWebChannel в `bridge-shim.js` |
 | WorkerW на новых сборках Win11 | Порт проверенной логики из `DesktopHost.cs`; fallback overlay |
 | Wayland на Linux | MVP на X11; Wayland — отдельный подэтап по DE |
-| Два стека в репо (C# + Python) | v1 в `src/`, v2 в `python/`; оба в `main` до замены v1 релизом v2 |
+| Два стека в репо (C# + Python) | v1 в `src/` (архив); v2 в `python/` — CI и Release `latest` только для v2 |
 | Дублирование логики GitHub | Единая таблица API в ROADMAP; тесты на паритет ответов bridge |
 
 ### Порядок реализации (кратко)

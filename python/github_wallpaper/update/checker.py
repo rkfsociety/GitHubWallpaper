@@ -1,4 +1,4 @@
-"""Проверка GitHub Release v2.0-beta на наличие новой версии."""
+"""Проверка GitHub Release latest на наличие новой версии."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ _RELEASE_NAME_VERSION_RE = re.compile(
 
 
 class AppUpdateChecker:
-    """Синхронная проверка релиза v2.0-beta через GitHub REST API."""
+    """Синхронная проверка релиза latest через GitHub REST API."""
 
     def __init__(self, *, client: httpx.Client | None = None) -> None:
         self._owns_client = client is None

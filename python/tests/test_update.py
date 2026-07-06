@@ -44,7 +44,7 @@ class AppUpdateCheckerTests(unittest.TestCase):
 
     def test_detects_update_from_release_payload(self) -> None:
         release_payload = {
-            "html_url": "https://github.com/rkfsociety/GitHubWallpaper/releases/tag/v2.0-beta",
+            "html_url": "https://github.com/rkfsociety/GitHubWallpaper/releases/tag/latest",
             "name": "GitHubWallpaper 2.0.99",
             "assets": [
                 {
@@ -61,7 +61,7 @@ class AppUpdateCheckerTests(unittest.TestCase):
         }
 
         def handler(request: httpx.Request) -> httpx.Response:
-            if request.url.path.endswith("/releases/tags/v2.0-beta"):
+            if request.url.path.endswith("/releases/tags/latest"):
                 return httpx.Response(200, json=release_payload)
             if request.url.path.endswith("/version.json"):
                 return httpx.Response(200, text=json.dumps({"version": "2.0.99"}))
