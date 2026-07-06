@@ -198,12 +198,12 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 ### 6.1 — Каркас проекта
 
-- [ ] `python/pyproject.toml` (PySide6, httpx, keyring, pydantic)
-- [ ] Структура пакета: `main.py`, `app.py`, `paths.py`, `single_instance.py`
-- [ ] `paths.py`: Windows `%APPDATA%` · Linux XDG (`XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`)
-- [ ] `QApplication` + `QSystemTrayIcon`: меню Настройки / Пауза / Выход
-- [ ] Single-instance (named mutex на Win · Unix socket на Linux)
-- [ ] Копирование `wwwroot/wallpaper/` в каталог данных при первом запуске (аналог `AppInstaller.EnsureWallpaperAssets`)
+- [x] `python/pyproject.toml` (PySide6, httpx, keyring, pydantic)
+- [x] Структура пакета: `main.py`, `app.py`, `paths.py`, `single_instance.py`
+- [x] `paths.py`: Windows `%APPDATA%` · Linux XDG (`XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`)
+- [x] `QApplication` + `QSystemTrayIcon`: меню Настройки / Пауза / Выход
+- [x] Single-instance (named mutex на Win · Unix socket на Linux)
+- [x] Копирование `wwwroot/wallpaper/` в каталог данных при первом запуске (аналог `AppInstaller.EnsureWallpaperAssets`)
 
 ### 6.2 — Обои и WebEngine
 
