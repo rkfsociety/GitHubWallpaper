@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QUrl, Signal
+from PySide6.QtCore import QObject, QUrl, Signal
 from PySide6.QtGui import QGuiApplication, QScreen
 
 from github_wallpaper.desktop.backend import DesktopBackend, create_desktop_backend
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class WallpaperController:
+class WallpaperController(QObject):
     """
     Координирует WallpaperWindow, локальный HTTP-сервер и DesktopBackend.
 
@@ -32,6 +32,7 @@ class WallpaperController:
     page_ready = Signal()
 
     def __init__(self) -> None:
+        super().__init__()
         self._backend: DesktopBackend = create_desktop_backend()
         self._server: LocalWallpaperServer | None = None
         self._window: WallpaperWindow | None = None
