@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ctypes
 import sys
+from dataclasses import dataclass
 from ctypes import wintypes
 
 from PySide6.QtCore import Qt, QRect
@@ -32,6 +33,9 @@ WS_EX_NOACTIVATE = 0x0800_0000
 WS_EX_APPWINDOW = 0x0004_0000
 WS_EX_TOOLWINDOW = 0x0000_0080
 WS_EX_TRANSPARENT = 0x0000_0020
+WS_EX_NOREDIRECTIONBITMAP = 0x0020_0000
+
+MIN_WORKER_WINDOW_SIZE = 400
 
 SWP_NOMOVE = 0x0002
 SWP_NOSIZE = 0x0001
@@ -80,11 +84,21 @@ class _POINT(ctypes.Structure):
     _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
 
 
+@dataclass(frozen=True, slots=True)
+class _RaisedDesktopLayout:
+    """Win11 24H2+: Progman + дочерние SHELLDLL_DefView и WorkerW."""
+
+    progman: int
+    shell_view: int
+    wallpaper_worker: int
+
+
 class WindowsDesktopBackend(DesktopBackend):
     """Прикрепляет QWidget к WorkerW за иконками рабочего стола."""
 
     def __init__(self) -> None:
         self._worker_window: int = 0
+        self._raised_layout: _RaisedDesktopLayout | None = None
         self._attached_handle: int = 0
         self._saved_style: int = 0
         self._saved_ex_style: int = 0
@@ -121,6 +135,7 @@ class WindowsDesktopBackend(DesktopBackend):
         if self._attached_handle:
             self._detach()
         self._worker_window = 0
+        self._raised_layout = None
         self._remove_display_hook()
 
     def _ensure_native_handle(self, window: QWidget) -> None:
@@ -157,7 +172,38 @@ class WindowsDesktopBackend(DesktopBackend):
     def _initialize_worker(self) -> None:
         if self._worker_window:
             return
+
+        if _is_raised_desktop():
+            self._raised_layout = _ensure_raised_desktop_layout()
+            self._worker_window = self._raised_layout.progman
+            return
+
+        self._raised_layout = None
         self._worker_window = _resolve_worker_window()
+
+    def _apply_raised_desktop_z_order(self, window_handle: int) -> None:
+        if self._raised_layout is None:
+            return
+
+        flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE
+        user32.SetWindowPos(
+            window_handle,
+            self._raised_layout.shell_view,
+            0,
+            0,
+            0,
+            0,
+            flags,
+        )
+        user32.SetWindowPos(
+            self._raised_layout.wallpaper_worker,
+            window_handle,
+            0,
+            0,
+            0,
+            0,
+            flags,
+        )
 
     def _attach(self, window_handle: int) -> None:
         if not window_handle:
@@ -191,8 +237,11 @@ class WindowsDesktopBackend(DesktopBackend):
 
         user32.SetParent(window_handle, self._worker_window)
         self._fit_to_target_bounds(window_handle)
-        _send_to_bottom_of_parent(window_handle)
-        _ensure_desktop_icons_above_wallpaper()
+        if self._raised_layout is not None:
+            self._apply_raised_desktop_z_order(window_handle)
+        else:
+            _send_to_bottom_of_parent(window_handle)
+            _ensure_desktop_icons_above_wallpaper()
         _enable_mouse_click_through(window_handle)
 
         self._attached_handle = window_handle
@@ -209,6 +258,8 @@ class WindowsDesktopBackend(DesktopBackend):
     def _fit_to_target_bounds(self, window_handle: int) -> None:
         bounds = self._target_bounds or _get_virtual_screen_bounds()
         self._fit_to_bounds(window_handle, bounds)
+        if self._raised_layout is not None:
+            self._apply_raised_desktop_z_order(window_handle)
 
     def _fit_to_bounds(self, window_handle: int, screen_bounds: QRect) -> None:
         position = _POINT(screen_bounds.x(), screen_bounds.y())
@@ -224,6 +275,78 @@ class WindowsDesktopBackend(DesktopBackend):
             screen_bounds.height(),
             SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW,
         )
+
+
+def _is_raised_desktop() -> bool:
+    progman = user32.FindWindowW("Progman", None)
+    if not progman:
+        return False
+
+    ex_style = _window_style(_get_window_long(progman, GWL_EXSTYLE))
+    return bool(ex_style & WS_EX_NOREDIRECTIONBITMAP)
+
+
+def _spawn_worker_layer(progman: int) -> None:
+    result = ctypes.c_ulong()
+    user32.SendMessageTimeoutW(
+        progman,
+        WM_SPAWN_WORKER,
+        0,
+        0,
+        SMTO_NORMAL,
+        1000,
+        ctypes.byref(result),
+    )
+
+
+def _ensure_raised_desktop_layout() -> _RaisedDesktopLayout:
+    progman = user32.FindWindowW("Progman", None)
+    if not progman:
+        raise RuntimeError("Окно Progman не найдено.")
+
+    _spawn_worker_layer(progman)
+
+    shell_view = user32.FindWindowExW(progman, 0, "SHELLDLL_DefView", None)
+    if not shell_view:
+        raise RuntimeError("SHELLDLL_DefView не найден в Progman.")
+
+    wallpaper_worker = _find_progman_wallpaper_worker(progman)
+    if not wallpaper_worker:
+        raise RuntimeError("Дочерний WorkerW для обоев не найден в Progman.")
+
+    return _RaisedDesktopLayout(
+        progman=int(progman),
+        shell_view=int(shell_view),
+        wallpaper_worker=int(wallpaper_worker),
+    )
+
+
+def _find_progman_wallpaper_worker(progman: int) -> int:
+    best_handle = 0
+    best_area = 0
+    child = 0
+
+    while True:
+        child = user32.FindWindowExW(progman, child, "WorkerW", None)
+        if not child:
+            break
+
+        width, height = _window_size(child)
+        if width < MIN_WORKER_WINDOW_SIZE or height < MIN_WORKER_WINDOW_SIZE:
+            continue
+
+        area = width * height
+        if area > best_area:
+            best_area = area
+            best_handle = int(child)
+
+    return best_handle
+
+
+def _window_size(window_handle: int) -> tuple[int, int]:
+    rect = wintypes.RECT()
+    user32.GetWindowRect(window_handle, ctypes.byref(rect))
+    return rect.right - rect.left, rect.bottom - rect.top
 
 
 def _resolve_worker_window() -> int:
@@ -256,20 +379,29 @@ def _resolve_worker_window() -> int:
 
 
 def _try_find_empty_worker_window() -> int:
-    found = wintypes.HWND(0)
+    best_handle = 0
+    best_area = 0
 
     @EnumWindowsProc
     def callback(top_level: int, _lparam: int) -> bool:
-        nonlocal found
+        nonlocal best_handle, best_area
         if not _has_window_class(top_level, "WorkerW"):
             return True
         if user32.FindWindowExW(top_level, 0, "SHELLDLL_DefView", None):
             return True
-        found = top_level
-        return False
+
+        width, height = _window_size(top_level)
+        if width < MIN_WORKER_WINDOW_SIZE or height < MIN_WORKER_WINDOW_SIZE:
+            return True
+
+        area = width * height
+        if area > best_area:
+            best_area = area
+            best_handle = top_level
+        return True
 
     user32.EnumWindows(callback, 0)
-    return int(found)
+    return best_handle
 
 
 def _try_find_worker_w_sibling_of_shell_view_host() -> int:
