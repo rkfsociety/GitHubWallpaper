@@ -29,8 +29,22 @@ def current_version() -> str:
         return __version__
 
 
+def is_bootstrap_build() -> bool:
+    if not getattr(sys, "frozen", False):
+        return False
+
+    try:
+        from github_wallpaper import _build_flavor
+
+        return _build_flavor.BUILD_FLAVOR == "bootstrap"
+    except (ImportError, AttributeError):
+        return False
+
+
 def can_self_update() -> bool:
     if not getattr(sys, "frozen", False):
+        return False
+    if is_bootstrap_build():
         return False
 
     executable = Path(sys.executable).resolve()

@@ -10,10 +10,11 @@
 
 ## Установка
 
-1. Архив из [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest):
-   - **Windows** — `GitHubWallpaper-Win-x64.zip` → `GitHubWallpaper.exe`
-   - **Linux (X11)** — `GitHubWallpaper-linux-x64.tar.gz` → `GitHubWallpaper`
-2. Трей → **Настройки** → GitHub OAuth или PAT → добавьте репозитории.
+1. Скачайте из [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest):
+   - **Windows** — `GitHubWallpaper.exe`
+   - **Linux (X11)** — `GitHubWallpaper`
+2. Запустите файл. При первом запуске приложение скачает компоненты (~150 МБ) в каталог данных и установит launcher в `%APPDATA%\GitHubWallpaper\` (Win) или `~/.config/GitHubWallpaper/` (Linux).
+3. Трей → **Настройки** → GitHub OAuth или PAT → добавьте репозитории.
 
 Без Python/.NET на машине. Обновления: трей → «Проверить обновления…».
 

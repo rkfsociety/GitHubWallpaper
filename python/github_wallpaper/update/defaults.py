@@ -27,3 +27,9 @@ def platform_archive_asset_name() -> str:
     if sys.platform == "win32":
         return "GitHubWallpaper-Win-x64.zip"
     return "GitHubWallpaper-linux-x64.tar.gz"
+
+
+def platform_installer_asset_name() -> str:
+    if sys.platform == "win32":
+        return "GitHubWallpaper.exe"
+    return "GitHubWallpaper"

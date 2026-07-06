@@ -128,7 +128,7 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 ### 6.6 — Сборка, CI и релиз
 
 - [x] `README`: зависимости, запуск, сборка PyInstaller
-- [x] Артефакты: `GitHubWallpaper-Win-x64.zip`, `GitHubWallpaper-linux-x64.tar.gz`
+- [x] Артефакты: `GitHubWallpaper.exe` / `GitHubWallpaper` (installer) + runtime-архивы для автоустановки
 - [x] GitHub Actions: тесты и сборка на `windows-latest` и `ubuntu-latest`
 - [x] Release `latest` на push в `main`
 - [x] Автообновление из Release `latest`

@@ -24,30 +24,42 @@ def main() -> int:
     args = parser.parse_args()
 
     python_dir = Path(__file__).resolve().parent.parent
-    dist_dir = python_dir / "dist" / "GitHubWallpaper"
     publish_dir = args.output_dir
     if not publish_dir.is_absolute():
         publish_dir = python_dir / publish_dir
 
     _write_build_version(python_dir)
-    _run_pyinstaller(python_dir)
+    _write_build_flavor(python_dir, "runtime")
+    _run_pyinstaller(python_dir, "GitHubWallpaper.spec")
 
+    dist_dir = python_dir / "dist" / "GitHubWallpaper"
     if not dist_dir.is_dir():
-        raise SystemExit(f"PyInstaller output not found: {dist_dir}")
+        raise SystemExit(f"PyInstaller runtime output not found: {dist_dir}")
 
     executable = dist_dir / ("GitHubWallpaper.exe" if sys.platform == "win32" else "GitHubWallpaper")
     if not executable.is_file():
-        raise SystemExit(f"Executable not found: {executable}")
+        raise SystemExit(f"Runtime executable not found: {executable}")
 
     publish_dir.mkdir(parents=True, exist_ok=True)
     if sys.platform == "win32":
-        archive_path = publish_dir / "GitHubWallpaper-Win-x64.zip"
-        _create_zip(dist_dir, archive_path)
+        runtime_archive = publish_dir / "GitHubWallpaper-Win-x64.zip"
+        _create_zip(dist_dir, runtime_archive)
+        print(f"Built runtime archive {runtime_archive} ({runtime_archive.stat().st_size:,} bytes)")
     else:
-        archive_path = publish_dir / "GitHubWallpaper-linux-x64.tar.gz"
-        _create_tarball(dist_dir, archive_path)
+        runtime_archive = publish_dir / "GitHubWallpaper-linux-x64.tar.gz"
+        _create_tarball(dist_dir, runtime_archive)
+        print(f"Built runtime archive {runtime_archive} ({runtime_archive.stat().st_size:,} bytes)")
 
-    print(f"Built {archive_path} ({archive_path.stat().st_size:,} bytes)")
+    _write_build_flavor(python_dir, "bootstrap")
+    _run_pyinstaller(python_dir, "GitHubWallpaperBootstrap.spec")
+
+    bootstrap_exe = python_dir / "dist" / ("GitHubWallpaper.exe" if sys.platform == "win32" else "GitHubWallpaper")
+    if not bootstrap_exe.is_file():
+        raise SystemExit(f"Bootstrap executable not found: {bootstrap_exe}")
+
+    installer_path = publish_dir / bootstrap_exe.name
+    shutil.copy2(bootstrap_exe, installer_path)
+    print(f"Built installer {installer_path} ({installer_path.stat().st_size:,} bytes)")
     return 0
 
 
@@ -62,8 +74,13 @@ def _write_build_version(python_dir: Path) -> None:
     target.write_text(f'__version__ = "{version}"\n', encoding="utf-8")
 
 
-def _run_pyinstaller(python_dir: Path) -> None:
-    spec_path = python_dir / "GitHubWallpaper.spec"
+def _write_build_flavor(python_dir: Path, flavor: str) -> None:
+    target = python_dir / "github_wallpaper" / "_build_flavor.py"
+    target.write_text(f'BUILD_FLAVOR = "{flavor}"\n', encoding="utf-8")
+
+
+def _run_pyinstaller(python_dir: Path, spec_name: str) -> None:
+    spec_path = python_dir / spec_name
     build_dir = python_dir / "build"
     dist_dir = python_dir / "dist"
 
