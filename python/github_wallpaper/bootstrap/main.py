@@ -15,6 +15,7 @@ from github_wallpaper.bootstrap.runtime_paths import (
     is_runtime_installed,
     launcher_path,
     runtime_executable,
+    runtime_root,
 )
 from github_wallpaper.paths import config_dir
 from github_wallpaper.update.installer import format_download_error
@@ -76,16 +77,39 @@ def _ensure_launcher() -> None:
 
 
 def _launch_runtime(args: list[str]) -> int:
-    executable = runtime_executable()
-    if executable is None:
-        raise FileNotFoundError("Runtime не найден после установки.")
+    executable = _resolve_runtime_executable()
 
-    subprocess.Popen(
-        [str(executable), *args],
-        cwd=str(executable.parent),
-        close_fds=True,
-    )
+    popen_kwargs: dict[str, object] = {
+        "args": [str(executable), *args],
+        "cwd": str(executable.parent),
+        "close_fds": False,
+    }
+    if sys.platform == "win32":
+        # DETACHED_PROCESS: дочерний процесс не завершается вместе с one-file launcher.
+        popen_kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+
+    subprocess.Popen(**popen_kwargs)
     return 0
+
+
+def _resolve_runtime_executable() -> Path:
+    name = "GitHubWallpaper.exe" if sys.platform == "win32" else "GitHubWallpaper"
+    explicit = runtime_root() / name
+    if explicit.is_file():
+        executable = explicit.resolve()
+    else:
+        discovered = runtime_executable()
+        if discovered is None:
+            raise FileNotFoundError("Runtime не найден после установки.")
+        executable = discovered.resolve()
+
+    launcher = launcher_path().resolve()
+    if executable == launcher:
+        raise FileNotFoundError(
+            "Runtime не найден: launcher и runtime указывают на один файл. "
+            "Переустановите приложение или запустите GitHubWallpaper.exe из папки app."
+        )
+    return executable
 
 
 def _is_network_error(exc: Exception) -> bool:

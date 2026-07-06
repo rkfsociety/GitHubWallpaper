@@ -27,8 +27,14 @@ def refresh_path_if_enabled() -> None:
 
 def _executable_path() -> str:
     if getattr(sys, "frozen", False):
-        from github_wallpaper.bootstrap.runtime_paths import preferred_launcher_path
+        from github_wallpaper.bootstrap.runtime_paths import (
+            preferred_launcher_path,
+            runtime_executable,
+        )
 
+        runtime = runtime_executable()
+        if runtime is not None:
+            return str(runtime.resolve())
         return str(preferred_launcher_path())
 
     module_path = Path(sys.argv[0]).resolve()
