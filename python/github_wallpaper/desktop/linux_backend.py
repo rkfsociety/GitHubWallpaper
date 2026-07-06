@@ -90,15 +90,16 @@ class LinuxDesktopBackend(DesktopBackend):
             return
 
         x11.XOpenDisplay.restype = ctypes.c_void_p
+        x11.XInternAtom.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_bool]
         x11.XInternAtom.restype = ctypes.c_ulong
         x11.XChangeProperty.argtypes = [
             ctypes.c_void_p,
             ctypes.c_ulong,
             ctypes.c_ulong,
+            ctypes.c_ulong,
             ctypes.c_int,
             ctypes.c_int,
-            ctypes.c_int,
-            ctypes.c_char_p,
+            ctypes.POINTER(ctypes.c_ulong),
             ctypes.c_int,
         ]
 
@@ -109,17 +110,17 @@ class LinuxDesktopBackend(DesktopBackend):
         try:
             wm_type_atom = x11.XInternAtom(dpy, _NET_WM_WINDOW_TYPE.encode(), False)
             desktop_atom = x11.XInternAtom(dpy, _NET_WM_WINDOW_TYPE_DESKTOP.encode(), False)
-            xa_atom = 4  # XA_ATOM
+            xa_atom = ctypes.c_ulong(4)  # XA_ATOM
 
             atom_data = (ctypes.c_ulong * 1)(desktop_atom)
             x11.XChangeProperty(
                 dpy,
-                wid,
+                ctypes.c_ulong(wid),
                 wm_type_atom,
                 xa_atom,
                 32,
                 0,
-                ctypes.cast(atom_data, ctypes.POINTER(ctypes.c_ubyte)),
+                atom_data,
                 1,
             )
             x11.XFlush(dpy)

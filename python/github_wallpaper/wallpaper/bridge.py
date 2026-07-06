@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from collections import deque
 from collections.abc import Callable
 from datetime import datetime
@@ -40,11 +41,23 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 _ASSETS_DIR = Path(__file__).resolve().parent / "assets"
-_UNAUTHENTICATED_RATE_LIMIT = 60
+
+
+def _assets_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            bundled = Path(meipass) / "github_wallpaper" / "wallpaper" / "assets"
+            if bundled.is_dir():
+                return bundled
+    return _ASSETS_DIR
 
 
 def _load_asset(name: str) -> str:
-    return (_ASSETS_DIR / name).read_text(encoding="utf-8")
+    return (_assets_dir() / name).read_text(encoding="utf-8")
+
+
+_UNAUTHENTICATED_RATE_LIMIT = 60
 
 
 class BridgeChannelHost(QObject):

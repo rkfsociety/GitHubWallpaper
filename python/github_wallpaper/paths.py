@@ -82,7 +82,9 @@ def find_bundled_wallpaper_root() -> Path | None:
         if meipass:
             candidates.append(Path(meipass) / "wwwroot" / "wallpaper")
 
-    candidates.append(Path(sys.executable).resolve().parent / "wwwroot" / "wallpaper")
+    exe_parent = Path(sys.executable).resolve().parent
+    candidates.append(exe_parent / "wwwroot" / "wallpaper")
+    candidates.append(exe_parent / "_internal" / "wwwroot" / "wallpaper")
 
     for candidate in candidates:
         if (candidate / "index.html").is_file():
