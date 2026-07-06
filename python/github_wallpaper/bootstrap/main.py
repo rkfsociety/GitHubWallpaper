@@ -79,17 +79,78 @@ def _ensure_launcher() -> None:
 def _launch_runtime(args: list[str]) -> int:
     executable = _resolve_runtime_executable()
 
-    popen_kwargs: dict[str, object] = {
-        "args": [str(executable), *args],
-        "cwd": str(executable.parent),
-        "close_fds": False,
-    }
     if sys.platform == "win32":
-        # DETACHED_PROCESS: дочерний процесс не завершается вместе с one-file launcher.
-        popen_kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+        _launch_windows_process(executable, args)
+        return 0
 
-    subprocess.Popen(**popen_kwargs)
+    subprocess.Popen(
+        [str(executable), *args],
+        cwd=str(executable.parent),
+        close_fds=False,
+    )
     return 0
+
+
+def _launch_windows_process(executable: Path, args: list[str]) -> None:
+    """Запуск runtime через Win32 API — обход рекурсии one-file PyInstaller subprocess."""
+    import ctypes
+    from ctypes import wintypes
+
+    CREATE_NEW_PROCESS_GROUP = 0x00000200
+    DETACHED_PROCESS = 0x00000008
+
+    class _STARTUPINFOW(ctypes.Structure):
+        _fields_ = [
+            ("cb", wintypes.DWORD),
+            ("lpReserved", wintypes.LPWSTR),
+            ("lpDesktop", wintypes.LPWSTR),
+            ("lpTitle", wintypes.LPWSTR),
+            ("dwX", wintypes.DWORD),
+            ("dwY", wintypes.DWORD),
+            ("dwXSize", wintypes.DWORD),
+            ("dwYSize", wintypes.DWORD),
+            ("dwXCountChars", wintypes.DWORD),
+            ("dwYCountChars", wintypes.DWORD),
+            ("dwFillAttribute", wintypes.DWORD),
+            ("dwFlags", wintypes.DWORD),
+            ("wShowWindow", wintypes.WORD),
+            ("cbReserved2", wintypes.WORD),
+            ("lpReserved2", ctypes.POINTER(wintypes.BYTE)),
+            ("hStdInput", wintypes.HANDLE),
+            ("hStdOutput", wintypes.HANDLE),
+            ("hStdError", wintypes.HANDLE),
+        ]
+
+    class _PROCESS_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("hProcess", wintypes.HANDLE),
+            ("hThread", wintypes.HANDLE),
+            ("dwProcessId", wintypes.DWORD),
+            ("dwThreadId", wintypes.DWORD),
+        ]
+
+    command_line = subprocess.list2cmdline([str(executable), *args])
+    startup_info = _STARTUPINFOW()
+    startup_info.cb = ctypes.sizeof(_STARTUPINFOW)
+    process_info = _PROCESS_INFORMATION()
+
+    if not ctypes.windll.kernel32.CreateProcessW(
+        str(executable),
+        command_line,
+        None,
+        None,
+        False,
+        CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS,
+        None,
+        str(executable.parent),
+        ctypes.byref(startup_info),
+        ctypes.byref(process_info),
+    ):
+        error_code = ctypes.windll.kernel32.GetLastError()
+        raise RuntimeError(f"Не удалось запустить runtime (код {error_code}).")
+
+    ctypes.windll.kernel32.CloseHandle(process_info.hProcess)
+    ctypes.windll.kernel32.CloseHandle(process_info.hThread)
 
 
 def _resolve_runtime_executable() -> Path:
