@@ -7,12 +7,12 @@ alwaysApply: true
 
 Динамические обои: HTML за иконками рабочего стола + данные GitHub REST API.
 
-**Репозиторий:** [rkfsociety/GitHubWallpaper](https://github.com/rkfsociety/GitHubWallpaper) · **Платформы:** v1.0 Windows 10/11 · v2.0 Windows + Linux · **Ответы:** только на русском
+**Репозиторий:** [rkfsociety/GitHubWallpaper](https://github.com/rkfsociety/GitHubWallpaper) · **Платформы:** v2.0 Windows + Linux · v1.0 архив в `src/` · **Ответы:** только на русском
 
 ## Стек
 
-**v1.0:** C# / .NET 8 · WinForms · WebView2 · WorkerW (`DesktopHost`) · HTML/CSS/JS в `wwwroot/wallpaper/`  
-**v2.0:** Python 3.11+ · PySide6 · Qt WebEngine · `keyring` · каталог `python/`
+**v2.0 (активный):** Python 3.11+ · PySide6 · Qt WebEngine · `keyring` · каталог `python/`  
+**v1.0 (архив):** C# / .NET 8 · WinForms · WebView2 · `src/` — CI не собирает
 
 ## Текущий этап (ROADMAP)
 
@@ -25,7 +25,7 @@ alwaysApply: true
 | 5 Полировка и релиз (C# v1) | ✅ |
 | 6 Python + Qt v2.0 | 🔄 |
 
-**Сейчас:** единая ветка `main`. v1.0 — push → CI обновляет Release `latest` (portable exe). v2.0 (Python/PySide6) — этап 6, каталог `python/`.
+**Сейчас:** ветка `main`. v2.0 (Python/PySide6) — этап 6, каталог `python/`; push → CI публикует Release `latest` (Win zip + Linux tarball). v1.0 в `src/` — только локальная сборка.
 
 ## Git (агент)
 
