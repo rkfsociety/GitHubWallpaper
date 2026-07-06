@@ -32,6 +32,7 @@ from github_wallpaper.github.credential_store import (
     GitHubOAuthClientSecretCredentialStore,
     GitHubPatCredentialStore,
 )
+from github_wallpaper.github.gh_cli_auth import get_status
 from github_wallpaper.github.oauth import defaults as oauth_defaults
 from github_wallpaper.github.oauth.exceptions import GitHubOAuthException
 from github_wallpaper.github.oauth.service import GitHubOAuthService
@@ -148,6 +149,21 @@ class SettingsDialog(QDialog):
         self._token_status_label.setWordWrap(True)
         form.addWidget(self._token_status_label)
 
+        self._gh_status_label = QLabel("")
+        self._gh_status_label.setWordWrap(True)
+        form.addWidget(self._gh_status_label)
+
+        gh_row = QHBoxLayout()
+        gh_login_btn = QPushButton("Войти через GitHub CLI")
+        gh_login_btn.clicked.connect(self._on_gh_login)
+        gh_row.addWidget(gh_login_btn)
+
+        gh_import_btn = QPushButton("Импортировать из gh")
+        gh_import_btn.clicked.connect(self._on_gh_import)
+        gh_row.addWidget(gh_import_btn)
+        gh_row.addStretch(1)
+        form.addLayout(gh_row)
+
         oauth_row = QHBoxLayout()
         sign_in_btn = QPushButton("Войти через GitHub")
         sign_in_btn.clicked.connect(lambda: self._run_oauth(device_only=False))
@@ -182,7 +198,7 @@ class SettingsDialog(QDialog):
 
         hint = QLabel(
             "Токен и Client Secret хранятся в Credential Manager / Secret Service. "
-            "Device Flow не требует Secret."
+            "Device Flow не требует Secret. Если установлен GitHub CLI (gh), можно войти через него."
         )
         hint.setWordWrap(True)
         form.addWidget(hint)
@@ -292,6 +308,7 @@ class SettingsDialog(QDialog):
             settings.repository_slots,
         )
         self._update_token_status()
+        self._update_gh_status()
         self._restore_window_position(settings)
 
     def _populate_monitors(self, selected_device_name: str) -> None:
@@ -489,12 +506,33 @@ class SettingsDialog(QDialog):
                 "Токен сохранён в Credential Manager. «Войти через GitHub» заменит текущий токен."
             )
             self._auth_user_label.setText("Статус: токен сохранён")
+        elif self._github_session.uses_gh_token:
+            self._token_status_label.setText(
+                "Используется токен из GitHub CLI (gh), не сохранённый в приложении. "
+                "Нажмите «Импортировать из gh», чтобы сохранить в keyring."
+            )
+            self._auth_user_label.setText("Статус: токен из gh")
         else:
             self._token_status_label.setText(
-                "Войдите через GitHub в браузере или вставьте PAT вручную. "
+                "Войдите через GitHub CLI, GitHub в браузере или вставьте PAT вручную. "
                 "Без токена — лимит 60 запросов/час."
             )
             self._auth_user_label.setText("Статус: токен не задан")
+
+    def _update_gh_status(self) -> None:
+        status = get_status()
+        if not status.available:
+            self._gh_status_label.setText(status.message or "GitHub CLI (gh) недоступен.")
+            return
+        if not status.logged_in:
+            self._gh_status_label.setText(
+                status.message or "В gh нет входа. Установите gh и выполните вход."
+            )
+            return
+
+        username = f" @{status.username}" if status.username else ""
+        scopes = ", ".join(status.scopes) if status.scopes else "не указаны"
+        self._gh_status_label.setText(f"GitHub CLI:{username} — scopes: {scopes}")
 
     def _on_save_token(self) -> None:
         token = self._token_input.text().strip()
@@ -512,8 +550,10 @@ class SettingsDialog(QDialog):
     def _on_clear_token(self) -> None:
         try:
             self._github_session.clear_token()
+            self._github_session.reload_token_from_gh()
             self._token_input.clear()
             self._update_token_status()
+            self._update_gh_status()
             QMessageBox.information(self, self.windowTitle(), "Токен удалён из хранилища.")
         except Exception as ex:
             QMessageBox.critical(self, self.windowTitle(), f"Не удалось удалить токен:\n{ex}")
@@ -528,11 +568,13 @@ class SettingsDialog(QDialog):
             except Exception as ex:
                 QMessageBox.critical(self, self.windowTitle(), f"Не удалось сохранить токен:\n{ex}")
                 return
-        elif not self._github_session.has_stored_token:
+        elif not self._github_session.has_token:
             QMessageBox.warning(self, self.windowTitle(), "Сначала введите и сохраните токен.")
             return
-        else:
+        elif self._github_session.has_stored_token:
             self._github_session.reload_token_from_store()
+        else:
+            self._github_session.reload_token_from_gh()
 
         async def _verify():
             return await self._github_session.client.get_authenticated_user()
@@ -551,6 +593,44 @@ class SettingsDialog(QDialog):
 
     def _on_logout(self) -> None:
         self._on_clear_token()
+
+    def _on_gh_login(self) -> None:
+        async def _login() -> None:
+            await asyncio.to_thread(self._github_session.login_with_gh)
+
+        def _on_success(_result) -> None:
+            self._update_token_status()
+            self._update_gh_status()
+            QMessageBox.information(self, self.windowTitle(), "Вход через GitHub CLI выполнен.")
+
+        def _on_failed(message: str) -> None:
+            QMessageBox.critical(
+                self,
+                self.windowTitle(),
+                f"Не удалось войти через GitHub CLI:\n{message}",
+            )
+
+        self._run_async(_login, _on_success, _on_failed)
+
+    def _on_gh_import(self) -> None:
+        async def _import() -> None:
+            await asyncio.to_thread(self._github_session.import_token_from_gh)
+
+        def _on_success(_result) -> None:
+            self._update_token_status()
+            self._update_gh_status()
+            QMessageBox.information(self, self.windowTitle(), "Токен импортирован из GitHub CLI.")
+
+        def _on_failed(message: str) -> None:
+            if isinstance(message, str) and "GhCliAuthError" in message:
+                message = message.split(":", 1)[-1].strip()
+            QMessageBox.critical(
+                self,
+                self.windowTitle(),
+                f"Не удалось импортировать токен из gh:\n{message}",
+            )
+
+        self._run_async(_import, _on_success, _on_failed)
 
     def _run_oauth(self, *, device_only: bool) -> None:
         self._save_oauth_client_id()
