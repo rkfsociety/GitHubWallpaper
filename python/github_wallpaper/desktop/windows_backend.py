@@ -166,8 +166,12 @@ class WindowsDesktopBackend(DesktopBackend):
         self._display_hooked = False
 
     def _on_display_changed(self, *_args: object) -> None:
-        if self._attached_handle:
-            self._fit_to_target_bounds(self._attached_handle)
+        if not self._attached_handle:
+            return
+
+        self._fit_to_target_bounds(self._attached_handle)
+        if self._raised_layout is not None:
+            self._apply_raised_desktop_z_order(self._attached_handle)
 
     def _initialize_worker(self) -> None:
         if self._worker_window:
@@ -258,8 +262,6 @@ class WindowsDesktopBackend(DesktopBackend):
     def _fit_to_target_bounds(self, window_handle: int) -> None:
         bounds = self._target_bounds or _get_virtual_screen_bounds()
         self._fit_to_bounds(window_handle, bounds)
-        if self._raised_layout is not None:
-            self._apply_raised_desktop_z_order(window_handle)
 
     def _fit_to_bounds(self, window_handle: int, screen_bounds: QRect) -> None:
         position = _POINT(screen_bounds.x(), screen_bounds.y())

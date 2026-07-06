@@ -54,6 +54,12 @@
   let fitContentFrame = 0;
   let contentResizeObserver = null;
   let isFittingContent = false;
+  let equalizeFrame = 0;
+  let repoRefreshFrame = 0;
+  let pendingRepoRefreshKeys = new Set();
+  let fitContentDebounceTimer = 0;
+  let resizeLayoutTimer = 0;
+  const LAYOUT_DEBOUNCE_MS = 150;
 
   const icons = {
     star:
@@ -444,7 +450,16 @@
       repoGrid.appendChild(card);
     }
 
-    card.innerHTML = renderRepoCard(entry);
+    const html = renderRepoCard(entry);
+    if (card.dataset.renderSig === html) {
+      if (!options.deferLayout) {
+        scheduleEqualizeAndFit();
+      }
+      return;
+    }
+
+    card.dataset.renderSig = html;
+    card.innerHTML = html;
 
     const feedSection = card.querySelector(".repo-card__feed");
     window.WallpaperFeed?.markNewItemsAnimated(feedSection);
@@ -455,12 +470,26 @@
   }
 
   function refreshRepoCard(owner, repo) {
-    const entry = state.repos[repoKey(owner, repo)];
-    if (!entry) {
+    pendingRepoRefreshKeys.add(repoKey(owner, repo));
+    if (repoRefreshFrame) {
       return;
     }
 
-    mountRepoCard(entry);
+    repoRefreshFrame = requestAnimationFrame(() => {
+      repoRefreshFrame = 0;
+      const keys = [...pendingRepoRefreshKeys];
+      pendingRepoRefreshKeys.clear();
+
+      for (const key of keys) {
+        const entry = state.repos[key];
+        if (!entry) {
+          continue;
+        }
+        mountRepoCard(entry, { deferLayout: true });
+      }
+
+      scheduleEqualizeAndFit();
+    });
   }
 
   function equalizeRepoCardHeights() {
@@ -548,7 +577,12 @@
   }
 
   function scheduleEqualizeAndFit() {
-    requestAnimationFrame(() => {
+    if (equalizeFrame) {
+      cancelAnimationFrame(equalizeFrame);
+    }
+
+    equalizeFrame = requestAnimationFrame(() => {
+      equalizeFrame = 0;
       requestAnimationFrame(() => {
         equalizeRepoCardHeights();
         scheduleFitContent();
@@ -687,6 +721,17 @@
   }
 
   function scheduleFitContent() {
+    if (fitContentDebounceTimer) {
+      clearTimeout(fitContentDebounceTimer);
+    }
+
+    fitContentDebounceTimer = window.setTimeout(() => {
+      fitContentDebounceTimer = 0;
+      runFitContentPasses();
+    }, LAYOUT_DEBOUNCE_MS);
+  }
+
+  function runFitContentPasses() {
     for (const delay of FIT_RETRY_DELAYS_MS) {
       window.setTimeout(() => {
         if (delay === 0) {
@@ -747,9 +792,18 @@
     }
 
     contentResizeObserver = new ResizeObserver(() => {
-      if (!isFittingContent) {
-        scheduleFitContent();
+      if (isFittingContent) {
+        return;
       }
+
+      if (resizeLayoutTimer) {
+        clearTimeout(resizeLayoutTimer);
+      }
+
+      resizeLayoutTimer = window.setTimeout(() => {
+        resizeLayoutTimer = 0;
+        scheduleFitContent();
+      }, LAYOUT_DEBOUNCE_MS);
     });
     contentResizeObserver.observe(wallpaperRoot);
     if (repoGrid) {
