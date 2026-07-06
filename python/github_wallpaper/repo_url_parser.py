@@ -14,6 +14,22 @@ class RepoReference:
     owner: str
     repo: str
 
+    @property
+    def slug(self) -> str:
+        return f"{self.owner}/{self.repo}"
+
+    @property
+    def html_url(self) -> str:
+        return f"https://github.com/{self.owner}/{self.repo}"
+
+
+def parse(input_value: str) -> RepoReference:
+    """Разбирает строку или выбрасывает ValueError."""
+    reference = try_parse(input_value)
+    if reference is None:
+        raise ValueError("Ожидается формат owner/repo или https://github.com/owner/repo.")
+    return reference
+
 
 def try_parse(input_value: str | None) -> RepoReference | None:
     """Разбирает owner/repo или https://github.com/owner/repo."""

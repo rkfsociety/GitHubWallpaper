@@ -230,21 +230,21 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 Порт логики из `src/GitHub/` (не копипаста, а эквивалентное поведение):
 
-- [ ] `repo_url_parser.py` — `owner/repo`, URL GitHub
-- [ ] `github_client.py` — httpx, `Authorization`, ETag / `If-None-Match`
-- [ ] `rate_limit_guard.py` — заголовки `X-RateLimit-*`, backoff при 403
-- [ ] `repo_poller.py` — asyncio или `QThread` + таймеры; те же интервалы, что `PollIntervals`
-- [ ] `activity_aggregator.py` — лента событий
-- [ ] `keyring` store для PAT и OAuth client secret (имена как в C#: `GitHubWallpaper/PersonalAccessToken`)
-- [ ] OAuth: Authorization Code + PKCE и Device Flow (порт `GitHubOAuthService`)
+- [x] `repo_url_parser.py` — `owner/repo`, URL GitHub
+- [x] `github_client.py` — httpx, `Authorization`, ETag / `If-None-Match`
+- [x] `rate_limit_guard.py` — заголовки `X-RateLimit-*`, backoff при 403
+- [x] `repo_poller.py` — asyncio или `QThread` + таймеры; те же интервалы, что `PollIntervals`
+- [x] `activity_aggregator.py` — лента событий
+- [x] `keyring` store для PAT и OAuth client secret (имена как в C#: `GitHubWallpaper/PersonalAccessToken`)
+- [x] OAuth: Authorization Code + PKCE и Device Flow (порт `GitHubOAuthService`)
 
 ### 6.5 — Настройки (Qt)
 
-- [ ] `SettingsStore` — чтение/запись `settings.json` (поля из `AppSettings.cs`, camelCase)
-- [ ] `SettingsDialog` — репозитории, сетка, интервалы, экран, OAuth/PAT, видимость блоков карточек
-- [ ] Миграция: Qt-приложение читает существующий `%APPDATA%` / `~/.config` файл от C#-версии
-- [ ] Автозапуск: registry Run (Win) · `.desktop` в `~/.config/autostart` (Linux)
-- [ ] Пауза при полноэкранном приложении и на батарее (платформенные хуки)
+- [x] `SettingsStore` — чтение/запись `settings.json` (поля из `AppSettings.cs`, camelCase)
+- [x] `SettingsDialog` — репозитории, сетка, интервалы, экран, OAuth/PAT, видимость блоков карточек
+- [x] Миграция: Qt-приложение читает существующий `%APPDATA%` / `~/.config` файл от C#-версии
+- [x] Автозапуск: registry Run (Win) · `.desktop` в `~/.config/autostart` (Linux)
+- [x] Пауза при полноэкранном приложении и на батарее (платформенные хуки)
 
 ### 6.6 — Сборка, CI и релиз
 

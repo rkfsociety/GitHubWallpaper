@@ -37,7 +37,7 @@ class SerializeTests(unittest.TestCase):
         self.assertNotIn("has_token", data["payload"])
 
     def test_repos_init_shape(self) -> None:
-        bridge = WallpaperBridge(_FakeController(), lambda: _sample_settings())
+        bridge = WallpaperBridge(_FakeController(), settings_loader=lambda: _sample_settings())
         bridge.push_repo_list()
         message = _FakeController.last_message
         assert message is not None
