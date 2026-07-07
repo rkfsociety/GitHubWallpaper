@@ -57,7 +57,9 @@ def main() -> int:
     if not bootstrap_exe.is_file():
         raise SystemExit(f"Bootstrap executable not found: {bootstrap_exe}")
 
-    installer_path = publish_dir / bootstrap_exe.name
+    from github_wallpaper.update import defaults
+
+    installer_path = publish_dir / defaults.platform_installer_asset_name()
     shutil.copy2(bootstrap_exe, installer_path)
     print(f"Built installer {installer_path} ({installer_path.stat().st_size:,} bytes)")
     return 0

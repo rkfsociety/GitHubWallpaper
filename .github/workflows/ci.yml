@@ -98,9 +98,9 @@ jobs:
             test -f publish/GitHubWallpaper-Win-x64.zip
             ls -lh publish/GitHubWallpaper.exe publish/GitHubWallpaper-Win-x64.zip
           else
-            test -f publish/GitHubWallpaper
+            test -f publish/GitHubWallpaper-linux-x64
             test -f publish/GitHubWallpaper-linux-x64.tar.gz
-            ls -lh publish/GitHubWallpaper publish/GitHubWallpaper-linux-x64.tar.gz
+            ls -lh publish/GitHubWallpaper-linux-x64 publish/GitHubWallpaper-linux-x64.tar.gz
           fi
 
   release-build:
@@ -215,7 +215,7 @@ jobs:
         run: |
           mkdir -p release
           find artifacts -name 'GitHubWallpaper.exe' -exec cp {} release/ \;
-          find artifacts -name 'GitHubWallpaper' -not -path '*/GitHubWallpaper/*' -exec cp {} release/ \;
+          find artifacts -name 'GitHubWallpaper-linux-x64' -exec cp {} release/ \;
           find artifacts -name 'GitHubWallpaper-Win-x64.zip' -exec cp {} release/ \;
           find artifacts -name 'GitHubWallpaper-linux-x64.tar.gz' -exec cp {} release/ \;
           cat > release/version.json <<EOF
@@ -225,7 +225,7 @@ jobs:
             "releaseTag": "latest",
             "windowsDownloadUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper.exe",
             "windowsRuntimeUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper-Win-x64.zip",
-            "linuxDownloadUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper",
+            "linuxDownloadUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper-linux-x64",
             "linuxRuntimeUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper-linux-x64.tar.gz"
           }
           EOF
@@ -246,7 +246,7 @@ jobs:
           Сборка **${VERSION}** (${SHORT_SHA}).
 
           - Windows: \`GitHubWallpaper.exe\` — скачайте и запустите; компоненты (~150 МБ) установятся в \`%APPDATA%\\GitHubWallpaper\\\`
-          - Linux: \`GitHubWallpaper\` — скачайте и запустите; компоненты установятся в \`~/.config/GitHubWallpaper/\` (glibc 2.31+, Debian 11 / Ubuntu 20.04+)
+          - Linux: \`GitHubWallpaper-linux-x64\` — скачайте и запустите; компоненты установятся в \`~/.config/GitHubWallpaper/\` (glibc 2.31+, Debian 11 / Ubuntu 20.04+)
           - Архивы \`GitHubWallpaper-*-x64.*\` — runtime для автоустановки и обновлений
 
           Python / PySide6 · Qt WebEngine.
@@ -261,7 +261,7 @@ jobs:
           RELEASE_ASSETS=(release/version.json)
           for candidate in \
             release/GitHubWallpaper.exe \
-            release/GitHubWallpaper \
+            release/GitHubWallpaper-linux-x64 \
             release/GitHubWallpaper-Win-x64.zip \
             release/GitHubWallpaper-linux-x64.tar.gz
           do

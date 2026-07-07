@@ -13,9 +13,9 @@
 ### Linux (X11)
 
 ```bash
-curl -fsSL -o GitHubWallpaper https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper \
-  && chmod +x GitHubWallpaper \
-  && ./GitHubWallpaper
+curl -fsSL -o GitHubWallpaper-linux-x64 https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper-linux-x64 \
+  && chmod +x GitHubWallpaper-linux-x64 \
+  && ./GitHubWallpaper-linux-x64
 ```
 
 При первом запуске скачаются компоненты (~150 МБ) в `~/.config/GitHubWallpaper/`. Требуется X11, OpenGL и glibc 2.31+ (Debian 11 / Ubuntu 20.04+).

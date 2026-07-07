@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import httpx
 
-from github_wallpaper.update import app_version
+from github_wallpaper.update import app_version, defaults
 from github_wallpaper.update.checker import AppUpdateChecker, _parse_version_json
 from github_wallpaper.update.models import Failed, Skipped, UpToDate, UpdateAvailable
 
@@ -130,6 +130,16 @@ class AppUpdateCheckerTests(unittest.TestCase):
                         result = checker.check()
 
         self.assertIsInstance(result, Failed)
+
+
+class UpdateDefaultsTests(unittest.TestCase):
+    def test_platform_installer_asset_name_linux(self) -> None:
+        with patch.object(defaults.sys, "platform", "linux"):
+            self.assertEqual(defaults.platform_installer_asset_name(), "GitHubWallpaper-linux-x64")
+
+    def test_platform_installer_asset_name_windows(self) -> None:
+        with patch.object(defaults.sys, "platform", "win32"):
+            self.assertEqual(defaults.platform_installer_asset_name(), "GitHubWallpaper.exe")
 
 
 if __name__ == "__main__":
