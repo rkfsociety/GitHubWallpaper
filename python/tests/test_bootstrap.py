@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import io
 import sys
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ from unittest.mock import patch
 
 import httpx
 
+from github_wallpaper.bootstrap.main import _configure_console_encoding
 from github_wallpaper.bootstrap import installer as bootstrap_installer
 from github_wallpaper.bootstrap import runtime_version
 from github_wallpaper.bootstrap.runtime_paths import (
@@ -196,6 +198,17 @@ class AppVersionBootstrapTests(unittest.TestCase):
 
 
 class BootstrapEntryPointTests(unittest.TestCase):
+    def test_configure_console_encoding_replaces_ascii_stdout(self) -> None:
+        buffer = io.BytesIO()
+        original_stdout = sys.stdout
+        sys.stdout = io.TextIOWrapper(buffer, encoding="ascii", line_buffering=True)
+        try:
+            _configure_console_encoding()
+            print("Загружено 0 из 263.9 МБ", flush=True)
+            self.assertIn("Загружено".encode("utf-8"), buffer.getvalue())
+        finally:
+            sys.stdout = original_stdout
+
     def test_main_py_has_script_entry_guard(self) -> None:
         main_py = Path(__file__).resolve().parents[1] / "github_wallpaper" / "bootstrap" / "main.py"
         source = main_py.read_text(encoding="utf-8")

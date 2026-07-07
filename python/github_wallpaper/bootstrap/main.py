@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,7 @@ from github_wallpaper.update.models import AppUpdateDownloadProgress
 
 
 def main() -> int:
+    _configure_console_encoding()
     try:
         config_dir().mkdir(parents=True, exist_ok=True)
         if is_runtime_installed():
@@ -218,6 +220,27 @@ def _format_size(value: int) -> str:
     if value >= 1_000:
         return f"{value / 1_000:.0f} КБ"
     return f"{value} Б"
+
+
+def _configure_console_encoding() -> None:
+    """PyInstaller one-file на Windows часто отдаёт stdout/stderr с ascii."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None:
+            continue
+        encoding = getattr(stream, "encoding", None)
+        if encoding and encoding.lower() not in {"ascii", "us-ascii"}:
+            continue
+        buffer = getattr(stream, "buffer", None)
+        if buffer is None:
+            continue
+        if hasattr(stream, "detach"):
+            stream.detach()
+        setattr(
+            sys,
+            stream_name,
+            io.TextIOWrapper(buffer, encoding="utf-8", errors="replace", line_buffering=True),
+        )
 
 
 if __name__ == "__main__":
