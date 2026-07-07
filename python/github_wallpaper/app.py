@@ -10,6 +10,7 @@ from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
 from github_wallpaper import autostart
+from github_wallpaper.app_restart import schedule_restart
 from github_wallpaper.desktop.auto_pause_monitor import AutoPauseMonitor
 from github_wallpaper.github.github_session import GitHubSession
 from github_wallpaper.github.repo_poller import RepoPoller
@@ -136,6 +137,7 @@ class GitHubWallpaperApp:
             self._on_check_for_updates,
         )
         menu.addSeparator()
+        menu.addAction("Перезапуск", self._on_restart)
         menu.addAction("Выход", self._app.quit)
 
         self._tray = QSystemTrayIcon(create_tray_icon(), self._app)
@@ -205,6 +207,10 @@ class GitHubWallpaperApp:
             return
         self._pause_coordinator.toggle_user_pause()
         self._update_pause_action()
+
+    def _on_restart(self) -> None:
+        schedule_restart()
+        self._app.quit()
 
     def _update_pause_action(self) -> None:
         self._pause_action.setText("Возобновить" if self._wallpaper.is_paused else "Пауза")
