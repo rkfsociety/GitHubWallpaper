@@ -185,7 +185,8 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             test -f publish/GitHubWallpaper.exe
             test -f publish/GitHubWallpaper-Win-x64.zip
-            test ! -f publish/GitHubWallpaper
+            # Git Bash на Windows находит GitHubWallpaper.exe по имени без .exe (PATHEXT).
+            test ! -d publish/GitHubWallpaper
           else
             test -f publish/GitHubWallpaper-linux-x64
             test -f publish/GitHubWallpaper-linux-x64.tar.gz
