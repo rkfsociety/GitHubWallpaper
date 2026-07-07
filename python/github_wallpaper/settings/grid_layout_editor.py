@@ -52,6 +52,7 @@ class GridLayoutEditor(QWidget):
         self._table = QTableWidget()
         self._table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._table.verticalHeader().setDefaultSectionSize(30)
         self._table.cellClicked.connect(self._on_cell_clicked)
 
         root = QVBoxLayout(self)
@@ -171,6 +172,9 @@ class GridLayoutEditor(QWidget):
                 self._table.setItem(row, col, item)
 
         self._table.resizeColumnsToContents()
+        row_height = self._table.verticalHeader().defaultSectionSize()
+        header = self._table.horizontalHeader().height()
+        self._table.setFixedHeight(rows * row_height + header + 6)
 
     def _emit_layout_changed(self) -> None:
         if not self._suppress_events:

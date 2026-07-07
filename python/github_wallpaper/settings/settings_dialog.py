@@ -13,14 +13,13 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QFormLayout,
-    QGroupBox,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
     QRadioButton,
-    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -39,6 +38,14 @@ from github_wallpaper.github.oauth.service import GitHubOAuthService
 from github_wallpaper.github.poll_intervals import PollIntervalPreset
 from github_wallpaper.repo_url_parser import try_parse
 from github_wallpaper.settings.grid_layout_editor import GridLayoutEditor
+from github_wallpaper.settings.settings_card import SettingsCard
+from github_wallpaper.settings.settings_theme import (
+    apply_settings_theme,
+    style_accent_button,
+    style_ghost_button,
+    style_muted_label,
+    style_outline_button,
+)
 from github_wallpaper.settings_store import AppSettings, CardDisplaySettings, SettingsStore
 
 if TYPE_CHECKING:
@@ -93,38 +100,94 @@ class SettingsDialog(QDialog):
         self._async_worker: _AsyncWorker | None = None
 
         self.setWindowTitle("GitHub Wallpaper — Настройки")
-        self.setMinimumSize(760, 640)
+        self.setMinimumSize(920, 580)
         self._build_ui()
         self._load_all()
         self.finished.connect(self._save_window_position)
 
     def _build_ui(self) -> None:
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-
-        content = QWidget()
-        layout = QVBoxLayout(content)
-
-        layout.addWidget(self._build_auth_group())
-        layout.addWidget(self._build_repos_group())
-        layout.addWidget(self._build_display_group())
-        layout.addWidget(self._build_monitor_group())
-        layout.addWidget(self._build_poll_group())
-        layout.addWidget(self._build_startup_group())
-        layout.addStretch(1)
-
-        scroll.setWidget(content)
+        apply_settings_theme(self)
 
         root = QVBoxLayout(self)
-        root.addWidget(scroll)
+        root.setContentsMargins(20, 18, 20, 18)
+        root.setSpacing(14)
 
-    def _build_auth_group(self) -> QGroupBox:
-        group = QGroupBox("Авторизация GitHub")
-        form = QVBoxLayout(group)
+        root.addWidget(self._build_auth_card())
+        root.addWidget(self._build_workspace_card(), stretch=1)
+        root.addWidget(self._build_startup_card())
 
+    def _build_auth_card(self) -> SettingsCard:
+        card = SettingsCard("Авторизация GitHub")
+        self._auth_card = card
+        layout = QVBoxLayout(card.body)
+        layout.setSpacing(8)
+
+        self._auth_compact = QWidget()
+        compact_row = QHBoxLayout(self._auth_compact)
+        compact_row.setContentsMargins(0, 0, 0, 0)
         self._auth_user_label = QLabel("")
         self._auth_user_label.setWordWrap(True)
-        form.addWidget(self._auth_user_label)
+        compact_row.addWidget(self._auth_user_label, stretch=1)
+        logout_btn = QPushButton("Выйти")
+        style_outline_button(logout_btn)
+        logout_btn.clicked.connect(self._on_logout)
+        compact_row.addWidget(logout_btn)
+        layout.addWidget(self._auth_compact)
+
+        self._auth_details = QWidget()
+        details = QVBoxLayout(self._auth_details)
+        details.setContentsMargins(0, 0, 0, 0)
+        details.setSpacing(8)
+
+        oauth_actions = QHBoxLayout()
+        sign_in_btn = QPushButton("Войти через GitHub")
+        style_accent_button(sign_in_btn)
+        sign_in_btn.clicked.connect(lambda: self._run_oauth(device_only=False))
+        oauth_actions.addWidget(sign_in_btn)
+
+        device_btn = QPushButton("Код устройства")
+        style_ghost_button(device_btn)
+        device_btn.clicked.connect(lambda: self._run_oauth(device_only=True))
+        oauth_actions.addWidget(device_btn)
+
+        gh_login_btn = QPushButton("GitHub CLI")
+        style_ghost_button(gh_login_btn)
+        gh_login_btn.clicked.connect(self._on_gh_login)
+        oauth_actions.addWidget(gh_login_btn)
+
+        gh_import_btn = QPushButton("Импорт из gh")
+        style_ghost_button(gh_import_btn)
+        gh_import_btn.clicked.connect(self._on_gh_import)
+        oauth_actions.addWidget(gh_import_btn)
+        oauth_actions.addStretch(1)
+        details.addLayout(oauth_actions)
+
+        oauth_fields = QHBoxLayout()
+        oauth_id_col = QVBoxLayout()
+        oauth_id_col.addWidget(QLabel("OAuth Client ID"))
+        self._oauth_client_id_input = QLineEdit()
+        self._oauth_client_id_input.setPlaceholderText("Developer settings")
+        self._oauth_client_id_input.editingFinished.connect(self._save_oauth_client_id)
+        oauth_id_col.addWidget(self._oauth_client_id_input)
+
+        oauth_secret_col = QVBoxLayout()
+        oauth_secret_col.addWidget(QLabel("Client Secret"))
+        self._oauth_client_secret_input = QLineEdit()
+        self._oauth_client_secret_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self._oauth_client_secret_input.setPlaceholderText("необязательно")
+        self._oauth_client_secret_input.editingFinished.connect(self._save_oauth_client_secret)
+        oauth_secret_col.addWidget(self._oauth_client_secret_input)
+
+        oauth_fields.addLayout(oauth_id_col, stretch=1)
+        oauth_fields.addLayout(oauth_secret_col, stretch=1)
+        details.addLayout(oauth_fields)
+
+        create_app_btn = QPushButton("Создать OAuth App")
+        style_ghost_button(create_app_btn)
+        create_app_btn.clicked.connect(
+            lambda: self._open_external_url(oauth_defaults.REGISTRATION_URL)
+        )
+        details.addWidget(create_app_btn)
 
         token_row = QHBoxLayout()
         self._token_input = QLineEdit()
@@ -133,80 +196,41 @@ class SettingsDialog(QDialog):
         token_row.addWidget(self._token_input, stretch=1)
 
         save_btn = QPushButton("Сохранить")
+        style_accent_button(save_btn)
         save_btn.clicked.connect(self._on_save_token)
         token_row.addWidget(save_btn)
 
         verify_btn = QPushButton("Проверить")
+        style_ghost_button(verify_btn)
         verify_btn.clicked.connect(self._on_verify_token)
         token_row.addWidget(verify_btn)
 
         clear_btn = QPushButton("Очистить")
+        style_ghost_button(clear_btn)
         clear_btn.clicked.connect(self._on_clear_token)
         token_row.addWidget(clear_btn)
-        form.addLayout(token_row)
+        details.addLayout(token_row)
 
         self._token_status_label = QLabel("")
         self._token_status_label.setWordWrap(True)
-        form.addWidget(self._token_status_label)
+        style_muted_label(self._token_status_label)
+        details.addWidget(self._token_status_label)
 
         self._gh_status_label = QLabel("")
         self._gh_status_label.setWordWrap(True)
-        form.addWidget(self._gh_status_label)
+        style_muted_label(self._gh_status_label)
+        details.addWidget(self._gh_status_label)
 
-        gh_row = QHBoxLayout()
-        gh_login_btn = QPushButton("Войти через GitHub CLI")
-        gh_login_btn.clicked.connect(self._on_gh_login)
-        gh_row.addWidget(gh_login_btn)
+        layout.addWidget(self._auth_details)
+        return card
 
-        gh_import_btn = QPushButton("Импортировать из gh")
-        gh_import_btn.clicked.connect(self._on_gh_import)
-        gh_row.addWidget(gh_import_btn)
-        gh_row.addStretch(1)
-        form.addLayout(gh_row)
+    def _build_workspace_card(self) -> SettingsCard:
+        card = SettingsCard("Сетка обоев")
+        row = QHBoxLayout(card.body)
+        row.setSpacing(16)
 
-        oauth_row = QHBoxLayout()
-        sign_in_btn = QPushButton("Войти через GitHub")
-        sign_in_btn.clicked.connect(lambda: self._run_oauth(device_only=False))
-        oauth_row.addWidget(sign_in_btn)
-
-        device_btn = QPushButton("Вход по коду устройства")
-        device_btn.clicked.connect(lambda: self._run_oauth(device_only=True))
-        oauth_row.addWidget(device_btn)
-
-        logout_btn = QPushButton("Выйти")
-        logout_btn.clicked.connect(self._on_logout)
-        oauth_row.addWidget(logout_btn)
-        oauth_row.addStretch(1)
-        form.addLayout(oauth_row)
-
-        oauth_form = QFormLayout()
-        self._oauth_client_id_input = QLineEdit()
-        self._oauth_client_id_input.editingFinished.connect(self._save_oauth_client_id)
-        oauth_form.addRow("OAuth Client ID:", self._oauth_client_id_input)
-
-        self._oauth_client_secret_input = QLineEdit()
-        self._oauth_client_secret_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self._oauth_client_secret_input.editingFinished.connect(self._save_oauth_client_secret)
-        oauth_form.addRow("OAuth Client Secret:", self._oauth_client_secret_input)
-
-        create_app_btn = QPushButton("Создать OAuth App на GitHub")
-        create_app_btn.clicked.connect(
-            lambda: self._open_external_url(oauth_defaults.REGISTRATION_URL)
-        )
-        oauth_form.addRow("", create_app_btn)
-        form.addLayout(oauth_form)
-
-        hint = QLabel(
-            "Токен и Client Secret хранятся в Credential Manager / Secret Service. "
-            "Device Flow не требует Secret. Если установлен GitHub CLI (gh), можно войти через него."
-        )
-        hint.setWordWrap(True)
-        form.addWidget(hint)
-        return group
-
-    def _build_repos_group(self) -> QGroupBox:
-        group = QGroupBox("Репозитории")
-        layout = QVBoxLayout(group)
+        repos_panel = QVBoxLayout()
+        repos_panel.setSpacing(8)
 
         self._grid_editor = GridLayoutEditor()
         self._grid_apply_timer = QTimer(self)
@@ -214,7 +238,7 @@ class SettingsDialog(QDialog):
         self._grid_apply_timer.setInterval(250)
         self._grid_apply_timer.timeout.connect(self._apply_grid_layout)
         self._grid_editor.layout_changed.connect(self._schedule_grid_layout_apply)
-        layout.addWidget(self._grid_editor)
+        repos_panel.addWidget(self._grid_editor)
 
         repo_row = QHBoxLayout()
         self._repo_input = QLineEdit()
@@ -223,18 +247,38 @@ class SettingsDialog(QDialog):
         repo_row.addWidget(self._repo_input, stretch=1)
 
         add_btn = QPushButton("Добавить")
+        style_accent_button(add_btn)
         add_btn.clicked.connect(self._on_add_repo)
         repo_row.addWidget(add_btn)
 
-        remove_btn = QPushButton("Удалить выбранный")
+        remove_btn = QPushButton("Удалить")
+        style_ghost_button(remove_btn)
         remove_btn.clicked.connect(self._on_remove_repo)
         repo_row.addWidget(remove_btn)
-        layout.addLayout(repo_row)
-        return group
+        repos_panel.addLayout(repo_row)
 
-    def _build_display_group(self) -> QGroupBox:
-        group = QGroupBox("Видимость блоков карточек")
-        form = QFormLayout(group)
+        row.addLayout(repos_panel, stretch=1)
+        row.addWidget(self._build_sidebar(), stretch=0)
+        return card
+
+    def _build_sidebar(self) -> QWidget:
+        sidebar = QWidget()
+        sidebar.setFixedWidth(300)
+        layout = QVBoxLayout(sidebar)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+
+        layout.addWidget(self._build_display_group())
+        layout.addWidget(self._build_monitor_group())
+        layout.addWidget(self._build_poll_group())
+        layout.addStretch(1)
+        return sidebar
+
+    def _build_display_group(self) -> SettingsCard:
+        card = SettingsCard("Содержимое карточек")
+        grid = QGridLayout(card.body)
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(4)
 
         self._display_toggles: dict[str, QCheckBox] = {}
         labels = {
@@ -243,58 +287,63 @@ class SettingsDialog(QDialog):
             "show_ci": "CI/CD",
             "show_release": "Релизы",
             "show_heatmap": "Heatmap",
-            "show_feed": "Лента активности",
+            "show_feed": "Лента",
             "show_pull_requests": "Pull requests",
             "show_issues": "Issues",
             "show_commits": "Коммиты",
         }
-        for field_name, label in labels.items():
+        for index, (field_name, label) in enumerate(labels.items()):
             checkbox = QCheckBox(label)
             checkbox.toggled.connect(self._on_card_display_changed)
             self._display_toggles[field_name] = checkbox
-            form.addRow(checkbox)
-        return group
+            grid.addWidget(checkbox, index // 2, index % 2)
+        return card
 
-    def _build_monitor_group(self) -> QGroupBox:
-        group = QGroupBox("Экран")
-        form = QFormLayout(group)
+    def _build_monitor_group(self) -> SettingsCard:
+        card = SettingsCard("Экран")
+        form = QFormLayout(card.body)
+        form.setContentsMargins(0, 0, 0, 0)
         self._monitor_combo = QComboBox()
         self._monitor_combo.currentIndexChanged.connect(self._on_behavior_changed)
-        form.addRow("Монитор для обоев:", self._monitor_combo)
-        return group
+        form.addRow("Монитор:", self._monitor_combo)
+        return card
 
-    def _build_poll_group(self) -> QGroupBox:
-        group = QGroupBox("Интервалы опроса GitHub API")
-        layout = QVBoxLayout(group)
+    def _build_poll_group(self) -> SettingsCard:
+        card = SettingsCard("Интервал обновления")
+        layout = QVBoxLayout(card.body)
+        layout.setSpacing(4)
 
-        self._economy_radio = QRadioButton("Экономный")
-        self._normal_radio = QRadioButton("Нормальный")
-        self._frequent_radio = QRadioButton("Частый")
+        self._economy_radio = QRadioButton("Экономный — 20 мин")
+        self._normal_radio = QRadioButton("Нормальный — 10 мин")
+        self._frequent_radio = QRadioButton("Частый — 1 мин")
         self._normal_radio.setChecked(True)
 
         for radio in (self._economy_radio, self._normal_radio, self._frequent_radio):
             radio.toggled.connect(self._on_behavior_changed)
             layout.addWidget(radio)
-        return group
+        return card
 
-    def _build_startup_group(self) -> QGroupBox:
-        group = QGroupBox("Запуск и поведение")
-        layout = QVBoxLayout(group)
+    def _build_startup_card(self) -> SettingsCard:
+        card = SettingsCard("Запуск и поведение")
+        grid = QGridLayout(card.body)
+        grid.setHorizontalSpacing(16)
+        grid.setVerticalSpacing(4)
 
         self._auto_start_check = QCheckBox("Запускать при входе в систему")
         self._pause_fullscreen_check = QCheckBox("Пауза при полноэкранном приложении")
         self._pause_battery_check = QCheckBox("Пауза при работе от батареи")
         self._auto_updates_check = QCheckBox("Автоматически проверять обновления")
 
-        for checkbox in (
+        checks = (
             self._auto_start_check,
             self._pause_fullscreen_check,
             self._pause_battery_check,
             self._auto_updates_check,
-        ):
+        )
+        for index, checkbox in enumerate(checks):
             checkbox.toggled.connect(self._on_behavior_changed)
-            layout.addWidget(checkbox)
-        return group
+            grid.addWidget(checkbox, index // 2, index % 2)
+        return card
 
     def _load_all(self) -> None:
         settings = self._settings_store.load()
@@ -357,7 +406,7 @@ class SettingsDialog(QDialog):
         if settings.settings_window_left is not None and settings.settings_window_top is not None:
             self.move(settings.settings_window_left, settings.settings_window_top)
         else:
-            self.resize(820, 700)
+            self.resize(940, 600)
 
     def _save_window_position(self) -> None:
         try:
@@ -503,21 +552,27 @@ class SettingsDialog(QDialog):
     def _update_token_status(self) -> None:
         if self._github_session.has_stored_token:
             self._token_status_label.setText(
-                "Токен сохранён в Credential Manager. «Войти через GitHub» заменит текущий токен."
+                "Токен в Credential Manager. «Войти через GitHub» заменит текущий."
             )
             self._auth_user_label.setText("Статус: токен сохранён")
         elif self._github_session.uses_gh_token:
             self._token_status_label.setText(
-                "Используется токен из GitHub CLI (gh), не сохранённый в приложении. "
-                "Нажмите «Импортировать из gh», чтобы сохранить в keyring."
+                "Токен из GitHub CLI (gh). «Импорт из gh» — сохранить в keyring."
             )
             self._auth_user_label.setText("Статус: токен из gh")
         else:
             self._token_status_label.setText(
-                "Войдите через GitHub CLI, GitHub в браузере или вставьте PAT вручную. "
-                "Без токена — лимит 60 запросов/час."
+                "Войдите через GitHub CLI, браузер или вставьте PAT. Без токена — 60 запросов/час."
             )
             self._auth_user_label.setText("Статус: токен не задан")
+        self._update_auth_view()
+
+    def _update_auth_view(self) -> None:
+        signed_in = self._github_session.has_stored_token or self._github_session.uses_gh_token
+        self._auth_details.setVisible(not signed_in)
+        self._auth_compact.setVisible(signed_in)
+        if hasattr(self, "_auth_card"):
+            self._auth_card.set_title_visible(not signed_in)
 
     def _update_gh_status(self) -> None:
         status = get_status()
