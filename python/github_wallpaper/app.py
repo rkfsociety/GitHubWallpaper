@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections.abc import Callable
 
 from PySide6.QtCore import Qt, QThread, QTimer, QSize, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
@@ -98,11 +99,15 @@ class GitHubWallpaperApp:
 
         self._settings_store = SettingsStore()
         settings = self._settings_store.load()
-        self._app_update_service = AppUpdateService(self._settings_store)
+
+        self._github_session = GitHubSession()
+        self._app_update_service = AppUpdateService(
+            self._settings_store,
+            token_provider=lambda: self._github_session.client.token,
+        )
         self._update_check_worker: _UpdateCheckWorker | None = None
         self._update_download_worker: _UpdateDownloadWorker | None = None
 
-        self._github_session = GitHubSession()
         self._repo_poller = RepoPoller(self._github_session.client)
         self._wallpaper = WallpaperController()
         self._pause_coordinator = WallpaperPauseCoordinator(self._wallpaper)
@@ -253,32 +258,53 @@ class GitHubWallpaperApp:
 
     def _on_manual_update_check_finished(self, result: AppUpdateCheckResult) -> None:
         if isinstance(result, UpToDate):
-            QMessageBox.information(
-                None,
-                APP_DISPLAY_NAME,
+            self._show_tray_message(
+                QMessageBox.Icon.Information,
                 f"Установлена последняя версия ({result.current_version}).",
             )
             return
 
         if isinstance(result, UpdateAvailable):
-            self._prompt_and_apply_update(result.update)
+            self._defer_tray_action(lambda: self._prompt_and_apply_update(result.update))
             return
 
         if isinstance(result, Skipped):
-            QMessageBox.information(None, APP_DISPLAY_NAME, result.reason)
+            self._show_tray_message(QMessageBox.Icon.Information, result.reason)
             return
 
         if isinstance(result, Failed):
-            QMessageBox.warning(None, APP_DISPLAY_NAME, result.message)
+            self._show_tray_message(QMessageBox.Icon.Warning, result.message)
+
+    def _defer_tray_action(self, action: Callable[[], None]) -> None:
+        """Отложить UI-действие после закрытия контекстного меню трея (Windows)."""
+        QTimer.singleShot(0, action)
+
+    def _show_tray_message(self, icon: QMessageBox.Icon, text: str) -> None:
+        self._defer_tray_action(lambda: self._exec_tray_message_box(icon, text))
+
+    def _exec_tray_message_box(self, icon: QMessageBox.Icon, text: str) -> int:
+        message_box = QMessageBox(icon, APP_DISPLAY_NAME, text, QMessageBox.StandardButton.Ok, None)
+        message_box.setWindowModality(Qt.WindowModality.ApplicationModal)
+        message_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        return message_box.exec()
+
+    def _ask_tray_question(self, text: str) -> QMessageBox.StandardButton:
+        message_box = QMessageBox(
+            QMessageBox.Icon.Question,
+            APP_DISPLAY_NAME,
+            text,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            None,
+        )
+        message_box.setDefaultButton(QMessageBox.StandardButton.No)
+        message_box.setWindowModality(Qt.WindowModality.ApplicationModal)
+        message_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        return message_box.exec()
 
     def _prompt_and_apply_update(self, update: AppUpdateInfo) -> None:
-        answer = QMessageBox.question(
-            None,
-            APP_DISPLAY_NAME,
+        answer = self._ask_tray_question(
             f"Доступна новая версия {update.version}.\n\n"
             "Скачать и перезапустить приложение сейчас?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
@@ -305,9 +331,8 @@ class GitHubWallpaperApp:
         message: str,
     ) -> None:
         progress_dialog.close()
-        QMessageBox.critical(
-            None,
-            APP_DISPLAY_NAME,
+        self._show_tray_message(
+            QMessageBox.Icon.Critical,
             f"Не удалось установить обновление:\n{message}\n\n"
             f"Можно скачать вручную:\n{update.release_page_url}",
         )

@@ -55,6 +55,10 @@ class GitHubClient:
         return self._token is not None
 
     @property
+    def token(self) -> str | None:
+        return self._token
+
+    @property
     def rate_limit(self) -> RateLimitGuard:
         return self._rate_limit_guard
 

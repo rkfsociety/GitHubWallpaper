@@ -32,16 +32,32 @@ _RELEASE_NAME_VERSION_RE = re.compile(
 class AppUpdateChecker:
     """Синхронная проверка релиза latest через GitHub REST API."""
 
-    def __init__(self, *, client: httpx.Client | None = None) -> None:
+    def __init__(self, *, client: httpx.Client | None = None, token: str | None = None) -> None:
         self._owns_client = client is None
-        self._client = client or httpx.Client(
-            headers={
-                "Accept": "application/vnd.github+json",
-                "User-Agent": _build_user_agent(),
-            },
-            timeout=httpx.Timeout(30.0),
-            follow_redirects=True,
-        )
+        self._token = _normalize_token(token)
+        if client is None:
+            self._client = self._create_client(self._token)
+            return
+
+        self._client = client
+        if self._token:
+            self._client.headers["Authorization"] = f"Bearer {self._token}"
+
+    def set_token(self, token: str | None) -> None:
+        normalized = _normalize_token(token)
+        if normalized == self._token:
+            return
+
+        self._token = normalized
+        if not self._owns_client:
+            if self._token:
+                self._client.headers["Authorization"] = f"Bearer {self._token}"
+            else:
+                self._client.headers.pop("Authorization", None)
+            return
+
+        self._client.close()
+        self._client = self._create_client(self._token)
 
     def check(self) -> AppUpdateCheckResult:
         if not app_version.can_self_update():
@@ -107,6 +123,28 @@ class AppUpdateChecker:
 
     def __exit__(self, *args: object) -> None:
         self.close()
+
+    @staticmethod
+    def _create_client(token: str | None) -> httpx.Client:
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": _build_user_agent(),
+        }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        return httpx.Client(
+            headers=headers,
+            timeout=httpx.Timeout(30.0),
+            follow_redirects=True,
+        )
+
+
+def _normalize_token(token: str | None) -> str | None:
+    if not token:
+        return None
+    stripped = token.strip()
+    return stripped or None
 
 
 def _find_asset(release: dict[str, Any], name: str) -> dict[str, Any] | None:

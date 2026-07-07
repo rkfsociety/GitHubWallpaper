@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timezone
+from typing import Protocol
 
 from github_wallpaper.settings_store import SettingsStore
 from github_wallpaper.update import defaults
@@ -16,14 +17,27 @@ from github_wallpaper.update.models import (
 )
 
 
+class _TokenProvider(Protocol):
+    def __call__(self) -> str | None: ...
+
+
 class AppUpdateService:
     """Порт C# AppUpdateService для Python v2.0."""
 
-    def __init__(self, settings_store: SettingsStore) -> None:
+    def __init__(
+        self,
+        settings_store: SettingsStore,
+        *,
+        token_provider: _TokenProvider | None = None,
+    ) -> None:
         self._settings_store = settings_store
-        self._checker = AppUpdateChecker()
+        self._token_provider = token_provider
+        initial_token = token_provider() if token_provider is not None else None
+        self._checker = AppUpdateChecker(token=initial_token)
 
     def check_for_updates(self) -> AppUpdateCheckResult:
+        if self._token_provider is not None:
+            self._checker.set_token(self._token_provider())
         return self._checker.check()
 
     def should_check_automatically(self) -> bool:

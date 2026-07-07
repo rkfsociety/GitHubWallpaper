@@ -42,6 +42,10 @@ class AppUpdateCheckerTests(unittest.TestCase):
                 result = checker.check()
         self.assertIsInstance(result, Skipped)
 
+    def test_uses_authorization_header_when_token_provided(self) -> None:
+        with AppUpdateChecker(token="ghp_test_token") as checker:
+            self.assertEqual(checker._client.headers.get("Authorization"), "Bearer ghp_test_token")
+
     def test_detects_update_from_release_payload(self) -> None:
         release_payload = {
             "html_url": "https://github.com/rkfsociety/GitHubWallpaper/releases/tag/latest",
