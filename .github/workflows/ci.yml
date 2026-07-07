@@ -179,6 +179,19 @@ jobs:
           fi
           $PYTHON scripts/build_release.py --output-dir publish
 
+      - name: Verify build artifact
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            test -f publish/GitHubWallpaper.exe
+            test -f publish/GitHubWallpaper-Win-x64.zip
+            test ! -f publish/GitHubWallpaper
+          else
+            test -f publish/GitHubWallpaper-linux-x64
+            test -f publish/GitHubWallpaper-linux-x64.tar.gz
+            test ! -f publish/GitHubWallpaper
+          fi
+
       - name: Upload platform artifact
         uses: actions/upload-artifact@v4
         with:
@@ -229,6 +242,17 @@ jobs:
             "linuxRuntimeUrl": "https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper-linux-x64.tar.gz"
           }
           EOF
+
+      - name: Verify release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f release/GitHubWallpaper.exe
+          test -f release/GitHubWallpaper-linux-x64
+          test -f release/GitHubWallpaper-Win-x64.zip
+          test -f release/GitHubWallpaper-linux-x64.tar.gz
+          test -f release/version.json
+          test ! -f release/GitHubWallpaper
 
       - name: Recreate latest release
         env:
