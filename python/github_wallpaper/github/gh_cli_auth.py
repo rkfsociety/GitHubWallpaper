@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 
 from github_wallpaper.github.oauth import defaults as oauth_defaults
@@ -188,7 +189,9 @@ def _run_gh(*args: str, timeout: float) -> tuple[int, str, str]:
 
 
 def _login_subprocess_kwargs() -> dict[str, object]:
-    return {}
+    if sys.platform != "win32":
+        return {}
+    return {"creationflags": subprocess.CREATE_NO_WINDOW}
 
 
 def _combine_output(stdout: str, stderr: str) -> str:
