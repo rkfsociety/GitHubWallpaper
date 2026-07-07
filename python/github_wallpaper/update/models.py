@@ -12,6 +12,7 @@ class AppUpdateInfo:
     release_page_url: str
     asset_size_bytes: int | None
     asset_name: str
+    asset_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

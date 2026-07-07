@@ -52,6 +52,7 @@ class AppUpdateCheckerTests(unittest.TestCase):
             "name": "GitHubWallpaper 2.0.99",
             "assets": [
                 {
+                    "id": 123,
                     "name": "GitHubWallpaper-Win-x64.zip",
                     "browser_download_url": "https://example.com/archive.zip",
                     "size": 12_000_000,

@@ -15,8 +15,8 @@ from pathlib import Path
 
 import httpx
 
-from github_wallpaper.github.github_client import _build_user_agent
 from github_wallpaper.update import app_version, defaults
+from github_wallpaper.update.asset_download import stream_archive_to_file
 from github_wallpaper.update.models import AppUpdateDownloadProgress, AppUpdateInfo
 
 MAX_DOWNLOAD_ATTEMPTS = 3
@@ -32,12 +32,14 @@ def update_work_directory() -> Path:
 def download(
     update: AppUpdateInfo,
     progress: Callable[[AppUpdateDownloadProgress], None] | None = None,
+    *,
+    token: str | None = None,
 ) -> Path:
     last_error: Exception | None = None
 
     for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
         try:
-            return _download_once(update, progress)
+            return _download_once(update, progress, token=token)
         except Exception as ex:
             if attempt >= MAX_DOWNLOAD_ATTEMPTS or not _is_retryable_download_error(ex):
                 raise
@@ -66,8 +68,12 @@ def schedule_restart(archive_path: Path) -> None:
 
 def format_download_error(exc: Exception) -> str:
     message = str(exc)
-    if "response ended" in message.lower():
-        return "Соединение оборвалось во время скачивания. Проверьте интернет и повторите."
+    lowered = message.lower()
+    if "response ended" in lowered or "10054" in message or "forcibly closed" in lowered:
+        return (
+            "Соединение с GitHub оборвалось во время скачивания. "
+            "Проверьте интернет, VPN и антивирус или скачайте архив вручную с Releases."
+        )
     if isinstance(exc, httpx.TimeoutException):
         return "Истекло время ожидания ответа GitHub. Повторите позже."
     return message
@@ -76,42 +82,20 @@ def format_download_error(exc: Exception) -> str:
 def _download_once(
     update: AppUpdateInfo,
     progress: Callable[[AppUpdateDownloadProgress], None] | None,
+    *,
+    token: str | None = None,
 ) -> Path:
     work_dir = update_work_directory()
     target_path = work_dir / update.asset_name
     if target_path.exists():
         target_path.unlink()
 
-    headers = {"User-Agent": _build_user_agent()}
-    with httpx.stream(
-        "GET",
-        update.download_url,
-        headers=headers,
-        timeout=httpx.Timeout(15 * 60.0),
-        follow_redirects=True,
-    ) as response:
-        response.raise_for_status()
-        total_bytes = response.headers.get("Content-Length")
-        expected_total = int(total_bytes) if total_bytes else update.asset_size_bytes
-
-        downloaded = 0
-        with target_path.open("wb") as output:
-            for chunk in response.iter_bytes(CHUNK_SIZE):
-                output.write(chunk)
-                downloaded += len(chunk)
-                if progress is not None:
-                    progress(AppUpdateDownloadProgress(downloaded, expected_total))
+    stream_archive_to_file(update, target_path, token=token, progress=progress)
 
     file_size = target_path.stat().st_size
     if file_size < defaults.MINIMUM_ARCHIVE_SIZE_BYTES:
         target_path.unlink(missing_ok=True)
         raise ValueError("Скачанный файл слишком маленький — обновление отменено.")
-
-    if expected_total is not None and file_size != expected_total:
-        target_path.unlink(missing_ok=True)
-        raise ValueError(
-            f"Скачано {file_size} из {expected_total} байт — файл загружен не полностью.",
-        )
 
     if update.asset_size_bytes and file_size != update.asset_size_bytes:
         target_path.unlink(missing_ok=True)

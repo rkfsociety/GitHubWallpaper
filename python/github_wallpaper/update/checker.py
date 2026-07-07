@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from github_wallpaper.github.github_client import _build_user_agent
+from github_wallpaper.update.asset_download import ascii_user_agent
 from github_wallpaper.update import app_version, defaults
 from github_wallpaper.update.models import (
     AppUpdateCheckResult,
@@ -116,6 +116,7 @@ class AppUpdateChecker:
                 return UpToDate(current)
 
             release_page = release.get("html_url") or defaults.release_page_url()
+            asset_id = archive_asset.get("id")
             return UpdateAvailable(
                 AppUpdateInfo(
                     version=remote_version,
@@ -123,6 +124,7 @@ class AppUpdateChecker:
                     release_page_url=str(release_page),
                     asset_size_bytes=_read_asset_size(archive_asset),
                     asset_name=asset_name,
+                    asset_id=int(asset_id) if isinstance(asset_id, int) else None,
                 ),
                 current,
             )
@@ -145,7 +147,7 @@ class AppUpdateChecker:
     def _create_client(token: str | None) -> httpx.Client:
         headers = {
             "Accept": "application/vnd.github+json",
-            "User-Agent": _build_user_agent(),
+            "User-Agent": ascii_user_agent(),
         }
         if token:
             headers["Authorization"] = f"Bearer {token}"

@@ -66,7 +66,8 @@ class AppUpdateService:
         update: AppUpdateInfo,
         progress: Callable[[AppUpdateDownloadProgress], None] | None = None,
     ) -> None:
-        archive_path = installer.download(update, progress)
+        token = self._token_provider() if self._token_provider is not None else None
+        archive_path = installer.download(update, progress, token=token)
         installer.schedule_restart(archive_path)
 
     def close(self) -> None:

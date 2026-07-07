@@ -29,6 +29,16 @@ class UpdateProgressDialog(QWidget):
         layout.addWidget(self._progress_bar)
 
     def report(self, progress: AppUpdateDownloadProgress) -> None:
+        if progress.bytes_received <= 0:
+            self._progress_bar.setRange(0, 0)
+            if progress.total_bytes:
+                self._status_label.setText(
+                    f"Подключение к GitHub… ({_format_size(progress.total_bytes)} всего)",
+                )
+            else:
+                self._status_label.setText("Подключение к GitHub…")
+            return
+
         if progress.percent is not None:
             self._progress_bar.setRange(0, 100)
             self._progress_bar.setValue(progress.percent)

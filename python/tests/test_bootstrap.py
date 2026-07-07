@@ -45,6 +45,7 @@ class BootstrapInstallerTests(unittest.TestCase):
                     "size": 128,
                 },
                 {
+                    "id": 123,
                     "name": "GitHubWallpaper-Win-x64.zip",
                     "browser_download_url": "https://example.com/runtime.zip",
                     "size": 12_000_000,
@@ -83,6 +84,7 @@ class BootstrapInstallerTests(unittest.TestCase):
                     "size": 128,
                 },
                 {
+                    "id": 123,
                     "name": "GitHubWallpaper-Win-x64.zip",
                     "browser_download_url": "https://example.com/runtime.zip",
                     "size": 12_000_000,
@@ -117,6 +119,7 @@ class BootstrapInstallerTests(unittest.TestCase):
                     "size": 128,
                 },
                 {
+                    "id": 123,
                     "name": "GitHubWallpaper-Win-x64.zip",
                     "browser_download_url": "https://example.com/runtime.zip",
                     "size": 12_000_000,
