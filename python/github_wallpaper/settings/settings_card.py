@@ -20,10 +20,9 @@ class SettingsCard(QFrame):
         self._title_label.setObjectName("cardTitle")
         root.addWidget(self._title_label)
 
+        # Каждая секция устанавливает собственный layout на body,
+        # поэтому здесь layout не создаём (иначе он конфликтует и виджеты «теряются»).
         self.body = QWidget()
-        body_layout = QVBoxLayout(self.body)
-        body_layout.setContentsMargins(0, 0, 0, 0)
-        body_layout.setSpacing(8)
         root.addWidget(self.body)
 
     def set_title_visible(self, visible: bool) -> None:
