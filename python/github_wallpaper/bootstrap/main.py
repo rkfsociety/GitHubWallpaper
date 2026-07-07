@@ -24,12 +24,36 @@ def main() -> int:
         config_dir().mkdir(parents=True, exist_ok=True)
         if is_runtime_installed():
             _ensure_launcher()
+            _ensure_runtime_up_to_date()
             return _launch_runtime(sys.argv[1:])
 
         return _install_and_launch()
     except Exception as ex:
         _show_fatal_error(format_download_error(ex) if _is_network_error(ex) else str(ex))
         return 1
+
+
+def _ensure_runtime_up_to_date() -> None:
+    try:
+        if not bootstrap_installer.runtime_needs_update():
+            return
+    except Exception as ex:
+        print(
+            f"Не удалось проверить обновление runtime: {ex}. Запуск текущей версии…",
+            flush=True,
+        )
+        return
+
+    print("GitHub Wallpaper — обновление компонентов с GitHub…", flush=True)
+    try:
+        bootstrap_installer.install_runtime(_report_console_progress)
+        print("Обновление завершено.", flush=True)
+    except Exception as ex:
+        print(
+            f"Не удалось обновить runtime: {format_download_error(ex) if _is_network_error(ex) else ex}. "
+            "Запуск текущей версии…",
+            flush=True,
+        )
 
 
 def _install_and_launch() -> int:

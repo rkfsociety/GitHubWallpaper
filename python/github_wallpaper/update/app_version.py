@@ -75,11 +75,15 @@ def try_parse_version(text: str | None) -> tuple[int, int, int] | None:
 
 
 def is_remote_newer(remote_version: str) -> bool:
-    current = try_parse_version(current_version())
-    remote = try_parse_version(remote_version)
-    if current is None or remote is None:
+    return is_version_newer_than(remote_version, current_version())
+
+
+def is_version_newer_than(candidate: str, baseline: str) -> bool:
+    newer = try_parse_version(candidate)
+    current = try_parse_version(baseline)
+    if newer is None or current is None:
         return False
-    return remote > current
+    return newer > current
 
 
 def install_directory() -> Path:

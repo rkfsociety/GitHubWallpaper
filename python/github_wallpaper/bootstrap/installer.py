@@ -6,14 +6,17 @@ import shutil
 import tarfile
 import zipfile
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import httpx
 
 from github_wallpaper.bootstrap.runtime_paths import runtime_root
+from github_wallpaper.bootstrap.runtime_version import write_installed_version
 from github_wallpaper.github.github_client import _build_user_agent
 from github_wallpaper.update import defaults
+from github_wallpaper.update.checker import _find_asset_url, _resolve_remote_version
 from github_wallpaper.update.installer import (
     CHUNK_SIZE,
     MAX_DOWNLOAD_ATTEMPTS,
@@ -25,7 +28,15 @@ from github_wallpaper.update.models import AppUpdateDownloadProgress
 ProgressCallback = Callable[[AppUpdateDownloadProgress], None]
 
 
-def fetch_runtime_asset() -> tuple[str, str, int | None]:
+@dataclass(frozen=True, slots=True)
+class RuntimeReleaseInfo:
+    version: str | None
+    download_url: str
+    asset_name: str
+    asset_size_bytes: int | None
+
+
+def fetch_runtime_release() -> RuntimeReleaseInfo:
     headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": _build_user_agent(),
@@ -39,15 +50,44 @@ def fetch_runtime_asset() -> tuple[str, str, int | None]:
         if asset is None:
             raise FileNotFoundError(f"В релизе не найден {asset_name}.")
 
-        url = str(asset["browser_download_url"])
+        version_json_url = _find_asset_url(release, defaults.VERSION_ASSET_NAME)
+        version = _resolve_remote_version(release, version_json_url, client)
         size = asset.get("size")
-        return url, asset_name, int(size) if isinstance(size, int) else None
+        return RuntimeReleaseInfo(
+            version=version,
+            download_url=str(asset["browser_download_url"]),
+            asset_name=asset_name,
+            asset_size_bytes=int(size) if isinstance(size, int) else None,
+        )
+
+
+def fetch_runtime_asset() -> tuple[str, str, int | None]:
+    release = fetch_runtime_release()
+    return release.download_url, release.asset_name, release.asset_size_bytes
+
+
+def runtime_needs_update() -> bool:
+    """True, если на GitHub есть runtime новее установленного в AppData."""
+    from github_wallpaper.bootstrap.runtime_version import needs_update, read_installed_version
+
+    release = fetch_runtime_release()
+    if not release.version:
+        return False
+    return needs_update(release.version, read_installed_version())
 
 
 def install_runtime(progress: ProgressCallback | None = None) -> Path:
-    download_url, asset_name, asset_size = fetch_runtime_asset()
-    archive_path = _download_archive(download_url, asset_name, asset_size, progress)
-    return _extract_runtime(archive_path)
+    release = fetch_runtime_release()
+    archive_path = _download_archive(
+        release.download_url,
+        release.asset_name,
+        release.asset_size_bytes,
+        progress,
+    )
+    target_dir = _extract_runtime(archive_path)
+    if release.version:
+        write_installed_version(release.version)
+    return target_dir
 
 
 def _download_archive(

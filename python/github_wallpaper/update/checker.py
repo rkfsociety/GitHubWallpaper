@@ -29,6 +29,23 @@ _RELEASE_NAME_VERSION_RE = re.compile(
 )
 
 
+def fetch_latest_release_version(*, client: httpx.Client | None = None) -> str | None:
+    """Версия runtime из релиза latest (version.json или заметки релиза)."""
+    owns_client = client is None
+    http_client = client or AppUpdateChecker._create_client(None)
+    try:
+        response = http_client.get(defaults.release_api_url())
+        response.raise_for_status()
+        release = response.json()
+        version_json_url = _find_asset_url(release, defaults.VERSION_ASSET_NAME)
+        return _resolve_remote_version(release, version_json_url, http_client)
+    except httpx.HTTPError:
+        return None
+    finally:
+        if owns_client:
+            http_client.close()
+
+
 class AppUpdateChecker:
     """Синхронная проверка релиза latest через GitHub REST API."""
 
