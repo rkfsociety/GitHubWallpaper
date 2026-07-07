@@ -28,7 +28,7 @@ curl -fsSL -o GitHubWallpaper-linux-x64 https://github.com/rkfsociety/GitHubWall
 
 Трей → **Настройки** → GitHub OAuth или PAT → добавьте репозитории.
 
-Без Python/.NET на машине. Обновления: трей → «Проверить обновления…».
+Без Python на машине. Обновления: трей → «Проверить обновления…».
 
 **Авторизация:** OAuth в настройках (рекомендуется) или [PAT](https://github.com/settings/tokens) с read-доступом (`repo` для приватных). Без токена — 60 req/h, только публичные репо.
 
@@ -53,7 +53,7 @@ python -m pip install -e ".[dev]" # + PyInstaller
 python scripts/build_release.py    # → python/publish/
 ```
 
-HTML/CSS/JS обоев — `wwwroot/wallpaper/`. CI на push в `main` публикует Release `latest`. Архив C# v1.0 — `src/`.
+HTML/CSS/JS обоев — `wwwroot/wallpaper/`. CI на push в `main` публикует Release `latest`.
 
 ## Лицензия
 

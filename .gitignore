@@ -1,20 +1,19 @@
 # Build
-bin/
-obj/
 publish/
 python/build/
 python/dist/
 python/publish/
+python/.pytest_cache/
 __pycache__/
 *.pyc
 *.pyo
-*.user
-*.suo
-.vs/
 
-# NuGet
-packages/
-*.nupkg
+# Local test / extracted artifacts
+GitHubWallpaper.exe_extracted/
+_release-test/
+_singlefile-test/
+publish-test/
+publish-fixed/
 
 # OS
 Thumbs.db

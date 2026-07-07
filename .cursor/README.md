@@ -8,4 +8,4 @@
 | `agent-workflow.mdc` | Git, сборка, язык ответов |
 | `roadmap.mdc` | Как вести ROADMAP.md и README |
 
-Источники истины: `ROADMAP.md`, `README.md`, код в `src/` и `wwwroot/wallpaper/`.
+Источники истины: `ROADMAP.md`, `README.md`, код в `python/` и `wwwroot/wallpaper/`.

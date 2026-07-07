@@ -4,7 +4,7 @@
 
 **Текущий стек:** Python 3.11+ · PySide6 · Qt WebEngine · GitHub REST API · Windows + Linux (X11)  
 **Релиз:** [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) — push в `main` → CI собирает portable-архивы Win/Linux.  
-**Архив v1.0:** C# / .NET 8 / WebView2 в `src/` (этапы 1–5, CI больше не собирает).
+**Архив v1.0:** C# / .NET 8 / WebView2 — git-теги `v1.0.x` (в `main` не хранится).
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## Этапы 1–5 (v1.0, архив)
 
-Реализовано в `src/` (C# / WinForms / WebView2 / WorkerW). Этапы закрыты; исходники сохранены для справки.
+Реализовано в C# / WinForms / WebView2 / WorkerW (этапы закрыты). Исходники — в git-тегах `v1.0.2`, `v1.0.3`.
 
 | Этап | Содержание |
 |------|------------|
@@ -29,8 +29,6 @@
 | 3 | Мульти-репо, `settings.json`, автозапуск, пауза |
 | 4 | PR, issues, релизы, CI badge, heatmap, лента |
 | 5 | OAuth, автообновление, выбор монитора, README, portable exe |
-
-Локальная сборка: `dotnet publish src -p:PublishProfile=win-x64`.
 
 ---
 
@@ -46,7 +44,7 @@
 |------|---------|
 | UI обоев | `wwwroot/wallpaper/` (HTML/CSS/JS) |
 | WebView | `QWebEngineView` |
-| Bridge | JSON-протокол `Bridge.cs` / `app.js` |
+| Bridge | JSON-протокол `bridge.py` / `app.js` |
 | Настройки | `settings.json` (без PAT) |
 | Секреты | `keyring` (Credential Manager / Secret Service) |
 | Обои | WorkerW (Win) · desktop layer X11 (Linux) |
@@ -119,7 +117,7 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 ### 6.5 — Настройки (Qt)
 
-- [x] `SettingsStore` — `settings.json` (поля из `AppSettings.cs`)
+- [x] `SettingsStore` — `settings.json` (совместим с v1.0)
 - [x] `SettingsDialog` — репо, сетка, интервалы, экран, OAuth/PAT
 - [x] Чтение существующего `settings.json` от v1.0
 - [x] Автозапуск: registry (Win) · `.desktop` (Linux)
@@ -149,7 +147,7 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 | `stats/*` возвращает HTTP 202 | Retry 2–5 сек, кэш |
 | Qt WebEngine тяжёлый (~150 MB) | PyInstaller one-folder; документировать размер |
 | `window.chrome.webview` нет в WebEngine | JS-shim + QWebChannel |
-| WorkerW на новых сборках Win11 | Порт логики из `DesktopHost.cs`; fallback overlay |
+| WorkerW на новых сборках Win11 | Порт логики в `windows_backend.py`; fallback overlay |
 | Wayland на Linux | MVP на X11; Wayland — отдельный подэтап |
 | Приватные репо | PAT со scope `repo` |
 

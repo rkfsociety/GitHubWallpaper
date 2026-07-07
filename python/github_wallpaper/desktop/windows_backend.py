@@ -1,4 +1,4 @@
-"""Windows: встраивание в WorkerW через ctypes (порт DesktopHost.cs)."""
+"""Windows: встраивание в WorkerW через ctypes."""
 
 from __future__ import annotations
 

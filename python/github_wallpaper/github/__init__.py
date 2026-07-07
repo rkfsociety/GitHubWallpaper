@@ -1,4 +1,4 @@
-"""GitHub REST API, polling и OAuth (порт src/GitHub/)."""
+"""GitHub REST API, polling и OAuth."""
 
 __all__ = ["GitHubSession", "RepoPoller"]
 

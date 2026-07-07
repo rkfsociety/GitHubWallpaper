@@ -180,7 +180,7 @@ class CardDisplaySettings:
 
 @dataclass
 class AppSettings:
-    """Сериализуемые настройки приложения (без PAT), паритет с AppSettings.cs."""
+    """Сериализуемые настройки приложения (без PAT), совместимы с v1.0."""
 
     repositories: list[str] = field(default_factory=list)
     grid_columns: int = _DEFAULT_GRID_COLUMNS

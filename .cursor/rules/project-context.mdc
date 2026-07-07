@@ -7,71 +7,67 @@ alwaysApply: true
 
 Динамические обои: HTML за иконками рабочего стола + данные GitHub REST API.
 
-**Репозиторий:** [rkfsociety/GitHubWallpaper](https://github.com/rkfsociety/GitHubWallpaper) · **Платформы:** v2.0 Windows + Linux · v1.0 архив в `src/` · **Ответы:** только на русском
+**Репозиторий:** [rkfsociety/GitHubWallpaper](https://github.com/rkfsociety/GitHubWallpaper) · **Платформы:** Windows + Linux (X11) · **Ответы:** только на русском
 
 ## Стек
 
-**v2.0 (активный):** Python 3.11+ · PySide6 · Qt WebEngine · `keyring` · каталог `python/`  
-**v1.0 (архив):** C# / .NET 8 · WinForms · WebView2 · `src/` — CI не собирает
+Python 3.11+ · PySide6 · Qt WebEngine · `keyring` · `httpx` · каталог `python/`
+
+Архив C# v1.0 — в git-тегах `v1.0.x`, в `main` не хранится.
 
 ## Текущий этап (ROADMAP)
 
 | Этап | Статус |
 |------|--------|
-| 1 Каркас движка | ✅ |
-| 2 GitHub + один репо | ✅ |
-| 3 Мульти-репо и настройки | ✅ |
-| 4 Полная активность | ✅ |
-| 5 Полировка и релиз (C# v1) | ✅ |
+| 1–5 v1.0 (C#, Windows) | ✅ Архив (теги `v1.0.x`) |
 | 6 Python + Qt v2.0 | 🔄 |
 
-**Сейчас:** ветка `main`. v2.0 (Python/PySide6) — этап 6, каталог `python/`; push → CI публикует Release `latest` (Win zip + Linux tarball). v1.0 в `src/` — только локальная сборка.
-
-## Git (агент)
-
-После каждой завершённой задачи: **коммит и сразу push** в `main`. Не спрашивать подтверждение. Без push CI не соберёт новый release.
+**Сейчас:** ветка `main`, каталог `python/`; push → CI публикует Release `latest` (Win installer + Linux tarball).
 
 ## Архитектура
 
 ```
-TrayService / SettingsForm
-        → WallpaperController → DesktopHost (WorkerW) → WebView2 (app.local)
-        → RepoPoller → GitHubApiClient → Bridge (JSON → WebView2)
-PAT: GitHubPatCredentialStore (Credential Manager)
-Репо: SettingsStore → settings.json
+QSystemTrayIcon + SettingsDialog (PySide6)
+        │
+        ▼
+WallpaperController ──► DesktopBackend ──► QWebEngineView
+   (windows / linux)         │                    ▲
+        │                   │                    │
+        ▼                   ▼                    │
+RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
+                    │
+                    ▼
+              keyring (PAT / OAuth)
 ```
 
 ## Ключевые пути
 
 | Что | Где |
 |-----|-----|
-| Точка входа | `src/Program.cs`, `TrayApplicationContext.cs` |
-| Обои | `src/Desktop/` — `WallpaperController`, `Bridge`, `DesktopHost` |
-| GitHub | `src/GitHub/` — `GitHubApiClient`, `RepoPoller`, `RepoUrlParser` |
-| Настройки | `src/Settings/` — `SettingsForm`, `SettingsStore`, `GitHubPatCredentialStore` |
+| Точка входа | `python/github_wallpaper/main.py`, `app.py` |
+| Обои | `python/github_wallpaper/wallpaper/` — `controller.py`, `bridge.py`, `wallpaper_window.py` |
+| Desktop | `python/github_wallpaper/desktop/` — `windows_backend.py`, `linux_backend.py` |
+| GitHub | `python/github_wallpaper/github/` — `github_client.py`, `repo_poller.py` |
+| Настройки | `python/github_wallpaper/settings/` — `settings_dialog.py`, `settings_store.py` |
 | UI обоев | `wwwroot/wallpaper/` — `index.html`, `app.js`, `styles.css` |
-| Python v2.0 | `python/` — PySide6-приложение (ветка `main`) |
-| AppData | `%APPDATA%\GitHubWallpaper\` (`AppPaths.AppData`, `settings.json`) |
-| Публикация | `src/Properties/PublishProfiles/win-x64.pubxml` → `publish/` |
+| AppData | `%APPDATA%\GitHubWallpaper\` / `~/.config/GitHubWallpaper/` (`settings.json`) |
+| Сборка | `python/scripts/build_release.py` → `python/publish/` |
 
-## Bridge: типы сообщений (C# → JS)
+## Bridge: типы сообщений (host → JS)
 
-`pause` · `resume` · `auth:status` · `repos:init` · `repo:metadata` · `repo:commits` · `repo:pulls` · `repo:issues` · `repo:releases` · `repo:ci-run` · `repo:heatmap` · `repo:activity-feed` · `repo:poll-failed` · (JS→C#) `open-url`
-
-Virtual host: `app.local` (`WallpaperController.VirtualHostName`).
+`pause` · `resume` · `auth:status` · `repos:init` · `repo:metadata` · `repo:commits` · `repo:pulls` · `repo:issues` · `repo:releases` · `repo:ci-run` · `repo:heatmap` · `repo:activity-feed` · `repo:poll-failed` · (JS→host) `open-url` · `page:ready`
 
 ## Соглашения кода
 
-- PAT **никогда** в `settings.json` — только Credential Manager
-- `internal sealed` для сервисов; XML-doc на публичных API
+- PAT **никогда** в `settings.json` — только `keyring`
 - Минимальный diff; не трогать несвязанный код
 - Недостающие SDK/инструменты — в `F:\github\PROG`
 
 ## Сборка
 
 ```bash
-dotnet run --project src
-dotnet publish src -p:PublishProfile=win-x64
+cd python
+python -m pip install -e ".[dev]"
+python -m github_wallpaper
+python scripts/build_release.py
 ```
-
-Требуется WebView2 Runtime на машине пользователя.

@@ -13,9 +13,7 @@ alwaysApply: true
 
 **Коммит — всегда** после завершённой задачи (`git add` → `git commit`). Не спрашивать «закоммитить?».
 
-**Push — всегда** сразу после каждого коммита (`git push`). Не спрашивать «запушить?» и не ждать отдельного запроса пользователя.
-
-Порядок без исключений: `git add` → `git commit` → `git push`.
+**Push — по запросу пользователя** (кроме исправлений CI — push сразу для проверки).
 
 Не коммитить секреты (`.env`, PAT, credentials). Не менять `git config`. Не делать force push в `main`.
 
@@ -23,12 +21,11 @@ alwaysApply: true
 
 `git status` · при необходимости `git pull`
 
-## После правек C#
+## После правок Python
 
-1. `dotnet build src` (или `dotnet run --project src` для проверки)
+1. `cd python && python -m unittest discover -s tests -p "test_*.py"`
 2. Задача из ROADMAP → обновить `ROADMAP.md` (+ `README.md` при смене этапа) — см. `roadmap.mdc`
 3. Коммит в том же сеансе
-4. Push сразу после коммита
 
 ## Документация
 
