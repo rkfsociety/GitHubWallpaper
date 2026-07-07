@@ -9,48 +9,78 @@ alwaysApply: true
 
 **Репозиторий:** [rkfsociety/GitHubWallpaper](https://github.com/rkfsociety/GitHubWallpaper) · **Платформы:** Windows + Linux (X11) · **Ответы:** только на русском
 
-## Стек
+## Стек (единственный активный)
 
-Python 3.11+ · PySide6 · Qt WebEngine · `keyring` · `httpx` · каталог `python/`
+Python 3.11+ · PySide6 · Qt WebEngine · `httpx` · `keyring` · `pydantic` · каталог `python/`
 
-Архив C# v1.0 — в git-тегах `v1.0.x`, в `main` не хранится.
+**Архив C# v1.0** — только в git-тегах `v1.0.2`, `v1.0.3`. В `main` нет `src/`, `.sln`, .NET.
+
+## Структура репозитория
+
+| Путь | Назначение |
+|------|------------|
+| `python/` | Приложение v2.0 (`pyproject.toml`, пакет `github_wallpaper`) |
+| `wwwroot/wallpaper/` | HTML/CSS/JS карточек обоев (общий с v1.0) |
+| `docs/` | Скриншоты для README |
+| `.github/workflows/ci.yml` | Тесты (PR) + сборка + Release `latest` (push в `main`) |
+| `ROADMAP.md` / `README.md` | План и пользовательская документация |
+
+**Не коммитить:** `GitHubWallpaper.exe_extracted/`, `publish/`, `python/build/`, `python/dist/`, `python/publish/`, локальные `_*-test/`.
 
 ## Текущий этап (ROADMAP)
 
 | Этап | Статус |
 |------|--------|
 | 1–5 v1.0 (C#, Windows) | ✅ Архив (теги `v1.0.x`) |
-| 6 Python + Qt v2.0 | 🔄 |
+| 6 Python + Qt v2.0 | 🔄 Код готов; осталась ручная приёмка |
 
-**Сейчас:** ветка `main`, каталог `python/`; push → CI публикует Release `latest` (Win installer + Linux tarball).
+Подзадачи 6.1–6.6 в ROADMAP отмечены `[x]`. Незакрыты **критерии готовности v2.0** (сценарии «Проверка» на Win и Linux).
+
+**Сейчас:** ветка `main`, каталог `python/`. Push в `main` → CI публикует Release `latest`.
+
+## Дистрибутив
+
+Два PyInstaller-артефакта (`python/scripts/build_release.py`):
+
+| Артефакт | Spec | Роль |
+|----------|------|------|
+| `GitHubWallpaper.exe` / `GitHubWallpaper` | `GitHubWallpaperBootstrap.spec` | Маленький installer: при первом запуске качает runtime (~150 МБ) |
+| `GitHubWallpaper-Win-x64.zip` / `…-linux-x64.tar.gz` | `GitHubWallpaper.spec` | Полный runtime (Qt WebEngine) для автоустановки |
+
+Код bootstrap: `python/github_wallpaper/bootstrap/`. Обновления: `python/github_wallpaper/update/`.
 
 ## Архитектура
 
 ```
-QSystemTrayIcon + SettingsDialog (PySide6)
+QSystemTrayIcon + SettingsDialog (app.py)
         │
         ▼
 WallpaperController ──► DesktopBackend ──► QWebEngineView
-   (windows / linux)         │                    ▲
-        │                   │                    │
-        ▼                   ▼                    │
+ (wallpaper/controller)  (desktop/*)           ▲
+        │                                        │
+        ▼                                        │
 RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
-                    │
-                    ▼
-              keyring (PAT / OAuth)
+ (github/repo_poller)   (github_client)  (wallpaper/bridge)
+        │
+        ▼
+ keyring + OAuth (github/credential_store, github/oauth/)
 ```
+
+Локальный HTTP для UI: `wallpaper/local_server.py`. Shim WebView2 API: `window.chrome.webview` в `bridge.py`.
 
 ## Ключевые пути
 
 | Что | Где |
 |-----|-----|
-| Точка входа | `python/github_wallpaper/main.py`, `app.py` |
-| Обои | `python/github_wallpaper/wallpaper/` — `controller.py`, `bridge.py`, `wallpaper_window.py` |
-| Desktop | `python/github_wallpaper/desktop/` — `windows_backend.py`, `linux_backend.py` |
-| GitHub | `python/github_wallpaper/github/` — `github_client.py`, `repo_poller.py` |
-| Настройки | `python/github_wallpaper/settings/` — `settings_dialog.py`, `settings_store.py` |
-| UI обоев | `wwwroot/wallpaper/` — `index.html`, `app.js`, `styles.css` |
-| AppData | `%APPDATA%\GitHubWallpaper\` / `~/.config/GitHubWallpaper/` (`settings.json`) |
+| Точка входа | `python/github_wallpaper/main.py` → `app.py` |
+| Обои | `python/github_wallpaper/wallpaper/` |
+| Desktop (WorkerW / X11) | `python/github_wallpaper/desktop/` |
+| GitHub API + polling | `python/github_wallpaper/github/` |
+| Настройки UI | `python/github_wallpaper/settings/` |
+| `settings.json` | `python/github_wallpaper/settings_store.py` |
+| UI обоев | `wwwroot/wallpaper/` |
+| AppData | `%APPDATA%\GitHubWallpaper\` / `~/.config/GitHubWallpaper/` |
+| Тесты | `python/tests/` |
 | Сборка | `python/scripts/build_release.py` → `python/publish/` |
 
 ## Bridge: типы сообщений (host → JS)
@@ -59,15 +89,17 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
 
 ## Соглашения кода
 
-- PAT **никогда** в `settings.json` — только `keyring`
+- PAT и OAuth client secret **никогда** в `settings.json` — только `keyring`
+- `settings.json` v1.0 читается без миграции (совместимость полей)
 - Минимальный diff; не трогать несвязанный код
-- Недостающие SDK/инструменты — в `F:\github\PROG`
+- Недостающие SDK/инструменты — скачивать в `F:\github\PROG`, ставить в систему оттуда
 
-## Сборка
+## Сборка и запуск
 
 ```bash
 cd python
 python -m pip install -e ".[dev]"
 python -m github_wallpaper
+python -m unittest discover -s tests -p "test_*.py"
 python scripts/build_release.py
 ```
