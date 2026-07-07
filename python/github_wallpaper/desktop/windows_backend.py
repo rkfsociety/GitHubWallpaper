@@ -128,8 +128,16 @@ class WindowsDesktopBackend(DesktopBackend):
 
     def set_screen(self, window: QWidget, screen: QScreen) -> None:
         self._target_bounds = screen.geometry()
-        if self._attached_handle:
-            self._fit_to_target_bounds(self._attached_handle)
+        if not self._attached_handle:
+            return
+
+        self._fit_to_target_bounds(self._attached_handle)
+        if self._raised_layout is not None:
+            self._apply_raised_desktop_z_order(self._attached_handle)
+
+        bounds = self._target_bounds
+        if bounds is not None:
+            window.resize(bounds.width(), bounds.height())
 
     def dispose(self) -> None:
         if self._attached_handle:

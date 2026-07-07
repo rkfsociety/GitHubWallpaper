@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QObject, QUrl, Signal
+from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtGui import QGuiApplication, QScreen
 
 from github_wallpaper.desktop.backend import DesktopBackend, create_desktop_backend
@@ -42,7 +42,12 @@ class WallpaperController(QObject):
         self._applied = False
         self._on_polling_pause: Callable[[bool], None] | None = None
         self._screen_hooks_attached = False
+        self._geometry_hooked_screens: set[str] = set()
         self._message_queue = PendingMessageQueue()
+        self._screen_change_timer = QTimer(self)
+        self._screen_change_timer.setSingleShot(True)
+        self._screen_change_timer.setInterval(150)
+        self._screen_change_timer.timeout.connect(self._reposition_wallpaper)
 
     @property
     def is_applied(self) -> bool:
@@ -71,10 +76,7 @@ class WallpaperController(QObject):
         """Задаёт монитор по DisplayDeviceName из settings.json."""
         self._display_device_name = (display_device_name or "").strip()
         if self._applied and self._window is not None:
-            screen = ScreenHelper.resolve(self._display_device_name)
-            self._backend.set_screen(self._window, screen)
-            self._window.fit_to_screen(screen)
-            self._post_viewport_update(screen)
+            self._reposition_wallpaper()
 
     def apply(self) -> None:
         """Создаёт окно, запускает HTTP-сервер и прикрепляет обои к рабочему столу."""
@@ -221,15 +223,30 @@ class WallpaperController(QObject):
         if self._on_polling_pause is not None:
             self._on_polling_pause(paused)
 
+    def _reposition_wallpaper(self) -> None:
+        """Перемещает обои на выбранный монитор и обновляет viewport в JS."""
+        if not self._applied or self._window is None:
+            return
+
+        screen = ScreenHelper.resolve(self._display_device_name)
+        self._backend.set_screen(self._window, screen)
+
+        # После SetParent(WorkerW) Qt setGeometry() ломает координаты на втором мониторе.
+        if not self._window.is_attached:
+            self._window.fit_to_screen(screen)
+
+        self._post_viewport_update(screen)
+
     def _ensure_screen_hooks(self) -> None:
         if self._screen_hooks_attached:
             return
 
         app = QGuiApplication.instance()
         if app is not None:
-            app.screenAdded.connect(self._on_screens_changed)
+            app.screenAdded.connect(self._on_screen_added)
             app.screenRemoved.connect(self._on_screens_changed)
             app.primaryScreenChanged.connect(self._on_screens_changed)
+        self._hook_screen_geometry_signals()
         self._screen_hooks_attached = True
 
     def _remove_screen_hooks(self) -> None:
@@ -238,16 +255,30 @@ class WallpaperController(QObject):
 
         app = QGuiApplication.instance()
         if app is not None:
-            app.screenAdded.disconnect(self._on_screens_changed)
+            app.screenAdded.disconnect(self._on_screen_added)
             app.screenRemoved.disconnect(self._on_screens_changed)
             app.primaryScreenChanged.disconnect(self._on_screens_changed)
+        self._geometry_hooked_screens.clear()
         self._screen_hooks_attached = False
 
-    def _on_screens_changed(self, *_args: object) -> None:
-        if not self._applied or self._window is None:
-            return
+    def _hook_screen_geometry_signals(self) -> None:
+        for screen in ScreenHelper.all_screens():
+            key = screen.name()
+            if key in self._geometry_hooked_screens:
+                continue
 
-        screen = ScreenHelper.resolve(self._display_device_name)
-        self._backend.set_screen(self._window, screen)
-        self._window.fit_to_screen(screen)
-        self._post_viewport_update(screen)
+            screen.geometryChanged.connect(self._on_screens_changed)
+            screen.availableGeometryChanged.connect(self._on_screens_changed)
+            self._geometry_hooked_screens.add(key)
+
+    def _on_screen_added(self, screen: QScreen) -> None:
+        key = screen.name()
+        if key not in self._geometry_hooked_screens:
+            screen.geometryChanged.connect(self._on_screens_changed)
+            screen.availableGeometryChanged.connect(self._on_screens_changed)
+            self._geometry_hooked_screens.add(key)
+        self._on_screens_changed()
+
+    def _on_screens_changed(self, *_args: object) -> None:
+        self._hook_screen_geometry_signals()
+        self._screen_change_timer.start()
