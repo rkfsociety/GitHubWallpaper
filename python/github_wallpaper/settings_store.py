@@ -1,4 +1,4 @@
-"""Чтение и запись settings.json (совместимость с C# AppSettings / SettingsStore)."""
+"""Чтение и запись settings.json."""
 
 from __future__ import annotations
 

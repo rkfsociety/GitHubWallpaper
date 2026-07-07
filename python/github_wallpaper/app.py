@@ -38,7 +38,7 @@ _logger = logging.getLogger(__name__)
 
 
 def create_tray_icon() -> QIcon:
-    """Простая иконка в стиле C# AppIcons (тёмный круг + синий акцент)."""
+    """Простая иконка (тёмный круг + синий акцент)."""
     size = 32
     pixmap = QPixmap(QSize(size, size))
     pixmap.fill(QColor(0, 0, 0, 0))

@@ -1,4 +1,4 @@
-"""Разрешение монитора по DisplayDeviceName (совместимость с C# Screen.DeviceName)."""
+"""Разрешение монитора по DisplayDeviceName."""
 
 from __future__ import annotations
 
@@ -99,13 +99,13 @@ class ScreenHelper:
 
     @staticmethod
     def win32_device_name(screen: QScreen) -> str | None:
-        """C# Screen.DeviceName (\\\\.\\DISPLAYn) для того же монитора."""
+        """Win32 DisplayDeviceName (\\\\.\\DISPLAYn) для того же монитора."""
         return _win32_monitors_by_geometry().get(_screen_rect_key(screen.geometry()))
 
     @staticmethod
     def resolve(device_name: str | None) -> QScreen:
         """
-        Находит экран по имени (QScreen.name() или C# Screen.DeviceName).
+        Находит экран по имени (QScreen.name() или Win32 DisplayDeviceName).
         Пустое имя — основной монитор.
         """
         if not device_name or not device_name.strip():

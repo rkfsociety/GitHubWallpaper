@@ -13,7 +13,7 @@ alwaysApply: true
 
 Python 3.11+ · PySide6 · Qt WebEngine · `httpx` · `keyring` · `pydantic` · каталог `python/`
 
-**Архив C# v1.0** — только в git-тегах `v1.0.2`, `v1.0.3`. В `main` нет `src/`, `.sln`, .NET.
+История предыдущей версии — в git-тегах `v1.0.x`. В `main` только Python.
 
 ## Структура репозитория
 
@@ -27,14 +27,9 @@ Python 3.11+ · PySide6 · Qt WebEngine · `httpx` · `keyring` · `pydantic` ·
 
 **Не коммитить:** `GitHubWallpaper.exe_extracted/`, `publish/`, `python/build/`, `python/dist/`, `python/publish/`, локальные `_*-test/`.
 
-## Текущий этап (ROADMAP)
+## Текущий статус (ROADMAP)
 
-| Этап | Статус |
-|------|--------|
-| 1–5 v1.0 (C#, Windows) | ✅ Архив (теги `v1.0.x`) |
-| 6 Python + Qt v2.0 | 🔄 Код готов; осталась ручная приёмка |
-
-Подзадачи 6.1–6.6 в ROADMAP отмечены `[x]`. Незакрыты **критерии готовности v2.0** (сценарии «Проверка» на Win и Linux).
+Кодовые разделы 1–6 в ROADMAP отмечены `[x]`. Незакрыты **критерии готовности** (сценарии «Проверка» на Win и Linux).
 
 **Сейчас:** ветка `main`, каталог `python/`. Push в `main` → CI публикует Release `latest`.
 
@@ -66,7 +61,7 @@ RepoPoller ──► GitHubClient ──► Bridge (JSON) ──┘
  keyring + OAuth (github/credential_store, github/oauth/)
 ```
 
-Локальный HTTP для UI: `wallpaper/local_server.py`. Shim WebView2 API: `window.chrome.webview` в `bridge.py`.
+Локальный HTTP для UI: `wallpaper/local_server.py`. Shim для `window.chrome.webview` (совместимость UI) в `bridge.py`.
 
 ## Ключевые пути
 

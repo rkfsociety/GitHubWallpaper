@@ -22,7 +22,7 @@ class _TokenProvider(Protocol):
 
 
 class AppUpdateService:
-    """Порт C# AppUpdateService для Python v2.0."""
+    """Служба проверки и установки обновлений приложения."""
 
     def __init__(
         self,

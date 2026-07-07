@@ -1,4 +1,4 @@
-"""JSON-мост C# ↔ JS: сериализация camelCase, очередь до page:ready, open-url."""
+"""JSON-мост host ↔ JS: сериализация camelCase, очередь до page:ready, open-url."""
 
 from __future__ import annotations
 

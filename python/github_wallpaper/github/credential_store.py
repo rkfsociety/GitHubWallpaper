@@ -1,4 +1,4 @@
-"""Хранение PAT и OAuth Client Secret через keyring (совместимость с C# Credential Manager)."""
+"""Хранение PAT и OAuth Client Secret через keyring."""
 
 from __future__ import annotations
 
