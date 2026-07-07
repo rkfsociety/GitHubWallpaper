@@ -131,13 +131,11 @@ class WindowsDesktopBackend(DesktopBackend):
         if not self._attached_handle:
             return
 
+        # Только Win32 SetWindowPos: Qt resize()/setGeometry() после SetParent(WorkerW)
+        # сбрасывает HWND в (0,0) клиентской области Progman — неверный монитор.
         self._fit_to_target_bounds(self._attached_handle)
         if self._raised_layout is not None:
             self._apply_raised_desktop_z_order(self._attached_handle)
-
-        bounds = self._target_bounds
-        if bounds is not None:
-            window.resize(bounds.width(), bounds.height())
 
     def dispose(self) -> None:
         if self._attached_handle:

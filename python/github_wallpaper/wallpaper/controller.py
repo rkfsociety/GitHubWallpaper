@@ -98,7 +98,6 @@ class WallpaperController(QObject):
         self._window.show()
 
         self._backend.apply(self._window, screen)
-        self._backend.set_screen(self._window, screen)
         self._window.mark_attached(True)
         self._ensure_screen_hooks()
 
