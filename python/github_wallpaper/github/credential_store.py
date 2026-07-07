@@ -12,15 +12,47 @@ OAUTH_SECRET_SERVICE = "GitHubWallpaper/OAuthClientSecret"
 OAUTH_SECRET_USERNAME = "GitHubOAuthClientSecret"
 
 
+def _recover_legacy_token(value: str) -> str | None:
+    """Токен C# v1.0 хранился в UTF-8, а keyring читает его как UTF-16LE.
+
+    Возвращает восстановленную ASCII-строку или None, если это не тот случай.
+    Токены GitHub всегда ASCII, поэтому не-ASCII значение — признак мисдекода.
+    """
+    try:
+        recovered = value.encode("utf-16-le").decode("ascii").strip()
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return None
+    if not recovered or not recovered.isprintable():
+        return None
+    return recovered
+
+
 class GitHubPatCredentialStore:
     """PAT в keyring (имена как в GitHubPatCredentialStore.cs)."""
 
     @staticmethod
     def read() -> str | None:
         try:
-            return keyring.get_password(PAT_SERVICE, PAT_USERNAME)
+            value = keyring.get_password(PAT_SERVICE, PAT_USERNAME)
         except keyring.errors.KeyringError:
             return None
+
+        if value is None:
+            return None
+
+        stripped = value.strip()
+        if not stripped or stripped.isascii():
+            return stripped or None
+
+        recovered = _recover_legacy_token(stripped)
+        if recovered is None:
+            return stripped
+
+        try:
+            keyring.set_password(PAT_SERVICE, PAT_USERNAME, recovered)
+        except keyring.errors.KeyringError:
+            pass
+        return recovered
 
     @staticmethod
     def save(token: str) -> None:

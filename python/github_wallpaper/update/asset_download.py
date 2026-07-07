@@ -23,7 +23,7 @@ def ascii_user_agent() -> str:
 
 def build_download_headers(*, token: str | None = None) -> dict[str, str]:
     headers = {"User-Agent": ascii_user_agent()}
-    if token and token.strip():
+    if token and token.strip() and token.strip().isascii():
         headers["Authorization"] = f"Bearer {token.strip()}"
     return headers
 

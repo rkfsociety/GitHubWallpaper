@@ -151,4 +151,9 @@ class GitHubClient:
 def _normalize_token(token: str | None) -> str | None:
     if token is None or not token.strip():
         return None
-    return token.strip()
+    stripped = token.strip()
+    # Токены GitHub всегда ASCII; не-ASCII значение сломает HTTP-заголовок,
+    # поэтому лучше идти без авторизации, чем падать на каждом запросе.
+    if not stripped.isascii():
+        return None
+    return stripped
