@@ -5,19 +5,25 @@
   "file": "index.html",
   "general": {
     "properties": {
-      "githubTokenLink": {
+      "githubTokenHint": {
         "order": 0,
         "type": "text",
-        "text": "<a href=\"https://github.com/settings/personal-access-tokens/new\">GitHub token (PAT)</a>"
+        "text": "GitHub token (PAT) — скопируйте ссылку для создания:"
       },
-      "githubToken": {
+      "githubTokenUrl": {
         "order": 1,
         "text": " ",
+        "type": "textinput",
+        "value": "https://github.com/settings/personal-access-tokens/new"
+      },
+      "githubToken": {
+        "order": 2,
+        "text": "Токен",
         "type": "textinput",
         "value": ""
       },
       "refreshSeconds": {
-        "order": 2,
+        "order": 3,
         "text": "Обновление (сек)",
         "type": "slider",
         "value": 120,
@@ -26,7 +32,7 @@
         "step": 10
       },
       "columns": {
-        "order": 3,
+        "order": 4,
         "text": "Колонки",
         "type": "slider",
         "value": 3,
@@ -35,7 +41,7 @@
         "step": 1
       },
       "rows": {
-        "order": 4,
+        "order": 5,
         "text": "Ряды",
         "type": "slider",
         "value": 2,
