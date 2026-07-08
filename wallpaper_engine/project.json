@@ -3,7 +3,6 @@
   "description": "GitHub-дашборд: карточки репозиториев (коммиты, PR, issues, релизы, CI, heatmap).\n\nТокен (fine-grained PAT, только чтение): выберите нужные репозитории и включите права — Metadata, Contents, Issues, Pull requests, Actions. Без токена лимит 60 запросов/час (только публичные репо). Для приватных репо токен обязателен.",
   "type": "web",
   "file": "index.html",
-  "preview": "preview.png",
   "general": {
     "properties": {
       "githubTokenHint": {
@@ -233,5 +232,7 @@
       "showIssues": { "order": 57, "text": "Issues", "type": "bool", "value": true },
       "showCommits": { "order": 58, "text": "Коммиты", "type": "bool", "value": true }
     }
-  }
+  },
+  "contentrating": "Everyone",
+  "preview": "preview.jpg"
 }

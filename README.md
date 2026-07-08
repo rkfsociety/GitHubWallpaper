@@ -4,8 +4,26 @@ Web-обои для **Wallpaper Engine**: карточки GitHub-репозит
 
 ## Установка
 
-1. В Wallpaper Engine выберите **Open Wallpaper** → **Open from file**.
-2. Укажите файл `wallpaper_engine/index.html` (или откройте папку `wallpaper_engine/` через редактор WE).
+**Важно:** если открыть только `index.html` из клона репозитория, WE показывает заглушку «Местный веб» без иконки. Нужен `project.json` и `preview.jpg` в той же папке.
+
+### Рекомендуемый способ
+
+```powershell
+cd wallpaper_engine
+.\install_to_we.ps1
+```
+
+Скрипт копирует проект в `wallpaper_engine\projects\myprojects\GitHubWallpaper\`. Затем в WE:
+
+1. Нажмите **Удалить из истории** у старой записи `index.html` (если есть).
+2. **Open Wallpaper** → **Open from file** → выберите  
+   `...\wallpaper_engine\projects\myprojects\GitHubWallpaper\index.html`
+
+Должны появиться название **GitHub Wallpaper (Wallpaper Engine)** и иконка.
+
+### Альтернатива
+
+**Create Wallpaper** → перетащите `wallpaper_engine/index.html` в окно редактора (импорт в myprojects).
 
 ## Настройка
 
@@ -36,6 +54,8 @@ Web-обои для **Wallpaper Engine**: карточки GitHub-репозит
 
 - `wallpaper_engine/`: готовый проект Wallpaper Engine (HTML wallpaper)
   - `project.json`: настройки/свойства
+  - `preview.jpg`: иконка в библиотеке WE
+  - `install_to_we.ps1`: копирование в myprojects
   - `we-adapter.js`: получение данных из GitHub API и доставка в UI
 
 ## Лицензия
