@@ -17,6 +17,7 @@
         "value": ""
       },
       "refreshSeconds": {
+        "order": 2,
         "text": "Обновление (сек)",
         "type": "slider",
         "value": 120,
@@ -25,6 +26,7 @@
         "step": 10
       },
       "columns": {
+        "order": 3,
         "text": "Колонки",
         "type": "slider",
         "value": 3,
@@ -33,6 +35,7 @@
         "step": 1
       },
       "rows": {
+        "order": 4,
         "text": "Ряды",
         "type": "slider",
         "value": 2,
@@ -40,28 +43,183 @@
         "max": 4,
         "step": 1
       },
-      "repo1": { "text": "Репозиторий 1 (owner/repo)", "type": "textinput", "value": "microsoft/vscode" },
-      "repo2": { "text": "Репозиторий 2 (owner/repo)", "type": "textinput", "value": "" },
-      "repo3": { "text": "Репозиторий 3 (owner/repo)", "type": "textinput", "value": "" },
-      "repo4": { "text": "Репозиторий 4 (owner/repo)", "type": "textinput", "value": "" },
-      "repo5": { "text": "Репозиторий 5 (owner/repo)", "type": "textinput", "value": "" },
-      "repo6": { "text": "Репозиторий 6 (owner/repo)", "type": "textinput", "value": "" },
-      "repo7": { "text": "Репозиторий 7 (owner/repo)", "type": "textinput", "value": "" },
-      "repo8": { "text": "Репозиторий 8 (owner/repo)", "type": "textinput", "value": "" },
-      "repo9": { "text": "Репозиторий 9 (owner/repo)", "type": "textinput", "value": "" },
-      "repo10": { "text": "Репозиторий 10 (owner/repo)", "type": "textinput", "value": "" },
-      "repo11": { "text": "Репозиторий 11 (owner/repo)", "type": "textinput", "value": "" },
-      "repo12": { "text": "Репозиторий 12 (owner/repo)", "type": "textinput", "value": "" },
-
-      "showDescription": { "text": "Описание", "type": "bool", "value": true },
-      "showStats": { "text": "Статы (звёзды/форки)", "type": "bool", "value": true },
-      "showCi": { "text": "CI badge", "type": "bool", "value": true },
-      "showRelease": { "text": "Последний релиз", "type": "bool", "value": true },
-      "showHeatmap": { "text": "Heatmap (52 недели)", "type": "bool", "value": true },
-      "showFeed": { "text": "Лента", "type": "bool", "value": true },
-      "showPullRequests": { "text": "Pull requests", "type": "bool", "value": true },
-      "showIssues": { "text": "Issues", "type": "bool", "value": true },
-      "showCommits": { "text": "Коммиты", "type": "bool", "value": true }
+      "repo1": {
+        "order": 10,
+        "text": "Репозиторий 1 (owner/repo)",
+        "type": "textinput",
+        "value": "microsoft/vscode",
+        "condition": "(columns.value * rows.value) >= 1"
+      },
+      "repo2": {
+        "order": 11,
+        "text": "Репозиторий 2 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 2"
+      },
+      "repo3": {
+        "order": 12,
+        "text": "Репозиторий 3 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 3"
+      },
+      "repo4": {
+        "order": 13,
+        "text": "Репозиторий 4 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 4"
+      },
+      "repo5": {
+        "order": 14,
+        "text": "Репозиторий 5 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 5"
+      },
+      "repo6": {
+        "order": 15,
+        "text": "Репозиторий 6 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 6"
+      },
+      "repo7": {
+        "order": 16,
+        "text": "Репозиторий 7 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 7"
+      },
+      "repo8": {
+        "order": 17,
+        "text": "Репозиторий 8 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 8"
+      },
+      "repo9": {
+        "order": 18,
+        "text": "Репозиторий 9 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 9"
+      },
+      "repo10": {
+        "order": 19,
+        "text": "Репозиторий 10 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 10"
+      },
+      "repo11": {
+        "order": 20,
+        "text": "Репозиторий 11 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 11"
+      },
+      "repo12": {
+        "order": 21,
+        "text": "Репозиторий 12 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 12"
+      },
+      "repo13": {
+        "order": 22,
+        "text": "Репозиторий 13 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 13"
+      },
+      "repo14": {
+        "order": 23,
+        "text": "Репозиторий 14 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 14"
+      },
+      "repo15": {
+        "order": 24,
+        "text": "Репозиторий 15 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 15"
+      },
+      "repo16": {
+        "order": 25,
+        "text": "Репозиторий 16 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 16"
+      },
+      "repo17": {
+        "order": 26,
+        "text": "Репозиторий 17 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 17"
+      },
+      "repo18": {
+        "order": 27,
+        "text": "Репозиторий 18 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 18"
+      },
+      "repo19": {
+        "order": 28,
+        "text": "Репозиторий 19 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 19"
+      },
+      "repo20": {
+        "order": 29,
+        "text": "Репозиторий 20 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 20"
+      },
+      "repo21": {
+        "order": 30,
+        "text": "Репозиторий 21 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 21"
+      },
+      "repo22": {
+        "order": 31,
+        "text": "Репозиторий 22 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 22"
+      },
+      "repo23": {
+        "order": 32,
+        "text": "Репозиторий 23 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 23"
+      },
+      "repo24": {
+        "order": 33,
+        "text": "Репозиторий 24 (owner/repo)",
+        "type": "textinput",
+        "value": "",
+        "condition": "(columns.value * rows.value) >= 24"
+      },
+      "showDescription": { "order": 50, "text": "Описание", "type": "bool", "value": true },
+      "showStats": { "order": 51, "text": "Статы (звёзды/форки)", "type": "bool", "value": true },
+      "showCi": { "order": 52, "text": "CI badge", "type": "bool", "value": true },
+      "showRelease": { "order": 53, "text": "Последний релиз", "type": "bool", "value": true },
+      "showHeatmap": { "order": 54, "text": "Heatmap (52 недели)", "type": "bool", "value": true },
+      "showFeed": { "order": 55, "text": "Лента", "type": "bool", "value": true },
+      "showPullRequests": { "order": 56, "text": "Pull requests", "type": "bool", "value": true },
+      "showIssues": { "order": 57, "text": "Issues", "type": "bool", "value": true },
+      "showCommits": { "order": 58, "text": "Коммиты", "type": "bool", "value": true }
     }
   }
 }

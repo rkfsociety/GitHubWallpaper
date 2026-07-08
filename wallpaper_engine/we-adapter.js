@@ -36,6 +36,28 @@
     return new Date().toISOString();
   }
 
+  function gridCapacity() {
+    return Math.max(1, state.columns) * Math.max(1, state.rows);
+  }
+
+  function readRepoSlots(properties) {
+    const capacity = gridCapacity();
+    const repos = [];
+    for (let i = 1; i <= capacity; i += 1) {
+      const key = `repo${i}`;
+      if (properties?.[key]) {
+        repos.push(parseRepoSlug(properties[key].value));
+        continue;
+      }
+      if (state.repos[i - 1]) {
+        repos.push(state.repos[i - 1]);
+        continue;
+      }
+      repos.push(null);
+    }
+    return repos;
+  }
+
   function repoKey(owner, repo) {
     return `${owner}/${repo}`;
   }
@@ -85,7 +107,7 @@
   }
 
   function pushReposInit() {
-    const capacity = Math.max(1, state.columns) * Math.max(1, state.rows);
+    const capacity = gridCapacity();
     const slots = [];
     for (let i = 0; i < capacity; i += 1) {
       const repo = state.repos[i];
@@ -535,25 +557,13 @@
       state.refreshSeconds = Number(properties.refreshSeconds.value) || 120;
     }
     if (properties.columns) {
-      state.columns = Math.max(1, Number(properties.columns.value) || 3);
+      state.columns = Math.max(1, Math.min(6, Number(properties.columns.value) || 3));
     }
     if (properties.rows) {
-      state.rows = Math.max(1, Number(properties.rows.value) || 2);
+      state.rows = Math.max(1, Math.min(4, Number(properties.rows.value) || 2));
     }
 
-    const repos = [];
-    for (let i = 1; i <= 12; i += 1) {
-      const key = `repo${i}`;
-      if (properties[key]) {
-        const parsed = parseRepoSlug(properties[key].value);
-        repos.push(parsed);
-      } else if (state.repos[i - 1]) {
-        repos.push(state.repos[i - 1]);
-      } else {
-        repos.push(null);
-      }
-    }
-    state.repos = repos;
+    state.repos = readRepoSlots(properties);
 
     const bools = [
       ["showDescription", "description"],
@@ -603,7 +613,7 @@
   function bootstrapDefaultsIfNoWE() {
     // Если запущено в обычном браузере, просто стартуем с дефолтами.
     if (!("wallpaperPropertyListener" in window)) {
-      state.repos = [parseRepoSlug("microsoft/vscode"), null, null, null, null, null, null, null, null, null, null, null];
+      state.repos = [parseRepoSlug("microsoft/vscode"), null, null, null, null, null];
       applyAllSettings();
     }
   }
