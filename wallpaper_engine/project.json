@@ -5,8 +5,14 @@
   "file": "index.html",
   "general": {
     "properties": {
+      "githubTokenLink": {
+        "order": 0,
+        "type": "text",
+        "text": "<a href=\"https://github.com/settings/personal-access-tokens/new\">GitHub token (PAT)</a>"
+      },
       "githubToken": {
-        "text": "GitHub token (PAT)",
+        "order": 1,
+        "text": " ",
         "type": "textinput",
         "value": ""
       },
