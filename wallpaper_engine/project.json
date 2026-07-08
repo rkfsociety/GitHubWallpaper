@@ -1,0 +1,61 @@
+{
+  "title": "GitHub Wallpaper (Wallpaper Engine)",
+  "description": "GitHub-дашборд как Web-обои: карточки репозиториев, коммиты, PR, issues, релизы, CI, heatmap.",
+  "type": "web",
+  "file": "index.html",
+  "general": {
+    "properties": {
+      "githubToken": {
+        "text": "GitHub token (PAT)",
+        "type": "textinput",
+        "value": ""
+      },
+      "refreshSeconds": {
+        "text": "Обновление (сек)",
+        "type": "slider",
+        "value": 120,
+        "min": 30,
+        "max": 900,
+        "step": 10
+      },
+      "columns": {
+        "text": "Колонки",
+        "type": "slider",
+        "value": 3,
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "rows": {
+        "text": "Ряды",
+        "type": "slider",
+        "value": 2,
+        "min": 1,
+        "max": 4,
+        "step": 1
+      },
+      "repo1": { "text": "Репозиторий 1 (owner/repo)", "type": "textinput", "value": "microsoft/vscode" },
+      "repo2": { "text": "Репозиторий 2 (owner/repo)", "type": "textinput", "value": "" },
+      "repo3": { "text": "Репозиторий 3 (owner/repo)", "type": "textinput", "value": "" },
+      "repo4": { "text": "Репозиторий 4 (owner/repo)", "type": "textinput", "value": "" },
+      "repo5": { "text": "Репозиторий 5 (owner/repo)", "type": "textinput", "value": "" },
+      "repo6": { "text": "Репозиторий 6 (owner/repo)", "type": "textinput", "value": "" },
+      "repo7": { "text": "Репозиторий 7 (owner/repo)", "type": "textinput", "value": "" },
+      "repo8": { "text": "Репозиторий 8 (owner/repo)", "type": "textinput", "value": "" },
+      "repo9": { "text": "Репозиторий 9 (owner/repo)", "type": "textinput", "value": "" },
+      "repo10": { "text": "Репозиторий 10 (owner/repo)", "type": "textinput", "value": "" },
+      "repo11": { "text": "Репозиторий 11 (owner/repo)", "type": "textinput", "value": "" },
+      "repo12": { "text": "Репозиторий 12 (owner/repo)", "type": "textinput", "value": "" },
+
+      "showDescription": { "text": "Описание", "type": "bool", "value": true },
+      "showStats": { "text": "Статы (звёзды/форки)", "type": "bool", "value": true },
+      "showCi": { "text": "CI badge", "type": "bool", "value": true },
+      "showRelease": { "text": "Последний релиз", "type": "bool", "value": true },
+      "showHeatmap": { "text": "Heatmap (52 недели)", "type": "bool", "value": true },
+      "showFeed": { "text": "Лента", "type": "bool", "value": true },
+      "showPullRequests": { "text": "Pull requests", "type": "bool", "value": true },
+      "showIssues": { "text": "Issues", "type": "bool", "value": true },
+      "showCommits": { "text": "Коммиты", "type": "bool", "value": true }
+    }
+  }
+}

@@ -1,59 +1,30 @@
-# GitHubWallpaper
+# GitHub Wallpaper (Wallpaper Engine)
 
-Динамические обои: карточки GitHub-репозиториев **позади иконок рабочего стола** (Windows + Linux).
-
-> [Скачать v2.0](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) · [дорожная карта](ROADMAP.md)
-
-![Карточки репозиториев на рабочем столе](docs/screenshots/wallpaper.svg)
-
-Коммиты, PR, issues, релизы, CI, heatmap, лента событий · несколько репо · выбор монитора · OAuth/PAT · автообновление.
+Web-обои для **Wallpaper Engine**: карточки GitHub-репозиториев с коммитами, PR, issues, релизами, CI и heatmap.
 
 ## Установка
 
-### Linux (X11)
+1. В Wallpaper Engine выберите **Open Wallpaper** → **Open from file**.
+2. Укажите файл `wallpaper_engine/index.html` (или откройте папку `wallpaper_engine/` через редактор WE).
 
-```bash
-curl -fsSL -o GitHubWallpaper-linux-x64 https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper-linux-x64 \
-  && chmod +x GitHubWallpaper-linux-x64 \
-  && ./GitHubWallpaper-linux-x64
-```
+## Настройка
 
-При первом запуске скачаются компоненты (~150 МБ) в `~/.config/GitHubWallpaper/`. Требуется X11, OpenGL и glibc 2.31+ (Debian 11 / Ubuntu 20.04+).
+Откройте настройки обоев в Wallpaper Engine и заполните:
 
-### Windows
+- **GitHub token (PAT)**: персональный токен GitHub.
+- **Репозиторий N (owner/repo)**: например `microsoft/vscode`.
+- **Колонки/Ряды**: размер сетки.
+- **Переключатели секций**: что показывать на карточке (CI/релиз/heatmap/лента и т.д.).
 
-Скачайте [`GitHubWallpaper.exe`](https://github.com/rkfsociety/GitHubWallpaper/releases/download/latest/GitHubWallpaper.exe) из [Release `latest`](https://github.com/rkfsociety/GitHubWallpaper/releases/latest) и запустите. Компоненты установятся в `%APPDATA%\GitHubWallpaper\`.
+### Токен (PAT)
 
-### Первый запуск
+Рекомендуется **Fine-grained PAT** с read-only доступом. Без токена GitHub ограничивает запросы до **60/час**.
 
-Трей → **Настройки** → GitHub OAuth или PAT → добавьте репозитории.
+## Структура
 
-Без Python на машине. Обновления: трей → «Проверить обновления…».
-
-**Авторизация:** OAuth в настройках (рекомендуется) или [PAT](https://github.com/settings/tokens) с read-доступом (`repo` для приватных). Без токена — 60 req/h, только публичные репо.
-
-**Настройки:** `%APPDATA%\GitHubWallpaper\` (Win) · `~/.config/GitHubWallpaper/` (Linux).
-
-| Проблема | Решение |
-|----------|---------|
-| Чёрный экран | Перезапуск; на Linux — X11 и OpenGL |
-| Не тот монитор | Настройки → Экран |
-| Приватный репо / 404 | PAT со scope `repo` |
-| Нет обновлений данных | Сеть, лимит API, пресет «Экономный» |
-
-## Разработка
-
-Каталог `python/`, Python 3.11+, PySide6 (Qt WebEngine).
-
-```bash
-cd python
-python -m pip install -e .
-python -m github_wallpaper          # из исходников
-python -m pip install -e ".[dev]" # + PyInstaller
-python scripts/build_release.py    # → python/publish/
-```
-
-HTML/CSS/JS обоев — `wwwroot/wallpaper/`. CI на push в `main` публикует Release `latest`.
+- `wallpaper_engine/`: готовый проект Wallpaper Engine (HTML wallpaper)
+  - `project.json`: настройки/свойства
+  - `we-adapter.js`: получение данных из GitHub API и доставка в UI
 
 ## Лицензия
 

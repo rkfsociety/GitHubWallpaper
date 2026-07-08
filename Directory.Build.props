@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <!-- Локальная сборка без -p:Version; в CI версия передаётся из workflow -->
-    <Version Condition="'$(Version)' == ''">1.0.0-dev</Version>
-  </PropertyGroup>
-</Project>
