@@ -1,6 +1,6 @@
 {
   "title": "GitHub Wallpaper (Wallpaper Engine)",
-  "description": "GitHub-дашборд как Web-обои: карточки репозиториев, коммиты, PR, issues, релизы, CI, heatmap.",
+  "description": "GitHub-дашборд: карточки репозиториев (коммиты, PR, issues, релизы, CI, heatmap).\n\nТокен (fine-grained PAT, только чтение): выберите нужные репозитории и включите права — Metadata, Contents, Issues, Pull requests, Actions. Без токена лимит 60 запросов/час (только публичные репо). Для приватных репо токен обязателен.",
   "type": "web",
   "file": "index.html",
   "general": {
@@ -22,8 +22,13 @@
         "type": "textinput",
         "value": ""
       },
-      "refreshSeconds": {
+      "githubTokenPermissions": {
         "order": 3,
+        "type": "text",
+        "text": "Права токена (Read): Metadata, Contents, Issues, Pull requests, Actions. Репозитории — только те, что в обоях. Без токена: 60 req/ч, только публичные."
+      },
+      "refreshSeconds": {
+        "order": 4,
         "text": "Обновление (сек)",
         "type": "slider",
         "value": 120,
@@ -32,7 +37,7 @@
         "step": 10
       },
       "columns": {
-        "order": 4,
+        "order": 5,
         "text": "Колонки",
         "type": "slider",
         "value": 3,
@@ -41,7 +46,7 @@
         "step": 1
       },
       "rows": {
-        "order": 5,
+        "order": 6,
         "text": "Ряды",
         "type": "slider",
         "value": 2,
